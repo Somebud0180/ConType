@@ -6,27 +6,27 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct ABXY_TypeApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var coordinator = AppCoordinator()
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra("ABXY Type", systemImage: "gamecontroller") {
+            Button(coordinator.isOverlayVisible ? "Hide Keyboard Overlay" : "Show Keyboard Overlay") {
+                coordinator.toggleOverlay()
+            }
+
+            Button("Settings") {
+                coordinator.openSettings()
+            }
+
+            Divider()
+
+            Button("Quit") {
+                coordinator.quit()
+            }
         }
-        .modelContainer(sharedModelContainer)
+        .menuBarExtraStyle(.menu)
     }
 }
