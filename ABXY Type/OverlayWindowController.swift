@@ -44,6 +44,10 @@ final class OverlayWindowController {
         keyEmitter.emit(keyCode: 51)
     }
 
+    func activateSpaceKey() {
+        keyEmitter.emit(keyCode: 49)
+    }
+
     func activateEnterKey() {
         keyEmitter.emit(keyCode: 36)
     }

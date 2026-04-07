@@ -392,6 +392,12 @@ final class ControllerInputManager: NSObject {
             return
         }
 
+        if actionBindings.space == button {
+            debugLog("Space triggered")
+            onSpace?()
+            return
+        }
+
         if actionBindings.enter == button {
             debugLog("Enter triggered")
             onEnter?()

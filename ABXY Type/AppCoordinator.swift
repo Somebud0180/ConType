@@ -64,6 +64,14 @@ final class AppCoordinator: ObservableObject {
             }
         }
 
+        controllerInputManager.onSpace = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.overlayController.activateSpaceKey()
+            }
+        }
+
         controllerInputManager.onEnter = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
