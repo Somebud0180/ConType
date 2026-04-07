@@ -24,25 +24,25 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		AA5962C92F8188640048A21D /* ABXY Type.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ABXY Type.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA5962D82F8188690048A21D /* ABXY TypeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ABXY TypeTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA5962E22F8188690048A21D /* ABXY TypeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ABXY TypeUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5962C92F8188640048A21D /* ConType.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConType.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5962D82F8188690048A21D /* ConType Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ConType Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5962E22F8188690048A21D /* ConType UI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ConType UI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		AA5962CB2F8188640048A21D /* ABXY Type */ = {
+		AA5962CB2F8188640048A21D /* ConType */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ABXY Type";
+			path = ConType;
 			sourceTree = "<group>";
 		};
-		AA5962DB2F8188690048A21D /* ABXY TypeTests */ = {
+		AA5962DB2F8188690048A21D /* ConType Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ABXY TypeTests";
+			path = "ConType Tests";
 			sourceTree = "<group>";
 		};
-		AA5962E52F8188690048A21D /* ABXY TypeUITests */ = {
+		AA5962E52F8188690048A21D /* ConType UI Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ABXY TypeUITests";
+			path = "ConType UI Tests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		AA5962C02F8188640048A21D = {
 			isa = PBXGroup;
 			children = (
-				AA5962CB2F8188640048A21D /* ABXY Type */,
-				AA5962DB2F8188690048A21D /* ABXY TypeTests */,
-				AA5962E52F8188690048A21D /* ABXY TypeUITests */,
+				AA5962CB2F8188640048A21D /* ConType */,
+				AA5962DB2F8188690048A21D /* ConType Tests */,
+				AA5962E52F8188690048A21D /* ConType UI Tests */,
 				AA5962CA2F8188640048A21D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		AA5962CA2F8188640048A21D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AA5962C92F8188640048A21D /* ABXY Type.app */,
-				AA5962D82F8188690048A21D /* ABXY TypeTests.xctest */,
-				AA5962E22F8188690048A21D /* ABXY TypeUITests.xctest */,
+				AA5962C92F8188640048A21D /* ConType.app */,
+				AA5962D82F8188690048A21D /* ConType Tests.xctest */,
+				AA5962E22F8188690048A21D /* ConType UI Tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AA5962C82F8188640048A21D /* ABXY Type */ = {
+		AA5962C82F8188640048A21D /* ConType */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA5962EC2F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY Type" */;
+			buildConfigurationList = AA5962EC2F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType" */;
 			buildPhases = (
 				AA5962C52F8188640048A21D /* Sources */,
 				AA5962C62F8188640048A21D /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				AA5962CB2F8188640048A21D /* ABXY Type */,
+				AA5962CB2F8188640048A21D /* ConType */,
 			);
-			name = "ABXY Type";
+			name = ConType;
 			packageProductDependencies = (
 			);
 			productName = "ABXY Type";
-			productReference = AA5962C92F8188640048A21D /* ABXY Type.app */;
+			productReference = AA5962C92F8188640048A21D /* ConType.app */;
 			productType = "com.apple.product-type.application";
 		};
-		AA5962D72F8188690048A21D /* ABXY TypeTests */ = {
+		AA5962D72F8188690048A21D /* ConType Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA5962EF2F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY TypeTests" */;
+			buildConfigurationList = AA5962EF2F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType Tests" */;
 			buildPhases = (
 				AA5962D42F8188690048A21D /* Sources */,
 				AA5962D52F8188690048A21D /* Frameworks */,
@@ -131,18 +131,18 @@
 				AA5962DA2F8188690048A21D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AA5962DB2F8188690048A21D /* ABXY TypeTests */,
+				AA5962DB2F8188690048A21D /* ConType Tests */,
 			);
-			name = "ABXY TypeTests";
+			name = "ConType Tests";
 			packageProductDependencies = (
 			);
 			productName = "ABXY TypeTests";
-			productReference = AA5962D82F8188690048A21D /* ABXY TypeTests.xctest */;
+			productReference = AA5962D82F8188690048A21D /* ConType Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		AA5962E12F8188690048A21D /* ABXY TypeUITests */ = {
+		AA5962E12F8188690048A21D /* ConType UI Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA5962F22F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY TypeUITests" */;
+			buildConfigurationList = AA5962F22F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType UI Tests" */;
 			buildPhases = (
 				AA5962DE2F8188690048A21D /* Sources */,
 				AA5962DF2F8188690048A21D /* Frameworks */,
@@ -154,13 +154,13 @@
 				AA5962E42F8188690048A21D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AA5962E52F8188690048A21D /* ABXY TypeUITests */,
+				AA5962E52F8188690048A21D /* ConType UI Tests */,
 			);
-			name = "ABXY TypeUITests";
+			name = "ConType UI Tests";
 			packageProductDependencies = (
 			);
 			productName = "ABXY TypeUITests";
-			productReference = AA5962E22F8188690048A21D /* ABXY TypeUITests.xctest */;
+			productReference = AA5962E22F8188690048A21D /* ConType UI Tests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AA5962C82F8188640048A21D /* ABXY Type */,
-				AA5962D72F8188690048A21D /* ABXY TypeTests */,
-				AA5962E12F8188690048A21D /* ABXY TypeUITests */,
+				AA5962C82F8188640048A21D /* ConType */,
+				AA5962D72F8188690048A21D /* ConType Tests */,
+				AA5962E12F8188690048A21D /* ConType UI Tests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		AA5962DA2F8188690048A21D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = AA5962C82F8188640048A21D /* ABXY Type */;
+			target = AA5962C82F8188640048A21D /* ConType */;
 			targetProxy = AA5962D92F8188690048A21D /* PBXContainerItemProxy */;
 		};
 		AA5962E42F8188690048A21D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = AA5962C82F8188640048A21D /* ABXY Type */;
+			target = AA5962C82F8188640048A21D /* ConType */;
 			targetProxy = AA5962E32F8188690048A21D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -394,6 +394,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -403,13 +404,15 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ConType;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-Type";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConType;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -426,6 +429,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -435,13 +439,15 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ConType;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-Type";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConType;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -463,7 +469,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-TypeTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConTypeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -484,7 +490,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-TypeTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConTypeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -503,7 +509,7 @@
 				DEVELOPMENT_TEAM = UV3PBA5W3W;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-TypeUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConTypeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -522,7 +528,7 @@
 				DEVELOPMENT_TEAM = UV3PBA5W3W;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lagera.ABXY-TypeUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lagera.ConTypeUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -545,7 +551,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AA5962EC2F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY Type" */ = {
+		AA5962EC2F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA5962ED2F8188690048A21D /* Debug */,
@@ -554,7 +560,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AA5962EF2F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY TypeTests" */ = {
+		AA5962EF2F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA5962F02F8188690048A21D /* Debug */,
@@ -563,7 +569,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AA5962F22F8188690048A21D /* Build configuration list for PBXNativeTarget "ABXY TypeUITests" */ = {
+		AA5962F22F8188690048A21D /* Build configuration list for PBXNativeTarget "ConType UI Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA5962F32F8188690048A21D /* Debug */,

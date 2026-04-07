@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "playstation5_button_create_alternative.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

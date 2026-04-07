@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "switch_button_plus.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

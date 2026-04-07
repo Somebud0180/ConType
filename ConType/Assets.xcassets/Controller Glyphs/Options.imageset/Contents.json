@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "xbox_button_view.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
