@@ -10,8 +10,8 @@ final class KeyboardHotkeyManager {
             var parts: [String] = []
             if modifiers.contains(.control) { parts.append("Ctrl") }
             if modifiers.contains(.option) { parts.append("Option") }
-            if modifiers.contains(.shift) { parts.append("Shift") }
             if modifiers.contains(.command) { parts.append("Command") }
+            if modifiers.contains(.shift) { parts.append("Shift") }
 
             switch key {
             case " ": parts.append("Space")

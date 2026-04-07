@@ -1,19 +1,57 @@
-//
-//  ABXY_TypeTests.swift
-//  ABXY TypeTests
-//
-//  Created by Ethan John Lagera on 4/5/26.
-//
-
 import Testing
 @testable import ABXY_Type
 
+@MainActor
 struct ABXY_TypeTests {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
+    @Test func moveWrapsOnDiscretePressAtEdges() {
+        let viewModel = KeyboardOverlayViewModel()
+
+        let movedLeft = viewModel.move(.left, trigger: .press)
+        #expect(movedLeft)
+        #expect(viewModel.selectedColumn == viewModel.rows[viewModel.selectedRow].count - 1)
+
+        let movedUp = viewModel.move(.up, trigger: .press)
+        #expect(movedUp)
+        #expect(viewModel.selectedRow == viewModel.rows.count - 1)
+        #expect(viewModel.selectedColumn == viewModel.rows[viewModel.selectedRow].count - 1)
     }
 
+    @Test func moveDoesNotWrapOnHoldRepeatAtEdges() {
+        let viewModel = KeyboardOverlayViewModel()
+
+        let movedLeft = viewModel.move(.left, trigger: .holdRepeat)
+        #expect(!movedLeft)
+        #expect(viewModel.selectedRow == 0)
+        #expect(viewModel.selectedColumn == 0)
+
+        let movedUp = viewModel.move(.up, trigger: .holdRepeat)
+        #expect(!movedUp)
+        #expect(viewModel.selectedRow == 0)
+        #expect(viewModel.selectedColumn == 0)
+    }
+
+    @Test func shiftShortcutCyclesWithAndWithoutCapsLockStep() {
+        let viewModel = KeyboardOverlayViewModel()
+
+        viewModel.cycleShiftShortcut(cyclesToCapsLock: true)
+        #expect(viewModel.isModifierActive(.shift))
+        #expect(!viewModel.isModifierActive(.capsLock))
+
+        viewModel.cycleShiftShortcut(cyclesToCapsLock: true)
+        #expect(!viewModel.isModifierActive(.shift))
+        #expect(viewModel.isModifierActive(.capsLock))
+
+        viewModel.cycleShiftShortcut(cyclesToCapsLock: true)
+        #expect(!viewModel.isModifierActive(.shift))
+        #expect(!viewModel.isModifierActive(.capsLock))
+
+        viewModel.cycleShiftShortcut(cyclesToCapsLock: false)
+        #expect(viewModel.isModifierActive(.shift))
+        #expect(!viewModel.isModifierActive(.capsLock))
+
+        viewModel.cycleShiftShortcut(cyclesToCapsLock: false)
+        #expect(!viewModel.isModifierActive(.shift))
+        #expect(!viewModel.isModifierActive(.capsLock))
+    }
 }

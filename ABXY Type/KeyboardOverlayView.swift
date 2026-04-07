@@ -43,6 +43,10 @@ struct VirtualKey: Identifiable, Hashable {
     var respondsToCapsLock: Bool {
         baseLabel.count == 1 && baseLabel.unicodeScalars.allSatisfy(CharacterSet.letters.contains)
     }
+
+    var isAlphanumeric: Bool {
+        baseLabel.count == 1 && baseLabel.unicodeScalars.allSatisfy(CharacterSet.alphanumerics.contains)
+    }
 }
 
 enum OverlayMoveDirection {
@@ -50,6 +54,11 @@ enum OverlayMoveDirection {
     case down
     case left
     case right
+}
+
+enum OverlayMoveTrigger {
+    case press
+    case holdRepeat
 }
 
 @MainActor
@@ -135,20 +144,43 @@ final class KeyboardOverlayViewModel: ObservableObject {
         return row[selectedColumn]
     }
 
-    func move(_ direction: OverlayMoveDirection) {
+    @discardableResult
+    func move(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger = .press) -> Bool {
+        let previousRow = selectedRow
+        let previousColumn = selectedColumn
+        let allowsWrap = trigger == .press
+
         switch direction {
         case .left:
-            selectedColumn = max(0, selectedColumn - 1)
+            if selectedColumn > 0 {
+                selectedColumn -= 1
+            } else if allowsWrap {
+                selectedColumn = max(0, rows[selectedRow].count - 1)
+            }
         case .right:
             let maxColumn = max(0, rows[selectedRow].count - 1)
-            selectedColumn = min(maxColumn, selectedColumn + 1)
+            if selectedColumn < maxColumn {
+                selectedColumn += 1
+            } else if allowsWrap {
+                selectedColumn = 0
+            }
         case .up:
-            selectedRow = max(0, selectedRow - 1)
+            if selectedRow > 0 {
+                selectedRow -= 1
+            } else if allowsWrap {
+                selectedRow = rows.count - 1
+            }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         case .down:
-            selectedRow = min(rows.count - 1, selectedRow + 1)
+            if selectedRow < rows.count - 1 {
+                selectedRow += 1
+            } else if allowsWrap {
+                selectedRow = 0
+            }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         }
+
+        return previousRow != selectedRow || previousColumn != selectedColumn
     }
 
     func select(row: Int, column: Int) {
@@ -173,11 +205,37 @@ final class KeyboardOverlayViewModel: ObservableObject {
         case .standard:
             let flags = eventFlags(from: activeModifierKeys)
             emitter(key, flags)
+
+            // Shift behaves as one-shot for typed alphanumeric characters.
+            if key.isAlphanumeric {
+                activeModifierKeys.remove(.shift)
+            }
         }
     }
 
     func isModifierActive(_ modifier: ModifierToggleKey) -> Bool {
         activeModifierKeys.contains(modifier)
+    }
+
+    func cycleShiftShortcut(cyclesToCapsLock: Bool) {
+        let nextState: ShiftShortcutState
+        switch shiftShortcutState {
+        case .lowercase:
+            nextState = .shift
+        case .shift:
+            nextState = cyclesToCapsLock ? .capsLock : .lowercase
+        case .capsLock:
+            nextState = .lowercase
+        }
+        applyShiftShortcutState(nextState)
+    }
+
+    func toggleCapsLockShortcut() {
+        if activeModifierKeys.contains(.capsLock) {
+            activeModifierKeys.remove(.capsLock)
+        } else {
+            activeModifierKeys.insert(.capsLock)
+        }
     }
 
     func prefersShiftLegend(for key: VirtualKey) -> Bool {
@@ -198,6 +256,30 @@ final class KeyboardOverlayViewModel: ObservableObject {
         if modifiers.contains(.shift) { flags.insert(.maskShift) }
         if modifiers.contains(.capsLock) { flags.insert(.maskAlphaShift) }
         return flags
+    }
+
+    private enum ShiftShortcutState {
+        case lowercase
+        case shift
+        case capsLock
+    }
+
+    private var shiftShortcutState: ShiftShortcutState {
+        if activeModifierKeys.contains(.capsLock) { return .capsLock }
+        if activeModifierKeys.contains(.shift) { return .shift }
+        return .lowercase
+    }
+
+    private func applyShiftShortcutState(_ state: ShiftShortcutState) {
+        activeModifierKeys.subtract([.shift, .capsLock])
+        switch state {
+        case .lowercase:
+            break
+        case .shift:
+            activeModifierKeys.insert(.shift)
+        case .capsLock:
+            activeModifierKeys.insert(.capsLock)
+        }
     }
 }
 

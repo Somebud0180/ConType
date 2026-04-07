@@ -7,14 +7,20 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private let settings: AppSettings
     private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
+    private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
+    private let onCancelControllerCapture: () -> Void
     private var window: NSWindow?
 
     init(
         settings: AppSettings,
-        onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void
+        onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
+        onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
+        onCancelControllerCapture: @escaping () -> Void
     ) {
         self.settings = settings
         self.onRequestControllerBindingCapture = onRequestControllerBindingCapture
+        self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
+        self.onCancelControllerCapture = onCancelControllerCapture
     }
 
     var isVisible: Bool {
@@ -38,11 +44,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let hostingController = NSHostingController(
             rootView: SettingsView(
                 settings: settings,
-                onRequestControllerBindingCapture: onRequestControllerBindingCapture
+                onRequestControllerBindingCapture: onRequestControllerBindingCapture,
+                onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
+                onCancelControllerCapture: onCancelControllerCapture
             )
         )
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 340),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -53,8 +61,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.title = "Settings"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 500, height: 340)
-        window.maxSize = NSSize(width: 500, height: 340)
+        window.minSize = NSSize(width: 560, height: 520)
+        window.maxSize = NSSize(width: 560, height: 520)
 
         self.window = window
         return window

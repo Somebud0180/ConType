@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "switch_stick_l_press.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

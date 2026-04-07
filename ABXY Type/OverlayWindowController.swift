@@ -29,8 +29,9 @@ final class OverlayWindowController {
         window?.orderOut(nil)
     }
 
-    func moveSelection(_ direction: OverlayMoveDirection) {
-        keyboardViewModel.move(direction)
+    @discardableResult
+    func moveSelection(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger = .press) -> Bool {
+        keyboardViewModel.move(direction, trigger: trigger)
     }
 
     func activateSelectedKey() {
@@ -41,6 +42,18 @@ final class OverlayWindowController {
 
     func activateBackspaceKey() {
         keyEmitter.emit(keyCode: 51)
+    }
+
+    func activateEnterKey() {
+        keyEmitter.emit(keyCode: 36)
+    }
+
+    func activateShiftShortcut(cyclesToCapsLock: Bool) {
+        keyboardViewModel.cycleShiftShortcut(cyclesToCapsLock: cyclesToCapsLock)
+    }
+
+    func activateCapsLockShortcut() {
+        keyboardViewModel.toggleCapsLockShortcut()
     }
 
     private func makeWindowIfNeeded() -> NSWindow {
@@ -95,4 +108,3 @@ final class OverlayWindowController {
         window.setFrame(NSRect(origin: origin, size: targetSize), display: true)
     }
 }
-

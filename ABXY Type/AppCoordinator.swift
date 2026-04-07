@@ -12,6 +12,12 @@ final class AppCoordinator: ObservableObject {
         settings: settings,
         onRequestControllerBindingCapture: { [weak self] onCaptured in
             self?.controllerInputManager.captureNextToggleBinding(onCaptured)
+        },
+        onRequestControllerActionButtonCapture: { [weak self] onCaptured in
+            self?.controllerInputManager.captureNextAssignableButton(onCaptured)
+        },
+        onCancelControllerCapture: { [weak self] in
+            self?.controllerInputManager.cancelPendingCaptures()
         }
     )
     private let hotkeyManager = KeyboardHotkeyManager()
@@ -31,12 +37,12 @@ final class AppCoordinator: ObservableObject {
             }
         }
 
-        controllerInputManager.onMove = { [weak self] direction in
+        controllerInputManager.onMove = { [weak self] direction, trigger in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
                 // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
-                self.overlayController.moveSelection(direction)
+                self.overlayController.moveSelection(direction, trigger: trigger)
             }
         }
 
@@ -58,6 +64,42 @@ final class AppCoordinator: ObservableObject {
             }
         }
 
+        controllerInputManager.onEnter = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.overlayController.activateEnterKey()
+            }
+        }
+
+        controllerInputManager.onShift = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.overlayController.activateShiftShortcut(cyclesToCapsLock: self.settings.shiftShortcutCyclesToCapsLock)
+            }
+        }
+
+        controllerInputManager.onCapsLock = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.overlayController.activateCapsLockShortcut()
+            }
+        }
+
+        controllerInputManager.onGlyphStyleChanged = { [weak self] style in
+            Task { @MainActor in
+                self?.settings.controllerGlyphStyle = style
+            }
+        }
+
+        controllerInputManager.onCaptureStateChanged = { [weak self] captureState in
+            Task { @MainActor in
+                self?.settings.controllerCaptureState = captureState
+            }
+        }
+
         settingsController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.setAccessoryMode()
@@ -66,7 +108,7 @@ final class AppCoordinator: ObservableObject {
 
         hotkeyManager.shortcut = settings.keyboardHotkey
         controllerInputManager.toggleBinding = settings.controllerToggleBinding
-        controllerInputManager.invertControllerFaceButtons = settings.invertControllerFaceButtons
+        controllerInputManager.actionBindings = settings.controllerActionBindings
 
         settings.$keyboardHotkey
             .sink { [weak self] value in
@@ -80,9 +122,9 @@ final class AppCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        settings.$invertControllerFaceButtons
+        settings.$controllerActionBindings
             .sink { [weak self] value in
-                self?.controllerInputManager.invertControllerFaceButtons = value
+                self?.controllerInputManager.actionBindings = value
             }
             .store(in: &cancellables)
 
