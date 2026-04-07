@@ -27,6 +27,12 @@ final class ControllerInputManager: NSObject {
             object: nil
         )
 
+        // Receive input while the app is in the background (menu bar / accessory / non-activating panel)
+        GCController.shouldMonitorBackgroundEvents = true
+
+        // Optionally discover wireless controllers proactively
+        GCController.startWirelessControllerDiscovery(completionHandler: nil)
+
         for controller in GCController.controllers() {
             configure(controller)
         }
@@ -54,7 +60,14 @@ final class ControllerInputManager: NSObject {
     }
 
     private func configureExtendedGamepad(_ gamepad: GCExtendedGamepad) {
+        // Treat Home/Menu/Options as the "guide" modifier
         gamepad.buttonMenu.pressedChangedHandler = { [weak self] _, _, pressed in
+            self?.isGuideHeld = pressed
+        }
+        gamepad.buttonHome?.pressedChangedHandler = { [weak self] _, _, pressed in
+            self?.isGuideHeld = pressed
+        }
+        gamepad.buttonOptions?.pressedChangedHandler = { [weak self] _, _, pressed in
             self?.isGuideHeld = pressed
         }
 

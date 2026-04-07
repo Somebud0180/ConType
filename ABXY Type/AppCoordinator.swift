@@ -34,6 +34,8 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onMove = { [weak self] direction in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
+                // Ensure we don't activate our app due to controller input
+                NSApp.deactivate()
                 self.overlayController.moveSelection(direction)
             }
         }
@@ -41,6 +43,8 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onSelect = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
+                // Ensure we don't activate our app due to controller input
+                NSApp.deactivate()
                 self.overlayController.activateSelectedKey()
             }
         }
@@ -48,6 +52,8 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onBackspace = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
+                // Ensure we don't activate our app due to controller input
+                NSApp.deactivate()
                 self.overlayController.activateBackspaceKey()
             }
         }
@@ -102,6 +108,8 @@ final class AppCoordinator: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isOverlayVisible = self.overlayController.show()
+            // Ensure our app doesn't steal focus from the target app
+            NSApp.deactivate()
         }
     }
 

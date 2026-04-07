@@ -95,3 +95,4 @@ final class OverlayWindowController {
         window.setFrame(NSRect(origin: origin, size: targetSize), display: true)
     }
 }
+
