@@ -1,5 +1,6 @@
 import Combine
 import ApplicationServices
+import AppKit
 import SwiftUI
 
 enum VirtualKeyRole: Hashable {
@@ -128,7 +129,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
         [
             VirtualKey(baseLabel: "Control", keyCode: 59, role: .toggleModifier(.control)),
             VirtualKey(baseLabel: "Option", keyCode: 58, role: .toggleModifier(.option)),
-            VirtualKey(baseLabel: "Command", keyCode: 55, role: .toggleModifier(.command)),
+            VirtualKey(baseLabel: "Command", keyCode: 55, widthUnits: 1.2, role: .toggleModifier(.command)),
             VirtualKey(baseLabel: "Space", keyCode: 49, usesRemainingSpace: true)
         ]
     ]
@@ -285,6 +286,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
 
 struct KeyboardOverlayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var viewModel: KeyboardOverlayViewModel
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
 
@@ -302,6 +304,8 @@ struct KeyboardOverlayView: View {
 
                 VStack(spacing: metrics.rowSpacing) {
                     ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
+                        let rowWidths = widths(for: row, metrics: metrics)
+
                         HStack(spacing: metrics.columnSpacing) {
                             ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
                                 let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
@@ -314,10 +318,11 @@ struct KeyboardOverlayView: View {
                                 }()
                                 let isCommandCluster = isCommandClusterKey(key)
                                 let prefersShiftLegend = viewModel.prefersShiftLegend(for: key)
-                                let keyWidth = width(for: key, in: row, metrics: metrics)
+                                let keyWidth = rowWidths[key.id] ?? max(1, metrics.baseUnitWidth)
+                                let keyColor: Color = colorScheme == .dark ? Color.white : Color.black
                                 let fillColor: Color = isSelected || isModifierLatched
-                                    ? Color.white.opacity(0.36)
-                                    : (isCommandCluster ? Color.white.opacity(0.23) : Color.white.opacity(0.16))
+                                    ? keyColor.opacity(0.36)
+                                    : (isCommandCluster ? keyColor.opacity(0.23) : keyColor.opacity(0.16))
                                 let strokeColor: Color = isSelected || isModifierLatched
                                     ? Color.white.opacity(0.75)
                                     : (isCommandCluster ? Color.white.opacity(0.34) : Color.white.opacity(0.22))
@@ -356,10 +361,10 @@ struct KeyboardOverlayView: View {
     private func keyLabel(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool) -> some View {
         Group {
             if let symbol = commandClusterSymbol(for: key) {
-                ZStack(alignment: .topLeading) {
+                ZStack(alignment: .topTrailing) {
                     Text(symbol)
                         .font(.system(size: metrics.commandSymbolFontSize, weight: .semibold, design: .rounded))
-                        .padding(.leading, metrics.commandSymbolInset)
+                        .padding(.trailing, metrics.commandSymbolInset)
                         .padding(.top, metrics.commandSymbolInset)
 
                     VStack(spacing: 0) {
@@ -368,8 +373,11 @@ struct KeyboardOverlayView: View {
                             .font(.system(size: metrics.commandLabelFontSize, weight: .medium, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.trailing, metrics.commandSymbolInset)
                             .padding(.bottom, metrics.commandLabelBottomInset)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else if let shiftedLabel = key.shiftedLabel {
                 VStack(spacing: metrics.legendSpacing) {
@@ -394,19 +402,71 @@ struct KeyboardOverlayView: View {
         .padding(.horizontal, max(4, metrics.baseUnitWidth * 0.08))
     }
 
-    private func width(for key: VirtualKey, in row: [VirtualKey], metrics: KeyboardLayoutMetrics) -> CGFloat {
-        guard key.usesRemainingSpace else {
-            return key.widthUnits * metrics.baseUnitWidth
+    private func widths(for row: [VirtualKey], metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
+        guard !row.isEmpty else { return [:] }
+
+        let spacingWidth = CGFloat(max(0, row.count - 1)) * metrics.columnSpacing
+        let availableKeyWidth = max(0, metrics.contentWidth - spacingWidth)
+
+        var resolved: [UUID: CGFloat] = [:]
+
+        let fixedKeys = row.filter { !$0.usesRemainingSpace }
+        for key in fixedKeys {
+            let baseWidth = key.widthUnits * metrics.baseUnitWidth
+            resolved[key.id] = max(baseWidth, minimumFittingWidth(for: key, metrics: metrics))
         }
 
-        let sideKeys = row.filter(\.usesRemainingSpace)
-        let sideCount = sideKeys.count
-        guard sideCount > 0 else { return key.widthUnits * metrics.baseUnitWidth }
+        let fixedWidth = fixedKeys.reduce(CGFloat(0)) { partialResult, key in
+            partialResult + (resolved[key.id] ?? 0)
+        }
 
-        let fixedUnits = row.filter { !$0.usesRemainingSpace }.reduce(CGFloat(0)) { $0 + $1.widthUnits }
-        let fixedWidth = (fixedUnits * metrics.baseUnitWidth) + (CGFloat(max(0, row.count - 1)) * metrics.columnSpacing)
-        let remainingWidth = max(0, metrics.contentWidth - fixedWidth)
-        return remainingWidth / CGFloat(sideCount)
+        let remainingKeys = row.filter(\.usesRemainingSpace)
+        guard !remainingKeys.isEmpty else { return resolved }
+
+        let availableRemainingWidth = max(0, availableKeyWidth - fixedWidth)
+        let minRemainingWidths = remainingKeys.map { minimumFittingWidth(for: $0, metrics: metrics) }
+        let minRemainingSum = minRemainingWidths.reduce(CGFloat(0), +)
+
+        if minRemainingSum > availableRemainingWidth, minRemainingSum > 0 {
+            for (index, key) in remainingKeys.enumerated() {
+                resolved[key.id] = availableRemainingWidth * (minRemainingWidths[index] / minRemainingSum)
+            }
+            return resolved
+        }
+
+        let remainingUnits = max(0.0001, remainingKeys.reduce(CGFloat(0)) { $0 + $1.widthUnits })
+        let extraWidth = max(0, availableRemainingWidth - minRemainingSum)
+        for (index, key) in remainingKeys.enumerated() {
+            let unitRatio = key.widthUnits / remainingUnits
+            resolved[key.id] = minRemainingWidths[index] + (extraWidth * unitRatio)
+        }
+
+        return resolved
+    }
+
+    private func minimumFittingWidth(for key: VirtualKey, metrics: KeyboardLayoutMetrics) -> CGFloat {
+        let horizontalPadding = max(4, metrics.baseUnitWidth * 0.08) * 2
+        let baseFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .medium)
+        let baseTextWidth = textWidth(key.baseLabel, font: baseFont)
+
+        var needed = baseTextWidth + horizontalPadding
+
+        if let shiftedLabel = key.shiftedLabel {
+            let shiftedFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .semibold)
+            needed = max(needed, textWidth(shiftedLabel, font: shiftedFont) + horizontalPadding)
+        }
+        
+        if let commandSymbol = commandClusterSymbol(for: key) {
+            let symbolFont = NSFont.systemFont(ofSize: metrics.commandSymbolFontSize, weight: .semibold)
+            needed = textWidth(commandSymbol, font: symbolFont) + metrics.commandSymbolInset + horizontalPadding
+        }
+
+        return ceil(needed)
+    }
+
+    private func textWidth(_ text: String, font: NSFont) -> CGFloat {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        return (text as NSString).size(withAttributes: attributes).width
     }
 
     private var keyAnimation: Animation {
