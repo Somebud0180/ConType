@@ -53,7 +53,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             rootView: OnboardingView(settings: settings, viewModel: viewModel)
         )
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 400),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -63,8 +63,9 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         window.title = "Welcome to ConType"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 360, height: 480)
-        window.maxSize = NSSize(width: 360, height: 480)
+        window.level = .floating
+        window.minSize = NSSize(width: 360, height: 400)
+        window.maxSize = NSSize(width: 540, height: 600)
 
         self.window = window
         return window
