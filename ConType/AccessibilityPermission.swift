@@ -1,16 +1,23 @@
+//
+//  AccessibilityPermission.swift
+//  ConType
+//
+//  Created by Ethan John Lagera on 4/8/26.
+//
+//  Code referenced from AXorcist
+//  https://github.com/steipete/AXorcist/
+
 import ApplicationServices
 
 public enum AccessibilityPermission {
-    private static let promptOptionKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-
     @MainActor
     public static func isTrusted() -> Bool {
         AXIsProcessTrusted()
     }
 
-    @discardableResult
+    @MainActor
     static func requestPrompt() -> Bool {
-        let options = [promptOptionKey: true] as CFDictionary
-        return AXIsProcessTrustedWithOptions(options)
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        return AXIsProcessTrustedWithOptions(options as CFDictionary?)
     }
 }

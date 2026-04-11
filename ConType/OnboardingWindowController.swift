@@ -58,7 +58,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-
+        
         window.contentViewController = hostingController
         window.title = "Welcome to ConType"
         window.delegate = self

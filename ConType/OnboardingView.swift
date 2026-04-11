@@ -22,8 +22,9 @@ final class OnboardingViewModel: ObservableObject {
             step = AccessibilityPermission.isTrusted() ? 2 : 1
         }
 
-        refreshAccessibilityStatus(advanceFromPermissionStep: true)
-        startPermissionPollingIfNeeded()
+        if step == 1 {
+            refreshAccessibilityStatus(advanceFromPermissionStep: true)
+        }
     }
 
     func stop() {
@@ -47,6 +48,7 @@ final class OnboardingViewModel: ObservableObject {
         }
 
         _ = AccessibilityPermission.requestPrompt()
+        startPermissionPollingIfNeeded()
         refreshAccessibilityStatus(advanceFromPermissionStep: true)
     }
 
@@ -76,8 +78,6 @@ final class OnboardingViewModel: ObservableObject {
     private func refreshAccessibilityStatus(advanceFromPermissionStep: Bool) {
         let trusted = AccessibilityPermission.isTrusted()
         let wasTrusted = isAccessibilityTrusted
-        
-        print(trusted)
         
         if wasTrusted != trusted {
             isAccessibilityTrusted = trusted
