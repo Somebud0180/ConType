@@ -141,6 +141,12 @@ final class AppCoordinator: ObservableObject {
             }
         }
 
+        controllerInputManager.onDetectedControllerChanged = { [weak self] detectedController in
+            Task { @MainActor in
+                self?.settings.detectedController = detectedController
+            }
+        }
+
         settingsController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.updateActivationPolicyForCurrentUIState()

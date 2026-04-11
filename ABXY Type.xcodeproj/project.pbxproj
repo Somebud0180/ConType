@@ -29,9 +29,22 @@
 		AA5962E22F8188690048A21D /* ConType UI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ConType UI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AA92B1152F8AA231001CAEEC /* Exceptions for "ConType" folder in "ConType" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AA5962C82F8188640048A21D /* ConType */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AA5962CB2F8188640048A21D /* ConType */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AA92B1152F8AA231001CAEEC /* Exceptions for "ConType" folder in "ConType" target */,
+			);
 			path = ConType;
 			sourceTree = "<group>";
 		};
@@ -404,7 +417,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ConType/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ConType;
+				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -439,7 +454,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ConType/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ConType;
+				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (

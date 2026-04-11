@@ -43,6 +43,59 @@ enum ControllerGlyphStyle: Equatable {
     }
 }
 
+enum ControllerGuideButton: String, CaseIterable, Equatable {
+    case menu
+    case home
+    case options
+
+    func displayTitle(for style: ControllerGlyphStyle) -> String {
+        switch (style, self) {
+        case (.nintendoSwitch, .menu):
+            return "+"
+        case (.nintendoSwitch, .options):
+            return "-"
+        case (.nintendoSwitch, .home):
+            return "Home"
+        case (.playStation, .menu):
+            return "Create"
+        case (.playStation, .home):
+            return "PS"
+        case (.playStation, .options):
+            return "Options"
+        case (_, .menu):
+            return "Menu"
+        case (_, .home):
+            return "Home"
+        case (_, .options):
+            return "Options"
+        }
+    }
+
+    func glyphAssetName(for style: ControllerGlyphStyle) -> String? {
+        switch (style, self) {
+        case (.playStation, .menu):
+            return "Menu_PS"
+        case (.playStation, .options):
+            return "Options_PS"
+        case (.nintendoSwitch, .menu):
+            return "Menu_Switch"
+        case (.nintendoSwitch, .options):
+            return "Options_Switch"
+        case (_, .menu):
+            return "Menu"
+        case (_, .options):
+            return "Options"
+        case (_, .home):
+            return nil
+        }
+    }
+}
+
+struct DetectedController: Equatable {
+    var name: String
+    var guideButtons: [ControllerGuideButton]
+}
+
 struct ControllerToggleBinding: Equatable {
     var button: ControllerAssignableButton
 
@@ -239,7 +292,9 @@ final class AppSettings: ObservableObject {
     @Published var controllerToggleBinding: ControllerToggleBinding = .default
     @Published var controllerActionBindings: ControllerActionBindings = .default
     @Published var shiftShortcutCyclesToCapsLock = true
+    @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
+    @Published var detectedController: DetectedController?
 }

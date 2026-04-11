@@ -25,28 +25,53 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Your Controller") {
+                if let detectedController = settings.detectedController {
+                    let guideButtons = displayedGuideButtons(for: detectedController)
+
+                    HStack {
+                        Text("Detected Controller:")
+                        Spacer()
+                        Text(detectedController.name)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    HStack {
+                        Text("Your controller's guide ")
+                        Image(systemName: "gamecontroller.circle.fill")
+                            .foregroundStyle(.primary)
+                        Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
+
+                        Spacer()
+
+                        HStack(spacing: 6) {
+                            ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
+                                guideButtonGlyph(guideButton)
+                            }
+                        }
+                    }
+                } else {
+                    Text("No controller detected")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
             Section("General") {
                 LabeledContent("Keyboard Shortcut") {
                     keyboardShortcutButton
                 }
 
-                VStack {
-                    LabeledContent("Controller Shortcut") {
+                LabeledContent("Controller Shortcut") {
                         controllerToggleButton
-                    }
-
-                    Text("The guide button on your controller is typically Menu, +, -, Home, or ☰.")
-                        .font(.footnote)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .listRowSeparator(.hidden)
 
                 if let keyboardValidationMessage {
                     Text(keyboardValidationMessage)
                         .foregroundStyle(.red)
                 }
                 
-                Toggle("Shift shortcut cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
+                Toggle("Shift hotkey cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
+                Toggle("Dismiss with guide button", isOn: $settings.dismissWithGuideButton)
                 Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
             }
 
@@ -338,6 +363,13 @@ struct SettingsView: View {
         ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
     }
 
+    private func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
+        if detectedController.guideButtons.isEmpty {
+            return [.menu]
+        }
+        return detectedController.guideButtons
+    }
+
     @ViewBuilder
     private func controllerChordView(
         guidePressed: Bool,
@@ -382,10 +414,38 @@ struct SettingsView: View {
 
     private func guideGlyph(size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
-            assetName: settings.controllerGlyphStyle.guideGlyphAssetName,
+            systemAsset: true,
+            assetName: "gamecontroller.circle.fill",
             fallbackText: "Guide",
             size: size
         )
+    }
+
+    @ViewBuilder
+    private func guideButtonGlyph(_ button: ControllerGuideButton, size: CGFloat = 20) -> some View {
+        let title = button.displayTitle(for: settings.controllerGlyphStyle)
+        if let assetName = button.glyphAssetName(for: settings.controllerGlyphStyle) {
+            ControllerGlyphBadge(
+                assetName: assetName,
+                fallbackText: title,
+                size: size
+            )
+        } else {
+            Text(title)
+                .font(.system(size: max(10, size * 0.45), weight: .semibold, design: .monospaced))
+                .lineLimit(1)
+                .padding(.horizontal, max(4, size * 0.24))
+                .frame(height: size)
+                .background(
+                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                )
+                .accessibilityLabel(Text(title))
+        }
     }
 
     private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
@@ -556,6 +616,7 @@ private struct RecordingDisplayContainer<Content: View>: View {
 }
 
 private struct ControllerGlyphBadge: View {
+    var systemAsset: Bool = false
     let assetName: String
     let fallbackText: String
     var size: CGFloat = 20
@@ -565,11 +626,18 @@ private struct ControllerGlyphBadge: View {
             RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
                 .fill(Color.primary.opacity(0.08))
 
-            Image(assetName)
-                .resizable()
-                .renderingMode(.original)
-                .scaledToFit()
-                .padding(max(2, size * 0.12))
+            if systemAsset {
+                Image(systemName: assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(max(2, size * 0.14))
+            } else {
+                Image(assetName)
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .padding(max(2, size * 0.12))
+            }
         }
         .frame(width: size, height: size)
         .overlay(

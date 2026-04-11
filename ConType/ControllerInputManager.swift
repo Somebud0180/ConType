@@ -12,6 +12,7 @@ final class ControllerInputManager: NSObject {
     var onCapsLock: (() -> Void)?
     var onGlyphStyleChanged: ((ControllerGlyphStyle) -> Void)?
     var onCaptureStateChanged: ((ControllerCaptureState) -> Void)?
+    var onDetectedControllerChanged: ((DetectedController?) -> Void)?
 
     var isToggleEnabled = true
     var toggleBinding: ControllerToggleBinding = .default
@@ -237,15 +238,58 @@ final class ControllerInputManager: NSObject {
 
     private func refreshConnectedControllerGlyphStyle() {
         let controllers = GCController.controllers()
-        let styles = controllers.map { controller in
-            ControllerGlyphStyle.detect(
-                vendorName: controller.vendorName,
-                productCategory: productCategory(for: controller)
-            )
+        guard let preferredController = preferredConnectedController(from: controllers) else {
+            onGlyphStyleChanged?(.generic)
+            onDetectedControllerChanged?(nil)
+            return
         }
 
-        let preferredStyle = styles.first(where: { $0 != .generic }) ?? styles.first ?? .generic
-        onGlyphStyleChanged?(preferredStyle)
+        let style = glyphStyle(for: preferredController)
+        onGlyphStyleChanged?(style)
+        onDetectedControllerChanged?(
+            DetectedController(
+                name: detectedControllerName(for: preferredController),
+                guideButtons: supportedGuideButtons(for: preferredController)
+            )
+        )
+    }
+
+    private func preferredConnectedController(from controllers: [GCController]) -> GCController? {
+        controllers.first(where: { glyphStyle(for: $0) != .generic }) ?? controllers.first
+    }
+
+    private func glyphStyle(for controller: GCController) -> ControllerGlyphStyle {
+        ControllerGlyphStyle.detect(
+            vendorName: controller.vendorName,
+            productCategory: productCategory(for: controller)
+        )
+    }
+
+    private func detectedControllerName(for controller: GCController) -> String {
+        if let vendorName = controller.vendorName?.trimmingCharacters(in: .whitespacesAndNewlines), !vendorName.isEmpty {
+            return vendorName
+        }
+
+        if let productCategory = productCategory(for: controller)?.trimmingCharacters(in: .whitespacesAndNewlines), !productCategory.isEmpty {
+            return productCategory
+        }
+
+        return "Unknown Controller"
+    }
+
+    private func supportedGuideButtons(for controller: GCController) -> [ControllerGuideButton] {
+        guard let gamepad = controller.extendedGamepad else {
+            return []
+        }
+
+        var buttons: [ControllerGuideButton] = []
+        if gamepad.buttonMenu != nil {
+            buttons.append(.menu)
+        }
+        if gamepad.buttonOptions != nil {
+            buttons.append(.options)
+        }
+        return buttons
     }
 
     private func productCategory(for controller: GCController) -> String? {
