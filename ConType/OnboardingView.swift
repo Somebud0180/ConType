@@ -8,6 +8,7 @@ final class OnboardingViewModel: ObservableObject {
     @Published private(set) var isAccessibilityTrusted = AccessibilityPermission.isTrusted()
 
     var onComplete: (() -> Void)?
+    var onAccessibilityTrustChanged: ((Bool) -> Void)?
 
     var isAwaitingActivation: Bool {
         step == 2
@@ -22,9 +23,7 @@ final class OnboardingViewModel: ObservableObject {
             step = AccessibilityPermission.isTrusted() ? 2 : 1
         }
 
-        if step == 1 {
-            refreshAccessibilityStatus(advanceFromPermissionStep: true)
-        }
+        refreshAccessibilityStatus(advanceFromPermissionStep: true)
     }
 
     func stop() {
@@ -81,9 +80,10 @@ final class OnboardingViewModel: ObservableObject {
         
         if wasTrusted != trusted {
             isAccessibilityTrusted = trusted
+            onAccessibilityTrustChanged?(trusted)
         }
 
-        if advanceFromPermissionStep, !wasTrusted, trusted, step == 2 {
+        if advanceFromPermissionStep, !wasTrusted, trusted, step == 1 {
             step = 2
         }
     }

@@ -46,6 +46,7 @@ final class AppCoordinator: ObservableObject {
     private let hotkeyManager = KeyboardHotkeyManager()
     private let controllerInputManager = ControllerInputManager()
     private var cancellables = Set<AnyCancellable>()
+    private var isHotkeyManagerRunning = false
 
     private var hasLaunchedBefore: Bool {
         get {
@@ -148,7 +149,14 @@ final class AppCoordinator: ObservableObject {
 
         onboardingController.onClose = { [weak self] in
             Task { @MainActor in
+                self?.refreshHotkeyManagerState()
                 self?.updateActivationPolicyForCurrentUIState()
+            }
+        }
+
+        onboardingController.onAccessibilityTrustChanged = { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshHotkeyManagerState()
             }
         }
 
@@ -177,7 +185,7 @@ final class AppCoordinator: ObservableObject {
         configureOpenAppOnStartup()
 
         setAccessoryMode()
-        hotkeyManager.start()
+        refreshHotkeyManagerState()
         controllerInputManager.start()
 
         DispatchQueue.main.async { [weak self] in
@@ -205,6 +213,8 @@ final class AppCoordinator: ObservableObject {
     }
 
     private func toggleOverlay(source: ToggleSource) {
+        refreshHotkeyManagerState()
+
         if source.isShortcutActivation {
             onboardingController.handleShortcutActivation()
         }
@@ -301,6 +311,21 @@ final class AppCoordinator: ObservableObject {
         } else {
             setAccessoryMode()
         }
+    }
+
+    private func refreshHotkeyManagerState() {
+        let shouldRunHotkeyManager = AccessibilityPermission.isTrusted()
+
+        if shouldRunHotkeyManager {
+            guard !isHotkeyManagerRunning else { return }
+            hotkeyManager.start()
+            isHotkeyManagerRunning = true
+            return
+        }
+
+        guard isHotkeyManagerRunning else { return }
+        hotkeyManager.stop()
+        isHotkeyManagerRunning = false
     }
 
     private func setAccessoryMode() {

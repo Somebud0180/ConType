@@ -5,6 +5,11 @@ import SwiftUI
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
     var onCompletion: (() -> Void)?
+    var onAccessibilityTrustChanged: ((Bool) -> Void)? {
+        didSet {
+            viewModel.onAccessibilityTrustChanged = onAccessibilityTrustChanged
+        }
+    }
 
     private let settings: AppSettings
     private let viewModel = OnboardingViewModel()
