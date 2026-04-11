@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import ServiceManagement
 import SwiftUI
 
 @MainActor
@@ -23,6 +24,7 @@ final class AppCoordinator: ObservableObject {
     }
 
     private let hasLaunchedBeforeDefaultsKey = "ConType.hasLaunchedBefore"
+    private let launchAtLoginService = SMAppService.mainApp
 
     private let overlayController = OverlayWindowController()
     private lazy var settingsController = SettingsWindowController(
@@ -172,6 +174,8 @@ final class AppCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
+        configureOpenAppOnStartup()
+
         setAccessoryMode()
         hotkeyManager.start()
         controllerInputManager.start()
@@ -236,6 +240,47 @@ final class AppCoordinator: ObservableObject {
 
         guard isFirstLaunch || shouldShowForMissingPermission else { return }
         presentOnboarding(startAtWelcome: isFirstLaunch)
+    }
+
+    private func configureOpenAppOnStartup() {
+        settings.openAppOnStartup = isLaunchAtLoginEnabled
+
+        settings.$openAppOnStartup
+            .removeDuplicates()
+            .sink { [weak self] shouldEnable in
+                self?.setLaunchAtLoginEnabled(shouldEnable)
+            }
+            .store(in: &cancellables)
+    }
+
+    private var isLaunchAtLoginEnabled: Bool {
+        switch launchAtLoginService.status {
+        case .enabled, .requiresApproval:
+            return true
+        case .notRegistered, .notFound:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
+    private func setLaunchAtLoginEnabled(_ shouldEnable: Bool) {
+        guard isLaunchAtLoginEnabled != shouldEnable else { return }
+
+        do {
+            if shouldEnable {
+                try launchAtLoginService.register()
+            } else {
+                try launchAtLoginService.unregister()
+            }
+        } catch {
+            print("Failed to update launch-at-login setting:", error)
+        }
+
+        let resolvedValue = isLaunchAtLoginEnabled
+        if settings.openAppOnStartup != resolvedValue {
+            settings.openAppOnStartup = resolvedValue
+        }
     }
 
     private func presentOnboarding(startAtWelcome: Bool) {

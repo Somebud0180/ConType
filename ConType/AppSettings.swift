@@ -239,7 +239,7 @@ final class AppSettings: ObservableObject {
     @Published var controllerToggleBinding: ControllerToggleBinding = .default
     @Published var controllerActionBindings: ControllerActionBindings = .default
     @Published var shiftShortcutCyclesToCapsLock = true
-    @Published var openAppOnStartup = true
+    @Published var openAppOnStartup = false
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
 }

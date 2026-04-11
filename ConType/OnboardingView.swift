@@ -31,8 +31,8 @@ final class OnboardingViewModel: ObservableObject {
         permissionPollTimer = nil
     }
 
-    func advanceFromWelcome() {
-        step = 1
+    func advanceStep() {
+        step += 1
     }
 
     func goBack() {
@@ -100,6 +100,8 @@ struct OnboardingView: View {
                 welcomeStep
             case 1:
                 permissionStep
+            case 2:
+                configStep
             default:
                 readyStep
             }
@@ -109,7 +111,7 @@ struct OnboardingView: View {
             actionRow
         }
         .padding(24)
-        .frame(width: 360, height: 480)
+        .frame(width: 360, height: 400)
     }
 
     private var welcomeStep: some View {
@@ -158,6 +160,23 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var configStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Spacer(minLength: 0)
+            
+            Text("Almost there!")
+                .font(.largeTitle.weight(.semibold))
+           
+            Toggle(isOn: $settings.openAppOnStartup) {
+                Text("Open app at startup")
+                Text("Should ConType open automatically when you log in? You can change this later in settings.")
+            }
+                    .toggleStyle(.switch)
+            
+            Spacer(minLength: 0)
+        }
+    }
+    
     private var readyStep: some View {
         VStack(alignment: .leading, spacing: 14) {
             Spacer(minLength: 0)
@@ -189,13 +208,13 @@ struct OnboardingView: View {
             Spacer()
 
             switch viewModel.step {
-            case 0:
+            case 0, 2:
                 Button("Next") {
-                    viewModel.advanceFromWelcome()
+                    viewModel.advanceStep()
                 }
                 .keyboardShortcut(.defaultAction)
             case 1:
-                Button(viewModel.isAccessibilityTrusted ? "Next ->" : "Enable Permission") {
+                Button(viewModel.isAccessibilityTrusted ? "Next" : "Enable Permission") {
                     viewModel.handlePermissionButton()
                 }
                 .keyboardShortcut(.defaultAction)
