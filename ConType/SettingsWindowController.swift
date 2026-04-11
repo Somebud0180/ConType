@@ -9,18 +9,21 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
+    private let onRestartOnboarding: () -> Void
     private var window: NSWindow?
 
     init(
         settings: AppSettings,
         onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
-        onCancelControllerCapture: @escaping () -> Void
+        onCancelControllerCapture: @escaping () -> Void,
+        onRestartOnboarding: @escaping () -> Void
     ) {
         self.settings = settings
         self.onRequestControllerBindingCapture = onRequestControllerBindingCapture
         self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
         self.onCancelControllerCapture = onCancelControllerCapture
+        self.onRestartOnboarding = onRestartOnboarding
     }
 
     var isVisible: Bool {
@@ -30,6 +33,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     func show() {
         let window = makeWindowIfNeeded()
         window.makeKeyAndOrderFront(nil)
+    }
+
+    func close() {
+        window?.performClose(nil)
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -46,7 +53,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 settings: settings,
                 onRequestControllerBindingCapture: onRequestControllerBindingCapture,
                 onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
-                onCancelControllerCapture: onCancelControllerCapture
+                onCancelControllerCapture: onCancelControllerCapture,
+                onRestartOnboarding: onRestartOnboarding
             )
         )
         let window = NSWindow(

@@ -6,7 +6,9 @@ struct SettingsView: View {
     let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
     let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     let onCancelControllerCapture: () -> Void
+    let onRestartOnboarding: () -> Void
 
+    @State private var isAccessibilityTrusted = AccessibilityPermission.isTrusted()
     @State private var keyboardKeyDownMonitor: Any?
     @State private var keyboardFlagsMonitor: Any?
     @State private var isRecordingKeyboardHotkey = false
@@ -43,6 +45,9 @@ struct SettingsView: View {
                     Text(keyboardValidationMessage)
                         .foregroundStyle(.red)
                 }
+                
+                Toggle("Shift shortcut cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
+                Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
             }
 
             Section("Controller Hotkeys") {
@@ -51,8 +56,6 @@ struct SettingsView: View {
                         controllerActionPickerButton(for: action)
                     }
                 }
-
-                Toggle("Shift shortcut cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
 
                 HStack {
                     Button("Reset Hotkeys") {
@@ -70,10 +73,18 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Permissions") {
-                Text("Input Monitoring and Accessibility are required for global typing and hotkeys.")
-                Text("Debug builds run unsandboxed for local input emulation testing.")
-                    .foregroundStyle(.secondary)
+            Section("Others") {
+                HStack {
+                    Text("Accessibility Permissions: ")
+                    Spacer()
+                    Text(isAccessibilityTrusted ? "Granted" : "Not Granted")
+                        .foregroundStyle(isAccessibilityTrusted ? .green : .red)
+                }
+                HStack {
+                    Button("Restart Onboarding") {
+                        onRestartOnboarding()
+                    }
+                }
             }
         }
         .onDisappear {
@@ -574,6 +585,7 @@ private struct ControllerGlyphBadge: View {
         settings: AppSettings(),
         onRequestControllerBindingCapture: { _ in },
         onRequestControllerActionButtonCapture: { _ in },
-        onCancelControllerCapture: {}
+        onCancelControllerCapture: {},
+        onRestartOnboarding: {}
     )
 }

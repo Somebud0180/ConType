@@ -35,6 +35,9 @@ final class AppCoordinator: ObservableObject {
         },
         onCancelControllerCapture: { [weak self] in
             self?.controllerInputManager.cancelPendingCaptures()
+        },
+        onRestartOnboarding: { [weak self] in
+            self?.restartOnboardingFromSettings()
         }
     )
     private lazy var onboardingController = OnboardingWindowController(settings: settings)
@@ -186,6 +189,11 @@ final class AppCoordinator: ObservableObject {
         setRegularMode()
         settingsController.show()
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func restartOnboardingFromSettings() {
+        settingsController.close()
+        presentOnboarding(startAtWelcome: true)
     }
 
     func quit() {
