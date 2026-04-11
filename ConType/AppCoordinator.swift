@@ -70,6 +70,12 @@ final class AppCoordinator: ObservableObject {
             }
         }
 
+        controllerInputManager.onDismissWithGuideButton = { [weak self] in
+            Task { @MainActor in
+                self?.dismissOverlayViaGuideButtonIfNeeded()
+            }
+        }
+
         controllerInputManager.onMove = { [weak self] direction, trigger in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
@@ -169,6 +175,8 @@ final class AppCoordinator: ObservableObject {
         hotkeyManager.shortcut = settings.keyboardHotkey
         controllerInputManager.toggleBinding = settings.controllerToggleBinding
         controllerInputManager.actionBindings = settings.controllerActionBindings
+        controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
+        controllerInputManager.isOverlayVisible = isOverlayVisible
 
         settings.$keyboardHotkey
             .sink { [weak self] value in
@@ -185,6 +193,12 @@ final class AppCoordinator: ObservableObject {
         settings.$controllerActionBindings
             .sink { [weak self] value in
                 self?.controllerInputManager.actionBindings = value
+            }
+            .store(in: &cancellables)
+
+        settings.$dismissWithGuideButton
+            .sink { [weak self] value in
+                self?.controllerInputManager.dismissWithGuideButton = value
             }
             .store(in: &cancellables)
 
@@ -232,6 +246,7 @@ final class AppCoordinator: ObservableObject {
         if overlayController.isVisible {
             overlayController.hide()
             isOverlayVisible = false
+            controllerInputManager.isOverlayVisible = false
             updateActivationPolicyForCurrentUIState()
             return
         }
@@ -241,9 +256,18 @@ final class AppCoordinator: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isOverlayVisible = self.overlayController.show()
+            self.controllerInputManager.isOverlayVisible = self.isOverlayVisible
             // Ensure our app doesn't steal focus from the target app
             NSApp.deactivate()
         }
+    }
+
+    private func dismissOverlayViaGuideButtonIfNeeded() {
+        guard overlayController.isVisible else { return }
+        overlayController.hide()
+        isOverlayVisible = false
+        controllerInputManager.isOverlayVisible = false
+        updateActivationPolicyForCurrentUIState()
     }
 
     private func presentOnboardingIfNeededOnLaunch() {

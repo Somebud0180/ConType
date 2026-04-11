@@ -13,10 +13,13 @@ final class ControllerInputManager: NSObject {
     var onGlyphStyleChanged: ((ControllerGlyphStyle) -> Void)?
     var onCaptureStateChanged: ((ControllerCaptureState) -> Void)?
     var onDetectedControllerChanged: ((DetectedController?) -> Void)?
+    var onDismissWithGuideButton: (() -> Void)?
 
     var isToggleEnabled = true
     var toggleBinding: ControllerToggleBinding = .default
     var actionBindings: ControllerActionBindings = .default
+    var dismissWithGuideButton = true
+    var isOverlayVisible = false
 
     private var isGuideHeld = false {
         didSet { publishCaptureState() }
@@ -35,6 +38,7 @@ final class ControllerInputManager: NSObject {
     private var activeMoveDirection: OverlayMoveDirection?
     private var holdRepeatStep = 0
     private var holdRepeatWorkItem: DispatchWorkItem?
+    private var suppressGuideChordUntilRelease = false
 
     private let holdRepeatInitialDelay: TimeInterval = 0.28
     private let holdRepeatInitialInterval: TimeInterval = 0.22
@@ -128,6 +132,7 @@ final class ControllerInputManager: NSObject {
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
                     self?.recordGuidePress()
+                    self?.dismissOverlayViaGuideIfNeeded(momentary: true)
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
             }
@@ -144,6 +149,7 @@ final class ControllerInputManager: NSObject {
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
                     self?.recordGuidePress()
+                    self?.dismissOverlayViaGuideIfNeeded(momentary: true)
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
             }
@@ -197,10 +203,26 @@ final class ControllerInputManager: NSObject {
         isGuideHeld = pressed
         if pressed {
             recordGuidePress()
+            dismissOverlayViaGuideIfNeeded(momentary: false)
             debugLog("Guide (\(source)) pressed")
         } else {
+            suppressGuideChordUntilRelease = false
             debugLog("Guide (\(source)) released")
         }
+    }
+
+    private func dismissOverlayViaGuideIfNeeded(momentary: Bool) {
+        guard dismissWithGuideButton, isOverlayVisible else { return }
+
+        suppressGuideChordUntilRelease = true
+        if momentary {
+            DispatchQueue.main.asyncAfter(deadline: .now() + guideChordWindow) { [weak self] in
+                self?.suppressGuideChordUntilRelease = false
+            }
+        }
+
+        debugLog("Dismissed overlay via guide button")
+        onDismissWithGuideButton?()
     }
 
     private func bindAssignableButton(_ buttonInput: GCControllerButtonInput?, as button: ControllerAssignableButton) {
@@ -409,6 +431,11 @@ final class ControllerInputManager: NSObject {
         }
 
         if isGuideActive {
+            if suppressGuideChordUntilRelease {
+                debugLog("Ignoring guide chord while dismiss suppression is active")
+                return
+            }
+
             let recorded = ControllerToggleBinding(button: button)
             if let pendingToggleCapture {
                 self.pendingToggleCapture = nil
@@ -421,6 +448,7 @@ final class ControllerInputManager: NSObject {
                 debugLog("Toggled overlay via controller binding")
                 onToggle?()
             }
+
             return
         }
 

@@ -372,7 +372,7 @@ struct KeyboardOverlayView: View {
         controllerShortcutButton: ControllerAssignableButton?
     ) -> some View {
         ZStack(alignment: .topTrailing) {
-            keyLegend(for: key, metrics: metrics, prefersShiftLegend: prefersShiftLegend)
+            keyLegend(for: key, metrics: metrics, prefersShiftLegend: prefersShiftLegend, controllerShortcutButton: controllerShortcutButton != nil)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -386,14 +386,14 @@ struct KeyboardOverlayView: View {
     }
 
     @ViewBuilder
-    private func keyLegend(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool) -> some View {
+    private func keyLegend(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool, controllerShortcutButton: Bool) -> some View {
         if let symbol = commandClusterSymbol(for: key) {
             ZStack(alignment: .topTrailing) {
                 Text(symbol)
                     .font(.system(size: metrics.commandSymbolFontSize, weight: .semibold, design: .rounded))
                     .padding(.trailing, metrics.commandSymbolInset)
                     .padding(.top, metrics.commandSymbolInset)
-
+                
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     Text(key.baseLabel)
@@ -404,7 +404,16 @@ struct KeyboardOverlayView: View {
                         .padding(.trailing, metrics.commandSymbolInset)
                         .padding(.bottom, metrics.commandLabelBottomInset)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else if controllerShortcutButton && key.baseLabel != "Space"  {
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Text(key.baseLabel)
+                    .font(.system(size: metrics.activeLegendFontSize, weight: .medium, design: .rounded))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, metrics.commandSymbolInset)
+                    .padding(.bottom, metrics.commandLabelBottomInset)
             }
         } else if let shiftedLabel = key.shiftedLabel {
             VStack(spacing: metrics.legendSpacing) {
@@ -521,12 +530,12 @@ struct KeyboardOverlayView: View {
     }
 
     private func minimumFittingWidth(for key: VirtualKey, metrics: KeyboardLayoutMetrics) -> CGFloat {
-        let horizontalPadding = max(4, metrics.baseUnitWidth * 0.08) * 2
+        let horizontalPadding = max(4, metrics.baseUnitWidth * 0.08)
         let baseFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .medium)
         let baseTextWidth = textWidth(key.baseLabel, font: baseFont)
 
         var needed = baseTextWidth + horizontalPadding
-
+        
         if let shiftedLabel = key.shiftedLabel {
             let shiftedFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .semibold)
             needed = max(needed, textWidth(shiftedLabel, font: shiftedFont) + horizontalPadding)
@@ -534,16 +543,15 @@ struct KeyboardOverlayView: View {
         
         if let commandSymbol = commandClusterSymbol(for: key) {
             let symbolFont = NSFont.systemFont(ofSize: metrics.commandSymbolFontSize, weight: .semibold)
-            needed = textWidth(commandSymbol, font: symbolFont) + metrics.commandSymbolInset + horizontalPadding
+            let labelFont = NSFont.systemFont(ofSize: metrics.commandLabelFontSize, weight: .medium)
+            needed = textWidth(key.baseLabel, font: labelFont) + textWidth(commandSymbol, font: symbolFont) + metrics.commandSymbolInset + horizontalPadding
         }
-
+        
         if let shortcutButton = controllerShortcutButton(for: key) {
-            let fallbackFont = NSFont.systemFont(ofSize: metrics.controllerFallbackFontSize, weight: .semibold)
-            let fallbackWidth = textWidth(shortcutButton.fallbackGlyphText, font: fallbackFont) + max(4, metrics.controllerGlyphSize * 0.35)
-            let glyphWidth = max(metrics.controllerGlyphSize, fallbackWidth)
-            needed = max(needed, glyphWidth + (metrics.controllerGlyphInset * 2) + horizontalPadding)
+            let labelFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .medium)
+            needed = textWidth(key.baseLabel, font: labelFont) + metrics.commandSymbolInset + horizontalPadding
         }
-
+        
         return ceil(needed)
     }
 
@@ -676,5 +684,5 @@ struct KeyboardOverlayView: View {
     KeyboardOverlayView(settings: AppSettings(), viewModel: KeyboardOverlayViewModel()) { key, _ in
         print("Pressed \(key.baseLabel)")
     }
-    .frame(width: 960, height: 280)
+    .frame(width: 840, height: 280)
 }

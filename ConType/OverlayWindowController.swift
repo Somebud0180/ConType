@@ -106,7 +106,7 @@ final class OverlayWindowController {
 
         let targetSize = NSSize(
             width: min(1040, max(840, frame.width - 80)),
-            height: min(420, max(320, frame.height - 120))
+            height: min(420, max(280, frame.height - 120))
         )
 
         let origin = NSPoint(
