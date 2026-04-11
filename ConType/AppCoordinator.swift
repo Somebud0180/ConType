@@ -26,7 +26,7 @@ final class AppCoordinator: ObservableObject {
     private let hasLaunchedBeforeDefaultsKey = "ConType.hasLaunchedBefore"
     private let launchAtLoginService = SMAppService.mainApp
 
-    private let overlayController = OverlayWindowController()
+    private lazy var overlayController = OverlayWindowController(settings: settings)
     private lazy var settingsController = SettingsWindowController(
         settings: settings,
         onRequestControllerBindingCapture: { [weak self] onCaptured in

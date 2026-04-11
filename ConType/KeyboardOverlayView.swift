@@ -287,6 +287,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
 struct KeyboardOverlayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: KeyboardOverlayViewModel
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
 
@@ -318,6 +319,7 @@ struct KeyboardOverlayView: View {
                                 }()
                                 let isCommandCluster = isCommandClusterKey(key)
                                 let prefersShiftLegend = viewModel.prefersShiftLegend(for: key)
+                                let controllerShortcutButton = controllerShortcutButton(for: key)
                                 let keyWidth = rowWidths[key.id] ?? max(1, metrics.baseUnitWidth)
                                 let keyColor: Color = colorScheme == .dark ? Color.white : Color.black
                                 let fillColor: Color = isSelected || isModifierLatched
@@ -331,7 +333,12 @@ struct KeyboardOverlayView: View {
                                     viewModel.select(row: rowIndex, column: columnIndex)
                                     viewModel.activate(key, using: onKeyPressed)
                                 } label: {
-                                    keyLabel(for: key, metrics: metrics, prefersShiftLegend: prefersShiftLegend)
+                                    keyLabel(
+                                        for: key,
+                                        metrics: metrics,
+                                        prefersShiftLegend: prefersShiftLegend,
+                                        controllerShortcutButton: controllerShortcutButton
+                                    )
                                         .frame(width: keyWidth, height: metrics.keyHeight)
                                         .scaleEffect(isModifierLatched ? 0.9 : 1)
                                         .background(
@@ -358,48 +365,117 @@ struct KeyboardOverlayView: View {
         }
     }
 
-    private func keyLabel(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool) -> some View {
-        Group {
-            if let symbol = commandClusterSymbol(for: key) {
-                ZStack(alignment: .topTrailing) {
-                    Text(symbol)
-                        .font(.system(size: metrics.commandSymbolFontSize, weight: .semibold, design: .rounded))
-                        .padding(.trailing, metrics.commandSymbolInset)
-                        .padding(.top, metrics.commandSymbolInset)
+    private func keyLabel(
+        for key: VirtualKey,
+        metrics: KeyboardLayoutMetrics,
+        prefersShiftLegend: Bool,
+        controllerShortcutButton: ControllerAssignableButton?
+    ) -> some View {
+        ZStack(alignment: .topTrailing) {
+            keyLegend(for: key, metrics: metrics, prefersShiftLegend: prefersShiftLegend)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        Text(key.baseLabel)
-                            .font(.system(size: metrics.commandLabelFontSize, weight: .medium, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.trailing, metrics.commandSymbolInset)
-                            .padding(.bottom, metrics.commandLabelBottomInset)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else if let shiftedLabel = key.shiftedLabel {
-                VStack(spacing: metrics.legendSpacing) {
-                    Text(shiftedLabel)
-                        .font(.system(size: prefersShiftLegend ? metrics.activeLegendFontSize : metrics.inactiveLegendFontSize, weight: .semibold, design: .rounded))
-                        .scaleEffect(prefersShiftLegend ? 1 : 0.9)
-                    Text(key.baseLabel)
-                        .font(.system(size: prefersShiftLegend ? metrics.inactiveLegendFontSize : metrics.activeLegendFontSize, weight: .medium, design: .rounded))
-                        .scaleEffect(prefersShiftLegend ? 0.9 : 1)
-                }
-                .minimumScaleFactor(0.55)
-                .lineLimit(1)
-                .animation(keyAnimation, value: prefersShiftLegend)
-            } else {
-                Text(key.baseLabel)
-                    .font(.system(size: metrics.activeLegendFontSize, weight: .medium, design: .rounded))
-                    .minimumScaleFactor(0.55)
-                    .lineLimit(1)
+            if let controllerShortcutButton {
+                controllerShortcutGlyph(for: controllerShortcutButton, metrics: metrics)
+                    .padding(.trailing, metrics.controllerGlyphInset)
+                    .padding(.top, metrics.controllerGlyphInset)
             }
         }
-        .foregroundStyle(.primary)
         .padding(.horizontal, max(4, metrics.baseUnitWidth * 0.08))
+    }
+
+    @ViewBuilder
+    private func keyLegend(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool) -> some View {
+        if let symbol = commandClusterSymbol(for: key) {
+            ZStack(alignment: .topTrailing) {
+                Text(symbol)
+                    .font(.system(size: metrics.commandSymbolFontSize, weight: .semibold, design: .rounded))
+                    .padding(.trailing, metrics.commandSymbolInset)
+                    .padding(.top, metrics.commandSymbolInset)
+
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    Text(key.baseLabel)
+                        .font(.system(size: metrics.commandLabelFontSize, weight: .medium, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.trailing, metrics.commandSymbolInset)
+                        .padding(.bottom, metrics.commandLabelBottomInset)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else if let shiftedLabel = key.shiftedLabel {
+            VStack(spacing: metrics.legendSpacing) {
+                Text(shiftedLabel)
+                    .font(.system(size: prefersShiftLegend ? metrics.activeLegendFontSize : metrics.inactiveLegendFontSize, weight: .semibold, design: .rounded))
+                    .scaleEffect(prefersShiftLegend ? 1 : 0.9)
+                Text(key.baseLabel)
+                    .font(.system(size: prefersShiftLegend ? metrics.inactiveLegendFontSize : metrics.activeLegendFontSize, weight: .medium, design: .rounded))
+                    .scaleEffect(prefersShiftLegend ? 0.9 : 1)
+            }
+            .minimumScaleFactor(0.55)
+            .lineLimit(1)
+            .animation(keyAnimation, value: prefersShiftLegend)
+        } else {
+            Text(key.baseLabel)
+                .font(.system(size: metrics.activeLegendFontSize, weight: .medium, design: .rounded))
+                .minimumScaleFactor(0.55)
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private func controllerShortcutGlyph(for button: ControllerAssignableButton, metrics: KeyboardLayoutMetrics) -> some View {
+        let assetName = button.glyphAssetName(for: settings.controllerGlyphStyle)
+
+        if NSImage(named: NSImage.Name(assetName)) != nil {
+            Image(assetName)
+                .resizable()
+                .renderingMode(.original)
+                .scaledToFit()
+                .frame(width: metrics.controllerGlyphSize, height: metrics.controllerGlyphSize)
+                .accessibilityLabel(Text(button.displayTitle(for: settings.controllerGlyphStyle)))
+        } else {
+            Text(button.fallbackGlyphText)
+                .font(.system(size: metrics.controllerFallbackFontSize, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .padding(.horizontal, max(2, metrics.controllerGlyphSize * 0.18))
+                .padding(.vertical, max(1, metrics.controllerGlyphSize * 0.1))
+                .background(
+                    RoundedRectangle(cornerRadius: max(3, metrics.controllerGlyphSize * 0.28), style: .continuous)
+                        .fill(Color.primary.opacity(0.12))
+                )
+                .accessibilityLabel(Text(button.displayTitle(for: settings.controllerGlyphStyle)))
+        }
+    }
+
+    private func controllerShortcutButton(for key: VirtualKey) -> ControllerAssignableButton? {
+        switch key.role {
+        case .toggleModifier(let modifier):
+            switch modifier {
+            case .shift:
+                return settings.controllerActionBindings.shift
+            case .capsLock:
+                return settings.controllerActionBindings.capsLock
+            case .control, .option, .command:
+                return nil
+            }
+        case .standard:
+            break
+        }
+
+        switch key.keyCode {
+        case 51:
+            return settings.controllerActionBindings.backspace
+        case 49:
+            return settings.controllerActionBindings.space
+        case 36:
+            return settings.controllerActionBindings.enter
+        default:
+            return nil
+        }
     }
 
     private func widths(for row: [VirtualKey], metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
@@ -459,6 +535,13 @@ struct KeyboardOverlayView: View {
         if let commandSymbol = commandClusterSymbol(for: key) {
             let symbolFont = NSFont.systemFont(ofSize: metrics.commandSymbolFontSize, weight: .semibold)
             needed = textWidth(commandSymbol, font: symbolFont) + metrics.commandSymbolInset + horizontalPadding
+        }
+
+        if let shortcutButton = controllerShortcutButton(for: key) {
+            let fallbackFont = NSFont.systemFont(ofSize: metrics.controllerFallbackFontSize, weight: .semibold)
+            let fallbackWidth = textWidth(shortcutButton.fallbackGlyphText, font: fallbackFont) + max(4, metrics.controllerGlyphSize * 0.35)
+            let glyphWidth = max(metrics.controllerGlyphSize, fallbackWidth)
+            needed = max(needed, glyphWidth + (metrics.controllerGlyphInset * 2) + horizontalPadding)
         }
 
         return ceil(needed)
@@ -556,6 +639,9 @@ struct KeyboardOverlayView: View {
             commandLabelFontSize: max(9, min(13, keyHeight * 0.2)),
             commandSymbolInset: max(4, min(9, keyHeight * 0.1)),
             commandLabelBottomInset: max(4, min(10, keyHeight * 0.11)),
+            controllerGlyphSize: max(16, min(24, keyHeight * 0.35)),
+            controllerGlyphInset: max(3, min(8, keyHeight * 0.1)),
+            controllerFallbackFontSize: max(8, min(12, keyHeight * 0.18)),
             keyCornerRadius: max(8, min(14, keyHeight * 0.23)),
             outerKeyCornerRadius: max(12, min(20, keyHeight * 0.35)),
             windowCornerRadius: max(18, min(30, side * 0.06))
@@ -577,6 +663,9 @@ struct KeyboardOverlayView: View {
         let commandLabelFontSize: CGFloat
         let commandSymbolInset: CGFloat
         let commandLabelBottomInset: CGFloat
+        let controllerGlyphSize: CGFloat
+        let controllerGlyphInset: CGFloat
+        let controllerFallbackFontSize: CGFloat
         let keyCornerRadius: CGFloat
         let outerKeyCornerRadius: CGFloat
         let windowCornerRadius: CGFloat
@@ -584,7 +673,7 @@ struct KeyboardOverlayView: View {
 }
 
 #Preview {
-    KeyboardOverlayView(viewModel: KeyboardOverlayViewModel()) { key, _ in
+    KeyboardOverlayView(settings: AppSettings(), viewModel: KeyboardOverlayViewModel()) { key, _ in
         print("Pressed \(key.baseLabel)")
     }
     .frame(width: 960, height: 280)

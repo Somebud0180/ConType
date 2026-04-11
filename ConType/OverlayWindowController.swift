@@ -9,8 +9,13 @@ private final class NonActivatingOverlayPanel: NSPanel {
 @MainActor
 final class OverlayWindowController {
     private var window: NSWindow?
+    private let settings: AppSettings
     private let keyboardViewModel = KeyboardOverlayViewModel()
     private let keyEmitter = KeyEmitter()
+
+    init(settings: AppSettings) {
+        self.settings = settings
+    }
 
     var isVisible: Bool {
         window?.isVisible == true
@@ -65,7 +70,7 @@ final class OverlayWindowController {
             return window
         }
 
-        let contentView = KeyboardOverlayView(viewModel: keyboardViewModel) { [weak self] key, modifiers in
+        let contentView = KeyboardOverlayView(settings: settings, viewModel: keyboardViewModel) { [weak self] key, modifiers in
             self?.keyEmitter.emit(key, modifiers: modifiers)
         }
 
