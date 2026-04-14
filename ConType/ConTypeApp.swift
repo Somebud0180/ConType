@@ -12,7 +12,7 @@ struct ConTypeApp: App {
     @StateObject private var coordinator = AppCoordinator()
 
     var body: some Scene {
-        MenuBarExtra("ConType", image: "ExtrasIcon") {
+        MenuBarExtra("ConType", image: "extrasicon") {
             Button(coordinator.isOverlayVisible ? "Hide Keyboard Overlay" : "Show Keyboard Overlay") {
                 coordinator.toggleOverlay()
             }
