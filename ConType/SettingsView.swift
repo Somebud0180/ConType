@@ -261,14 +261,6 @@ struct SettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            RecordingDisplayContainer {
-                controllerChordView(
-                    guidePressed: settings.controllerCaptureState.isGuidePressed,
-                    buttons: orderedButtons(from: settings.controllerCaptureState.pressedButtons),
-                    waitingText: waitingControllerText
-                )
-            }
-
             ForEach(ControllerAssignableButton.allCases) { button in
                 let isSelected = settings.controllerActionBindings.button(for: action) == button
 
