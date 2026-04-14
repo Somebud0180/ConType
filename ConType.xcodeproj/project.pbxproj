@@ -16,14 +16,14 @@
 			containerPortal = AA5962C12F8188640048A21D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = AA5962C82F8188640048A21D;
-			remoteInfo = "ABXY Type";
+			remoteInfo = ConType;
 		};
 		AA5962E32F8188690048A21D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AA5962C12F8188640048A21D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = AA5962C82F8188640048A21D;
-			remoteInfo = "ABXY Type";
+			remoteInfo = ConType;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -132,7 +132,7 @@
 			packageProductDependencies = (
 				AA80F8222F8E78E80060DD45 /* SkyLightWindow */,
 			);
-			productName = "ABXY Type";
+			productName = ConType;
 			productReference = AA5962C92F8188640048A21D /* ConType.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -155,7 +155,7 @@
 			name = "ConType Tests";
 			packageProductDependencies = (
 			);
-			productName = "ABXY TypeTests";
+			productName = ConTypeTests;
 			productReference = AA5962D82F8188690048A21D /* ConType Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -178,7 +178,7 @@
 			name = "ConType UI Tests";
 			packageProductDependencies = (
 			);
-			productName = "ABXY TypeUITests";
+			productName = ConTypeUITests;
 			productReference = AA5962E22F8188690048A21D /* ConType UI Tests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -421,20 +421,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UV3PBA5W3W;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
-				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
-				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
-				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
-				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
-				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
-				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
-				ENABLE_RESOURCE_ACCESS_USB = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ConType/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ConType;
@@ -468,10 +457,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UV3PBA5W3W;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ConType/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ConType;
@@ -552,7 +540,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "ABXY Type";
+				TEST_TARGET_NAME = ConType;
 			};
 			name = Debug;
 		};
@@ -571,7 +559,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = "ABXY Type";
+				TEST_TARGET_NAME = ConType;
 			};
 			name = Release;
 		};
