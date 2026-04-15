@@ -132,7 +132,7 @@ struct SettingsView: View {
                 Text(settings.keyboardHotkey.displayText)
                     .font(.system(.body, design: .monospaced))
             }
-            .frame(width: 230, alignment: .trailing)
+            .frame(width: 230, alignment: .leading)
             .frame(minHeight: 32)
         }
         .buttonStyle(.bordered)
@@ -180,7 +180,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 buttonGlyph(settings.controllerToggleBinding.button, size: 26)
             }
-            .frame(width: 230, alignment: .trailing)
+            .frame(width: 230, alignment: .leading)
             .frame(minHeight: 32)
         }
         .buttonStyle(.bordered)
@@ -239,11 +239,12 @@ struct SettingsView: View {
                 buttonGlyph(selectedButton)
                 Text(selectedButton.displayTitle(for: settings.controllerGlyphStyle))
                     .font(.system(.body, design: .monospaced))
+                Spacer()
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
-            .frame(width: 230, alignment: .trailing)
+            .frame(width: 230, alignment: .leading)
             .frame(minHeight: 24)
         }
         .buttonStyle(.bordered)
