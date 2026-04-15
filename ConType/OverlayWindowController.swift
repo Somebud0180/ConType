@@ -154,9 +154,17 @@ final class OverlayWindowController {
         NSPoint(
             x: frame.midX - (normalizedSize.width / 2),
             y: frame.midY - (normalizedSize.height / 2)
-        )
-        :
-        window.frame.origin
+        ) :
+        {
+            let currentCenter = NSPoint(
+                x: window.frame.origin.x + window.frame.size.width / 2,
+                y: window.frame.origin.y + window.frame.size.height / 2
+            )
+            return NSPoint(
+                x: currentCenter.x - normalizedSize.width / 2,
+                y: currentCenter.y - normalizedSize.height / 2
+            )
+        }()
         
         window.setFrame(NSRect(origin: origin, size: normalizedSize), display: true, animate: true)
     }
