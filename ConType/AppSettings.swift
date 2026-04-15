@@ -312,9 +312,9 @@ enum WindowSize {
         case .small:
             return (800, 320)
         case .medium:
-            return (1200, 480)
+            return (1200, 440)
         case .large:
-            return (1600, 640)
+            return (1400, 500)
         }
     }
 }

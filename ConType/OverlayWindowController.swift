@@ -140,8 +140,8 @@ final class OverlayWindowController {
         
         // Limit window size to constraint
         let targetSize = NSSize(
-            width: min(1600, max(800, windowDimensions.width)),
-            height: min(640, max(320, windowDimensions.height))
+            width: min(1400, max(800, windowDimensions.width)),
+            height: min(500, max(320, windowDimensions.height))
         )
         
         // Limit window size to within screen bounds
