@@ -133,7 +133,6 @@ final class ControllerInputManager: NSObject {
                 // On modern systems we already handle Menu/Home/Options via the input profile; no paused handler needed.
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
-                    self?.recordGuidePress()
                     self?.dismissOverlayViaGuideIfNeeded(momentary: true)
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
@@ -150,7 +149,6 @@ final class ControllerInputManager: NSObject {
                 // On modern systems we already handle Menu/Home/Options via the input profile; no paused handler needed.
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
-                    self?.recordGuidePress()
                     self?.dismissOverlayViaGuideIfNeeded(momentary: true)
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
@@ -204,12 +202,10 @@ final class ControllerInputManager: NSObject {
     private func setGuidePressed(_ pressed: Bool, source: String) {
         isGuideHeld = pressed
         if pressed {
-            recordGuidePress()
             dismissOverlayViaGuideIfNeeded(momentary: false)
             debugLog("Guide (\(source)) pressed")
         } else {
             suppressGuideChordUntilRelease = false
-            debugLog("Guide (\(source)) released")
         }
     }
 
@@ -330,11 +326,6 @@ final class ControllerInputManager: NSObject {
                 pressedButtons: pressedAssignableButtons
             )
         )
-    }
-
-    private func recordGuidePress() {
-        lastGuidePressDate = Date()
-        debugLog("Guide press recorded at \(lastGuidePressDate)")
     }
 
     private var isGuideActive: Bool {

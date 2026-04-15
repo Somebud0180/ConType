@@ -25,43 +25,21 @@ final class KeyboardHotkeyManager {
     var onToggle: (() -> Void)?
     var shortcut: Shortcut?
 
-    private var localMonitor: Any?
-    private var globalMonitor: Any?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
     func start() {
         stop()
 
-        // Prefer a CGEvent tap so we can swallow the shortcut before it reaches the front app.
         if installEventTap() {
             return
         }
-
-        // Fallback: NSEvent monitors (can't swallow events; front app will also receive the keys).
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
-            guard self.matchesToggleShortcut(event) else { return event }
-            self.onToggle?()
-            return nil
-        }
-
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.matchesToggleShortcut(event) else { return }
-            self.onToggle?()
-        }
+        
+        debugPrint("Failed to create event tap for keyboard hotkey. Stopping hotkey monitoring.")
+        stop()
     }
 
     func stop() {
-        if let localMonitor {
-            NSEvent.removeMonitor(localMonitor)
-            self.localMonitor = nil
-        }
-
-        if let globalMonitor {
-            NSEvent.removeMonitor(globalMonitor)
-            self.globalMonitor = nil
-        }
 
         if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
