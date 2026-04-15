@@ -10,6 +10,8 @@ final class ControllerInputManager: NSObject {
     var onEnter: (() -> Void)?
     var onShift: (() -> Void)?
     var onCapsLock: (() -> Void)?
+    var onEnlarge: (() -> Void)?
+    var onShrink: (() -> Void)?
     var onGlyphStyleChanged: ((ControllerGlyphStyle) -> Void)?
     var onCaptureStateChanged: ((ControllerCaptureState) -> Void)?
     var onDetectedControllerChanged: ((DetectedController?) -> Void)?
@@ -485,6 +487,16 @@ final class ControllerInputManager: NSObject {
         if actionBindings.capsLock == button {
             debugLog("Caps Lock shortcut triggered")
             onCapsLock?()
+        }
+        
+        if actionBindings.enlargeWindow == button {
+            debugLog("Enlarge Overlay shortcut triggered")
+            onEnlarge?()
+        }
+        
+        if actionBindings.shrinkWindow == button {
+            debugLog("Shrink Overlay shortcut triggered")
+            onShrink?()
         }
     }
 }

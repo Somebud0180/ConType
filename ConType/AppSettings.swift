@@ -219,6 +219,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enter
     case shift
     case capsLock
+    case enlargeWindow
+    case shrinkWindow
 
     var id: String { rawValue }
 
@@ -230,6 +232,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
         case .enter: return "Enter"
         case .shift: return "Shift"
         case .capsLock: return "Caps Lock"
+        case .enlargeWindow: return "Enlarge Keyboard"
+        case.shrinkWindow: return "Shrink Keyboard"
         }
     }
 }
@@ -241,6 +245,8 @@ struct ControllerActionBindings: Equatable {
     var enter: ControllerAssignableButton
     var shift: ControllerAssignableButton
     var capsLock: ControllerAssignableButton
+    var enlargeWindow: ControllerAssignableButton
+    var shrinkWindow: ControllerAssignableButton
 
     static let `default` = ControllerActionBindings(
         acceptType: .south,
@@ -248,7 +254,9 @@ struct ControllerActionBindings: Equatable {
         space: .north,
         enter: .west,
         shift: .leftStickPress,
-        capsLock: .rightStickPress
+        capsLock: .rightStickPress,
+        enlargeWindow: .rightShoulder,
+        shrinkWindow: .leftShoulder
     )
 
     func button(for action: ControllerActionBinding) -> ControllerAssignableButton {
@@ -265,6 +273,10 @@ struct ControllerActionBindings: Equatable {
             return shift
         case .capsLock:
             return capsLock
+        case .enlargeWindow:
+            return enlargeWindow
+        case .shrinkWindow:
+            return shrinkWindow
         }
     }
 
@@ -282,6 +294,27 @@ struct ControllerActionBindings: Equatable {
             shift = button
         case .capsLock:
             capsLock = button
+        case .enlargeWindow:
+            enlargeWindow = button
+        case .shrinkWindow:
+            shrinkWindow = button
+        }
+    }
+}
+
+enum WindowSize {
+    case small
+    case medium
+    case large
+    
+    var windowDimensions: (width: CGFloat, height: CGFloat) {
+        switch self {
+        case .small:
+            return (800, 320)
+        case .medium:
+            return (1200, 480)
+        case .large:
+            return (1600, 640)
         }
     }
 }
@@ -297,4 +330,5 @@ final class AppSettings: ObservableObject {
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
     @Published var detectedController: DetectedController?
+    @Published var windowSize: WindowSize = .small
 }

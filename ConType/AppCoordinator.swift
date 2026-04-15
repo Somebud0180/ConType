@@ -134,6 +134,18 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateCapsLockShortcut()
             }
         }
+        
+        controllerInputManager.onEnlarge = { [weak self] in
+            Task { @MainActor in
+                self?.overlayController.enlargeWindow()
+            }
+        }
+        
+        controllerInputManager.onShrink = { [weak self] in
+            Task { @MainActor in
+                self?.overlayController.shrinkWindow()
+            }
+        }
 
         controllerInputManager.onGlyphStyleChanged = { [weak self] style in
             Task { @MainActor in
