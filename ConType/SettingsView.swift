@@ -616,27 +616,20 @@ private struct ControllerGlyphBadge: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
-                .fill(Color.primary.opacity(0.08))
-
             if systemAsset {
                 Image(systemName: assetName)
                     .resizable()
                     .scaledToFit()
-                    .padding(max(2, size * 0.14))
+                    .padding(max(2, size * 0.1))
             } else {
                 Image(assetName)
                     .resizable()
                     .renderingMode(.original)
                     .scaledToFit()
-                    .padding(max(2, size * 0.12))
+                    .colorMultiply(Color.primary)
             }
         }
         .frame(width: size, height: size)
-        .overlay(
-            RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
-        )
         .accessibilityLabel(Text(fallbackText))
     }
 }
