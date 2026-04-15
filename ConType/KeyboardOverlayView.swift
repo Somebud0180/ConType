@@ -444,6 +444,7 @@ struct KeyboardOverlayView: View {
                 .resizable()
                 .renderingMode(.original)
                 .scaledToFit()
+                .colorMultiply(Color.primary)
                 .frame(width: metrics.controllerGlyphSize, height: metrics.controllerGlyphSize)
                 .accessibilityLabel(Text(button.displayTitle(for: settings.controllerGlyphStyle)))
         } else {
