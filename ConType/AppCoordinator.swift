@@ -45,6 +45,7 @@ final class AppCoordinator: ObservableObject {
     private lazy var onboardingController = OnboardingWindowController(settings: settings)
     private let hotkeyManager = KeyboardHotkeyManager()
     private let controllerInputManager = ControllerInputManager()
+    private let mouseEmitter = MouseEmitter()
     private var cancellables = Set<AnyCancellable>()
     private var isHotkeyManagerRunning = false
 
@@ -82,6 +83,15 @@ final class AppCoordinator: ObservableObject {
                 // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
                 self.overlayController.moveSelection(direction, trigger: trigger)
+            }
+        }
+        
+        controllerInputManager.onMouseMove = { [weak self] delta in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                // Ensure we don't activate our app due to controller input
+                NSApp.deactivate()
+                self.mouseEmitter.moveCursor(by: delta)
             }
         }
 

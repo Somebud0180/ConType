@@ -1,9 +1,21 @@
 import Foundation
 import GameController
 
+enum JoystickMovementMode {
+    case limited    // 4 Directional
+    case full       // 8 Directional
+    case analogRate // Continuous movement
+}
+
+enum movementMode {
+    case dpad
+    case stick
+}
+
 final class ControllerInputManager: NSObject {
     var onToggle: (() -> Void)?
     var onMove: ((OverlayMoveDirection, OverlayMoveTrigger) -> Void)?
+    var onMouseMove: ((CGVector) -> Void)?
     var onSelect: (() -> Void)?
     var onBackspace: (() -> Void)?
     var onSpace: (() -> Void)?
@@ -35,18 +47,44 @@ final class ControllerInputManager: NSObject {
     private var pendingToggleCapture: ((ControllerToggleBinding) -> Void)?
     private var pendingAssignableButtonCapture: ((ControllerAssignableButton) -> Void)?
 
+    private var joystickMode: JoystickMovementMode = .limited
     private var directionPressCounts: [OverlayMoveDirection: Int] = [:]
     private var heldDirectionOrder: [OverlayMoveDirection] = []
     private var activeMoveDirection: OverlayMoveDirection?
     private var holdRepeatStep = 0
     private var holdRepeatWorkItem: DispatchWorkItem?
     private var suppressGuideChordUntilRelease = false
+    
+    // Internal state for analog handling
+    private var filteredStick = CGVector(dx: 0, dy: 0)
+    private var lastAnalogDirection: OverlayMoveDirection? = nil
+    private var analogTimer: Timer? = nil
+    private var lastAnalogUpdate = Date()
 
-    private let holdRepeatInitialDelay: TimeInterval = 0.28
-    private let holdRepeatInitialInterval: TimeInterval = 0.22
-    private let holdRepeatMinimumInterval: TimeInterval = 0.055
-    private let holdRepeatAcceleration: Double = 0.84
-
+    // Variables for dpad hold repeat behavior
+    private let padHoldRepeatInitialDelay: TimeInterval = 0.28
+    private let padHoldRepeatInitialInterval: TimeInterval = 0.22
+    private let padHoldRepeatMinimumInterval: TimeInterval = 0.055
+    private let padHoldRepeatAcceleration: Double = 0.84
+    
+    // Variables for discrete stick hold repeat behavior
+    private var stickHoldRepeatInitialDelay: TimeInterval = 0.36
+    private var stickHoldRepeatInitialInterval: TimeInterval = 0.30
+    private var stickHoldRepeatMinimumInterval: TimeInterval = 0.08
+    private var stickHoldRepeatAcceleration: Double = 0.88
+    
+    // Variables for analog mode and mapping
+    private var joystickDeadZone: Float = 0.20
+    private var joystickSensitivity: CGFloat = 400.0
+    private var joystickSmoothingAlpha: CGFloat = 0.65
+    private var joystickTickInterval: TimeInterval = 1.0 / 60.0
+    
+    // Augmented hold repeat variables
+    private var holdRepeatInitialDelay: TimeInterval?
+    private var holdRepeatInitialInterval: TimeInterval?
+    private var holdRepeatMinimumInterval: TimeInterval?
+    private var holdRepeatAcceleration: Double?
+    
 #if DEBUG
     private func debugLog(_ message: String) { print("[Controller] \(message)") }
 #else
@@ -102,6 +140,7 @@ final class ControllerInputManager: NSObject {
         NotificationCenter.default.removeObserver(self)
     }
 
+    // MARK: - Controller Connection Handling
     @objc
     private func controllerDidConnect(_ notification: Notification) {
         guard let controller = notification.object as? GCController else { return }
@@ -118,9 +157,14 @@ final class ControllerInputManager: NSObject {
         // Avoid stale pressed state from a disconnected device.
         isGuideHeld = false
         pressedAssignableButtons.removeAll()
+        stopMoveRepeat(clearDirection: true)
+        lastAnalogDirection = nil
+        stopAnalogTimerIfNeeded()
+        filteredStick = CGVector(dx: 0, dy: 0)
         refreshConnectedControllerGlyphStyle()
     }
 
+    // MARK: - Controller Handling
     private func configure(_ controller: GCController) {
         debugLog("Configuring controller: \(controller.vendorName ?? "Unknown")")
 
@@ -173,7 +217,7 @@ final class ControllerInputManager: NSObject {
         bindAssignableButton(gamepad.rightTrigger, as: .rightTrigger)
 
         bindDirectionalInput(gamepad.dpad)
-        bindDirectionalInput(gamepad.leftThumbstick)
+        bindAnalogStick(gamepad.leftThumbstick)
     }
 
     private func configureThumbstickButtonPresses(from controller: GCController) {
@@ -225,6 +269,7 @@ final class ControllerInputManager: NSObject {
 
     private func bindAssignableButton(_ buttonInput: GCControllerButtonInput?, as button: ControllerAssignableButton) {
         buttonInput?.pressedChangedHandler = { [weak self] _, _, pressed in
+            self?.updateRepeatTuning(for: .dpad)
             self?.handleAssignableButtonChange(button, pressed: pressed)
         }
     }
@@ -255,7 +300,172 @@ final class ControllerInputManager: NSObject {
             self?.setDirectionalInput(.down, pressed: pressed)
         }
     }
+    
+    // MARK: - Analog Stick Handling
+    private func bindAnalogStick(_ stick: GCControllerDirectionPad) {
+        stick.valueChangedHandler = { [weak self] _, xValue, yValue in
+            guard let self = self else { return }
+            self.handleAnalogStick(x: xValue, y: yValue)
+        }
+    }
+    
+    private func handleAnalogStick(x: Float, y: Float) {
+        // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
+        let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
+        let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
+        
+        // Low-pass filter to reduce jitter
+        let alpha = joystickSmoothingAlpha
+        filteredStick.dx = filteredStick.dx * alpha + raw.dx * (1.0 - alpha)
+        filteredStick.dy = filteredStick.dy * alpha + raw.dy * (1.0 - alpha)
+        
+        // let filteredMagnitude = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
+        
+        switch joystickMode {
+        case .analogRate:
+            // Start or stop analog timer depending on magnitude vs deadZone
+            if rawMagnitude > CGFloat(joystickDeadZone) {
+                startAnalogTimerIfNeeded()
+                lastAnalogUpdate = Date()
+            } else {
+                stopAnalogTimerIfNeeded()
+            }
+            
+            // When in analog mode we do not synthesize discrete presses; analogTimer will generate deltas
+            // But we still may want to clear any discrete held direction state:
+            if let last = lastAnalogDirection {
+                // release the previous discrete direction if any
+                setDirectionalInput(last, pressed: false)
+                lastAnalogDirection = nil
+                stopMoveRepeat(clearDirection: true)
+            }
+            
+        case .limited, .full:
+            // Map to discrete direction based on filteredStick and magnitude vs deadZone
+            if rawMagnitude <= CGFloat(joystickDeadZone) {
+                // release any held discrete direction
+                if let last = lastAnalogDirection {
+                    setDirectionalInput(last, pressed: false)
+                    lastAnalogDirection = nil
+                }
+                stopMoveRepeat(clearDirection: true)
+                filteredStick = CGVector(dx: 0, dy: 0)
+                stopAnalogTimerIfNeeded()
+                return
+            }
+            
+            let newDir = discreteDirection(for: filteredStick, mode: joystickMode)
+            if newDir != lastAnalogDirection {
+                // release previous, press new
+                if let last = lastAnalogDirection {
+                    setDirectionalInput(last, pressed: false)
+                }
+                
+                lastAnalogDirection = newDir
+                updateRepeatTuning(for: .stick)
+                setDirectionalInput(newDir, pressed: true)
+            }
+            stopAnalogTimerIfNeeded()
+        }
+    }
+    
+    private func discreteDirection(for vector: CGVector, mode: JoystickMovementMode) -> OverlayMoveDirection {
+        let angle = atan2(vector.dy, vector.dx) // -π..π
+        // Convert to degrees 0..360 where 0 = right, 90 = up
+        var degrees = angle * 180.0 / .pi
+        if degrees < 0 { degrees += 360.0 }
+        debugPrint("Analog stick angle: \(degrees)° (dx: \(vector.dx), dy: \(vector.dy))")
+        debugPrint("Joystick mode: \(mode), magnitude: \(sqrt(vector.dx * vector.dx + vector.dy * vector.dy))")
+        
+        // Cardinal and diagonal angular ranges
+        switch mode {
+        case .limited:
+            // Map to nearest cardinal: up (45..135), left (135..225), down (225..315), right (315..45)
+            if degrees >= 45 && degrees < 135 { return .up }
+            if degrees >= 135 && degrees < 225 { return .left }
+            if degrees >= 225 && degrees < 315 { return .down }
+            return .right
+            
+        case .full:
+            switch degrees {
+            case 337.5..<360, 0..<22.5: return .right
+            case 22.5..<67.5: return .upRight
+            case 67.5..<112.5: return .up
+            case 112.5..<157.5: return .upLeft
+            case 157.5..<202.5: return .left
+            case 202.5..<247.5: return .downLeft
+            case 247.5..<292.5: return .down
+            case 292.5..<337.5: return .downRight
+            default: return .right
+            }
+            
+        case .analogRate:
+            return .right // unreachable for analogRate
+        }
+    }
 
+    private func startAnalogTimerIfNeeded() {
+        guard analogTimer == nil, joystickMode == .analogRate else { return }
+        
+        analogTimer = Timer.scheduledTimer(withTimeInterval: joystickTickInterval, repeats: true, block: { [weak self] _ in
+            self?.analogTimerFired()
+        })
+        // Ensure timer runs on main runloop in common modes
+        RunLoop.main.add(analogTimer!, forMode: .common)
+    }
+    
+    private func stopAnalogTimerIfNeeded() {
+        analogTimer?.invalidate()
+        analogTimer = nil
+    }
+    
+    private func analogTimerFired() {
+        // Compute delta using filteredStick and sensitivity
+        let tNow = Date()
+        let elapsed = tNow.timeIntervalSince(lastAnalogUpdate)
+        lastAnalogUpdate = tNow
+        
+        let mag = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
+        guard mag > CGFloat(joystickDeadZone) else { return }
+        
+        // Normalize and scale magnitude into [0..1] beyond dead zone
+        let normalizedMag = (mag - CGFloat(joystickDeadZone)) / (1.0 - CGFloat(joystickDeadZone))
+        let nx = filteredStick.dx / mag
+        let ny = filteredStick.dy / mag
+        
+        // velocity = sensitivity * normalizedMag (units/sec)
+        let velocityX = nx * joystickSensitivity * CGFloat(normalizedMag)
+        let velocityY = ny * joystickSensitivity * CGFloat(normalizedMag)
+        
+        // delta = velocity * elapsed
+        let delta = CGVector(dx: velocityX * CGFloat(elapsed), dy: velocityY * CGFloat(elapsed))
+        
+        // send delta as mouse move on main thread
+        DispatchQueue.main.async {
+            self.sendMouseMove(delta)
+        }
+    }
+    
+    // Helpers to temporarily swap repeat tuning for stick-based discrete movement.
+    // This uses your existing repeat fields: holdRepeatInitialDelay, holdRepeatInitialInterval,
+    // holdRepeatMinimumInterval, holdRepeatAcceleration. We store and swap in the "stick" values.
+    private func updateRepeatTuning(for type: movementMode) {
+        switch type {
+        case .dpad:
+            holdRepeatInitialDelay = padHoldRepeatInitialDelay
+            holdRepeatInitialInterval = padHoldRepeatInitialInterval
+            holdRepeatMinimumInterval = padHoldRepeatMinimumInterval
+            holdRepeatAcceleration = padHoldRepeatAcceleration
+            
+        case .stick:
+            holdRepeatInitialDelay = stickHoldRepeatInitialDelay
+            holdRepeatInitialInterval = stickHoldRepeatInitialInterval
+            holdRepeatMinimumInterval = stickHoldRepeatMinimumInterval
+            holdRepeatAcceleration = stickHoldRepeatAcceleration
+        }
+    }
+    
+    // MARK: - Controller Glyph Handling
     private func refreshConnectedControllerGlyphStyle() {
         let controllers = GCController.controllers()
         guard let preferredController = preferredConnectedController(from: controllers) else {
@@ -303,12 +513,8 @@ final class ControllerInputManager: NSObject {
         }
 
         var buttons: [ControllerGuideButton] = []
-        if gamepad.buttonMenu != nil {
-            buttons.append(.menu)
-        }
-        if gamepad.buttonOptions != nil {
-            buttons.append(.options)
-        }
+        buttons.append(.menu)
+        buttons.append(.options)
         return buttons
     }
 
@@ -363,13 +569,15 @@ final class ControllerInputManager: NSObject {
         }
     }
 
+    // MARK: - Input Handling
+    // MARK: Movement Handling
     private func beginHeldMovement(in direction: OverlayMoveDirection) {
         stopMoveRepeat(clearDirection: false)
         activeMoveDirection = direction
         holdRepeatStep = 0
 
         sendMove(direction, trigger: .press)
-        scheduleMoveRepeat(after: holdRepeatInitialDelay)
+        scheduleMoveRepeat(after: holdRepeatInitialDelay ?? padHoldRepeatInitialDelay)
     }
 
     private func scheduleMoveRepeat(after delay: TimeInterval) {
@@ -392,8 +600,8 @@ final class ControllerInputManager: NSObject {
         sendMove(direction, trigger: .holdRepeat)
         holdRepeatStep += 1
         let acceleratedInterval = max(
-            holdRepeatMinimumInterval,
-            holdRepeatInitialInterval * pow(holdRepeatAcceleration, Double(holdRepeatStep))
+            holdRepeatMinimumInterval ?? padHoldRepeatMinimumInterval,
+            (holdRepeatInitialInterval ?? padHoldRepeatInitialInterval) * pow(holdRepeatAcceleration ?? padHoldRepeatAcceleration, Double(holdRepeatStep))
         )
         scheduleMoveRepeat(after: acceleratedInterval)
     }
@@ -412,7 +620,13 @@ final class ControllerInputManager: NSObject {
         debugLog("Move: \(direction) trigger=\(trigger)")
         onMove?(direction, trigger)
     }
+    
+    private func sendMouseMove(_ delta: CGVector) {
+        debugLog("Mouse Move: \(delta)")
+        onMouseMove?(delta)
+    }
 
+    // MARK: Button Input Handling
     private func handleAssignableButtonPress(_ button: ControllerAssignableButton) {
         debugLog("Button pressed: \(button)")
 

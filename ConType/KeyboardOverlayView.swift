@@ -55,6 +55,10 @@ enum OverlayMoveDirection {
     case down
     case left
     case right
+    case upLeft
+    case upRight
+    case downLeft
+    case downRight
 }
 
 enum OverlayMoveTrigger {
@@ -179,8 +183,19 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 selectedRow = 0
             }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+        case .upLeft:
+            move(.up, trigger: trigger)
+            move(.left, trigger: trigger)
+        case .upRight:
+            move(.up, trigger: trigger)
+            move(.right, trigger: trigger)
+        case .downLeft:
+            move(.down, trigger: trigger)
+            move(.left, trigger: trigger)
+        case .downRight:
+            move(.down, trigger: trigger)
+            move(.right, trigger: trigger)
         }
-
         return previousRow != selectedRow || previousColumn != selectedColumn
     }
 
