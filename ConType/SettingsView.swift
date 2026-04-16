@@ -18,6 +18,7 @@ struct SettingsView: View {
 
     @State private var isRecordingControllerHotkey = false
     @State private var activeControllerActionPicker: ControllerActionBinding?
+    @State private var stickMovementStyle = JoystickMovementMode.limited
 
     private let waitingKeyboardText = "Waiting for keyboard input..."
     private let waitingControllerText = "Waiting for controller input..."
@@ -73,6 +74,23 @@ struct SettingsView: View {
                 Toggle("Shift hotkey cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
                 Toggle("Dismiss with guide button", isOn: $settings.dismissWithGuideButton)
                 Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
+                
+                VStack(alignment: .leading) {
+                    Picker("Keyboard stick movement style", selection: $stickMovementStyle) {
+                        Text("4 Directional").tag(JoystickMovementMode.limited)
+                        Text("8 Directional").tag(JoystickMovementMode.full)
+                    }
+                    .onSubmit {
+                        settings.stickMovementStyle = stickMovementStyle
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowSeparator(.hidden)
+                    
+                    Text(movementDecription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .animation(.easeInOut)
+                }
             }
 
             Section("Controller Hotkeys") {
@@ -119,6 +137,16 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 560, height: 520)
+    }
+    
+    private var movementDecription: String {
+        if $settings.stickMovementStyle.wrappedValue == JoystickMovementMode.limited {
+            return "In this style, the joystick navigates the keyboard like a d-pad."
+        } else if $settings.stickMovementStyle.wrappedValue == JoystickMovementMode.full {
+            return "In this style, the joystick nvaigates the keyboard more freely, with diagonal movements."
+        }
+        
+        return "This style doesn't exist"
     }
 
     private var keyboardShortcutButton: some View {

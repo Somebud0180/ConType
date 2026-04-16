@@ -80,7 +80,6 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onMove = { [weak self] direction, trigger in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
-                // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
                 self.overlayController.moveSelection(direction, trigger: trigger)
             }
@@ -89,7 +88,6 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onMouseMove = { [weak self] delta in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
-                // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
                 self.mouseEmitter.moveCursor(by: delta)
             }
@@ -98,7 +96,6 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onSelect = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
-                // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
                 self.overlayController.activateSelectedKey()
             }
@@ -107,7 +104,6 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onBackspace = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isVisible else { return }
-                // Ensure we don't activate our app due to controller input
                 NSApp.deactivate()
                 self.overlayController.activateBackspaceKey()
             }
@@ -142,6 +138,38 @@ final class AppCoordinator: ObservableObject {
                 guard let self, self.overlayController.isVisible else { return }
                 NSApp.deactivate()
                 self.overlayController.activateCapsLockShortcut()
+            }
+        }
+        
+        controllerInputManager.onLeftClickDown = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.mouseEmitter.emit(button: .left, eventType: .leftMouseDown)
+            }
+        }
+        
+        controllerInputManager.onRightClickDown = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.mouseEmitter.emit(button: .right, eventType: .rightMouseDown)
+            }
+        }
+        
+        controllerInputManager.onLeftClickUp = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.mouseEmitter.emit(button: .left, eventType: .leftMouseUp)
+            }
+        }
+        
+        controllerInputManager.onRightClickUp = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.overlayController.isVisible else { return }
+                NSApp.deactivate()
+                self.mouseEmitter.emit(button: .right, eventType: .rightMouseUp)
             }
         }
         
@@ -199,6 +227,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.actionBindings = settings.controllerActionBindings
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
         controllerInputManager.isOverlayVisible = isOverlayVisible
+        controllerInputManager.joystickMode = settings.stickMovementStyle
 
         settings.$keyboardHotkey
             .sink { [weak self] value in

@@ -219,6 +219,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enter
     case shift
     case capsLock
+    case mouseLeftClick
+    case mouseRightClick
     case enlargeWindow
     case shrinkWindow
 
@@ -232,6 +234,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
         case .enter: return "Enter"
         case .shift: return "Shift"
         case .capsLock: return "Caps Lock"
+        case .mouseLeftClick: return "Left Click"
+        case .mouseRightClick: return "Right Click"
         case .enlargeWindow: return "Enlarge Keyboard"
         case.shrinkWindow: return "Shrink Keyboard"
         }
@@ -245,6 +249,8 @@ struct ControllerActionBindings: Equatable {
     var enter: ControllerAssignableButton
     var shift: ControllerAssignableButton
     var capsLock: ControllerAssignableButton
+    var mouseLeftClick: ControllerAssignableButton
+    var mouseRightClick: ControllerAssignableButton
     var enlargeWindow: ControllerAssignableButton
     var shrinkWindow: ControllerAssignableButton
 
@@ -255,6 +261,8 @@ struct ControllerActionBindings: Equatable {
         enter: .west,
         shift: .leftStickPress,
         capsLock: .rightStickPress,
+        mouseLeftClick: .leftTrigger,
+        mouseRightClick: .rightTrigger,
         enlargeWindow: .rightShoulder,
         shrinkWindow: .leftShoulder
     )
@@ -273,6 +281,10 @@ struct ControllerActionBindings: Equatable {
             return shift
         case .capsLock:
             return capsLock
+        case .mouseLeftClick:
+            return mouseLeftClick
+        case .mouseRightClick:
+            return mouseRightClick
         case .enlargeWindow:
             return enlargeWindow
         case .shrinkWindow:
@@ -294,6 +306,10 @@ struct ControllerActionBindings: Equatable {
             shift = button
         case .capsLock:
             capsLock = button
+        case .mouseLeftClick:
+            mouseLeftClick = button
+        case .mouseRightClick:
+            mouseRightClick = button
         case .enlargeWindow:
             enlargeWindow = button
         case .shrinkWindow:
@@ -327,6 +343,7 @@ final class AppSettings: ObservableObject {
     @Published var shiftShortcutCyclesToCapsLock = true
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
+    @Published var stickMovementStyle: JoystickMovementMode = .limited
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
     @Published var detectedController: DetectedController?

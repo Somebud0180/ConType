@@ -4,7 +4,7 @@ import GameController
 enum JoystickMovementMode {
     case limited    // 4 Directional
     case full       // 8 Directional
-    case analogRate // Continuous movement
+    case mouse      // Similar to full but with different handling
 }
 
 enum movementMode {
@@ -22,6 +22,10 @@ final class ControllerInputManager: NSObject {
     var onEnter: (() -> Void)?
     var onShift: (() -> Void)?
     var onCapsLock: (() -> Void)?
+    var onLeftClickDown: (() -> Void)?
+    var onLeftClickUp: (() -> Void)?
+    var onRightClickDown: (() -> Void)?
+    var onRightClickUp: (() -> Void)?
     var onEnlarge: (() -> Void)?
     var onShrink: (() -> Void)?
     var onGlyphStyleChanged: ((ControllerGlyphStyle) -> Void)?
@@ -34,6 +38,7 @@ final class ControllerInputManager: NSObject {
     var actionBindings: ControllerActionBindings = .default
     var dismissWithGuideButton = true
     var isOverlayVisible = false
+    var joystickMode: JoystickMovementMode = .limited
 
     private var isGuideHeld = false {
         didSet { publishCaptureState() }
@@ -47,7 +52,6 @@ final class ControllerInputManager: NSObject {
     private var pendingToggleCapture: ((ControllerToggleBinding) -> Void)?
     private var pendingAssignableButtonCapture: ((ControllerAssignableButton) -> Void)?
 
-    private var joystickMode: JoystickMovementMode = .limited
     private var directionPressCounts: [OverlayMoveDirection: Int] = [:]
     private var heldDirectionOrder: [OverlayMoveDirection] = []
     private var activeMoveDirection: OverlayMoveDirection?
@@ -71,9 +75,9 @@ final class ControllerInputManager: NSObject {
     private var stickHoldRepeatInitialDelay: TimeInterval = 0.36
     private var stickHoldRepeatInitialInterval: TimeInterval = 0.30
     private var stickHoldRepeatMinimumInterval: TimeInterval = 0.08
-    private var stickHoldRepeatAcceleration: Double = 0.88
+    private var stickHoldRepeatAcceleration: Double = 0.65
     
-    // Variables for analog mode and mapping
+    // Variables for mouse mode
     private var joystickDeadZone: Float = 0.20
     private var joystickSensitivity: CGFloat = 400.0
     private var joystickSmoothingAlpha: CGFloat = 0.65
@@ -218,6 +222,7 @@ final class ControllerInputManager: NSObject {
 
         bindDirectionalInput(gamepad.dpad)
         bindAnalogStick(gamepad.leftThumbstick)
+        bindAnalogStick(gamepad.rightThumbstick, mouseMode: true)
     }
 
     private func configureThumbstickButtonPresses(from controller: GCController) {
@@ -280,6 +285,7 @@ final class ControllerInputManager: NSObject {
             handleAssignableButtonPress(button)
         } else {
             pressedAssignableButtons.remove(button)
+            handleAssignableButtonLift(button)
         }
     }
 
@@ -302,14 +308,14 @@ final class ControllerInputManager: NSObject {
     }
     
     // MARK: - Analog Stick Handling
-    private func bindAnalogStick(_ stick: GCControllerDirectionPad) {
+    private func bindAnalogStick(_ stick: GCControllerDirectionPad, mouseMode: Bool = false) {
         stick.valueChangedHandler = { [weak self] _, xValue, yValue in
             guard let self = self else { return }
-            self.handleAnalogStick(x: xValue, y: yValue)
+            self.handleAnalogStick(x: xValue, y: yValue, joystickMode: mouseMode ? .mouse : self.joystickMode)
         }
     }
     
-    private func handleAnalogStick(x: Float, y: Float) {
+    private func handleAnalogStick(x: Float, y: Float, joystickMode: JoystickMovementMode) {
         // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
@@ -322,7 +328,7 @@ final class ControllerInputManager: NSObject {
         // let filteredMagnitude = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
         
         switch joystickMode {
-        case .analogRate:
+        case .mouse:
             // Start or stop analog timer depending on magnitude vs deadZone
             if rawMagnitude > CGFloat(joystickDeadZone) {
                 startAnalogTimerIfNeeded()
@@ -350,7 +356,6 @@ final class ControllerInputManager: NSObject {
                 }
                 stopMoveRepeat(clearDirection: true)
                 filteredStick = CGVector(dx: 0, dy: 0)
-                stopAnalogTimerIfNeeded()
                 return
             }
             
@@ -365,7 +370,6 @@ final class ControllerInputManager: NSObject {
                 updateRepeatTuning(for: .stick)
                 setDirectionalInput(newDir, pressed: true)
             }
-            stopAnalogTimerIfNeeded()
         }
     }
     
@@ -399,13 +403,13 @@ final class ControllerInputManager: NSObject {
             default: return .right
             }
             
-        case .analogRate:
-            return .right // unreachable for analogRate
+        case .mouse:
+            return .right // unreachable for mouse
         }
     }
 
     private func startAnalogTimerIfNeeded() {
-        guard analogTimer == nil, joystickMode == .analogRate else { return }
+        guard analogTimer == nil else { return }
         
         analogTimer = Timer.scheduledTimer(withTimeInterval: joystickTickInterval, repeats: true, block: { [weak self] _ in
             self?.analogTimerFired()
@@ -446,9 +450,6 @@ final class ControllerInputManager: NSObject {
         }
     }
     
-    // Helpers to temporarily swap repeat tuning for stick-based discrete movement.
-    // This uses your existing repeat fields: holdRepeatInitialDelay, holdRepeatInitialInterval,
-    // holdRepeatMinimumInterval, holdRepeatAcceleration. We store and swap in the "stick" values.
     private func updateRepeatTuning(for type: movementMode) {
         switch type {
         case .dpad:
@@ -694,6 +695,16 @@ final class ControllerInputManager: NSObject {
             onCapsLock?()
         }
         
+        if actionBindings.mouseLeftClick == button {
+            debugLog("Left Click shortcut triggered")
+            onLeftClickDown?()
+        }
+        
+        if actionBindings.mouseRightClick == button {
+            debugLog("Right Click shortcut triggered")
+            onRightClickDown?()
+        }
+        
         if actionBindings.enlargeWindow == button {
             debugLog("Enlarge Overlay shortcut triggered")
             onEnlarge?()
@@ -702,6 +713,20 @@ final class ControllerInputManager: NSObject {
         if actionBindings.shrinkWindow == button {
             debugLog("Shrink Overlay shortcut triggered")
             onShrink?()
+        }
+    }
+    
+    func handleAssignableButtonLift(_ button: ControllerAssignableButton) {
+        debugLog("Button lifted: \(button)")
+        
+        if actionBindings.mouseLeftClick == button {
+            debugLog("Left Click release triggered")
+            onLeftClickUp?()
+        }
+        
+        if actionBindings.mouseRightClick == button {
+            debugLog("Right Click release triggered")
+            onRightClickUp?()
         }
     }
 }
