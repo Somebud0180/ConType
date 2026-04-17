@@ -21,6 +21,7 @@ final class OnboardingViewModel: ObservableObject {
             step = 0
         } else {
             step = AccessibilityPermission.isTrusted() ? 2 : 1
+            startPermissionPollingIfNeeded()
         }
 
         refreshAccessibilityStatus(advanceFromPermissionStep: true)
