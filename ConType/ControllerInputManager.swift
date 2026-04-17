@@ -508,7 +508,7 @@ final class ControllerInputManager: NSObject {
         
         // velocity = sensitivity * normalizedMag (units/sec)
         let velocityX = nx * mouseSensitivity * CGFloat(normalizedMag)
-        let velocityY = ny * mouseSensitivity * CGFloat(normalizedMag)
+        let velocityY = ny * mouseSensitivity * CGFloat(normalizedMag) * -1
         
         // delta = velocity * elapsed
         let delta = CGVector(dx: velocityX * CGFloat(elapsed), dy: velocityY * CGFloat(elapsed))

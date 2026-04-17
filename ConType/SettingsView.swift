@@ -674,15 +674,16 @@ struct SettingsView: View {
     
     @ViewBuilder
     private func stickSliders(localDeadzone: Binding<CGFloat>, settingsDeadzone: Binding<CGFloat>) -> some View {
-        Slider(value: Binding<Double>(
+        Slider(
+            value: Binding<Double>(
             get: { Double(localDeadzone.wrappedValue) },
-            set: { localDeadzone.wrappedValue = CGFloat(($0 * 100).rounded() / 100) }
-        ), in: 0.0...0.8) {
+            set: { localDeadzone.wrappedValue = CGFloat(($0 * 100).rounded() / 100) }),
+            in: 0.0...0.8,) {
             Text("Deadzone")
         }
-        .onSubmit {
-            settingsDeadzone.wrappedValue = localDeadzone.wrappedValue
-        }
+            .onChange(of: localDeadzone.wrappedValue) {
+                settingsDeadzone.wrappedValue = localDeadzone.wrappedValue
+            }
     }
     
     @ViewBuilder
