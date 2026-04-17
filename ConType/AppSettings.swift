@@ -2,6 +2,20 @@ import AppKit
 import Combine
 import Foundation
 
+enum AxisInputType: String, CaseIterable, Equatable {
+    case none
+    case overlayMovement
+    case mouseMovement
+    
+    var title: String {
+        switch self {
+        case .none: return "None"
+        case .overlayMovement: return "Overlay Movement"
+        case .mouseMovement: return "Mouse Movement"
+        }
+    }
+}
+
 enum ControllerGlyphStyle: Equatable {
     case generic
     case playStation
@@ -343,6 +357,9 @@ final class AppSettings: ObservableObject {
     @Published var controllerActionBindings: ControllerActionBindings = .default
     
     // Preferences
+    @Published var leftStickInputType: AxisInputType = .overlayMovement
+    @Published var rightStickInputType: AxisInputType = .mouseMovement
+    @Published var padInputType: AxisInputType = .overlayMovement
     @Published var shiftShortcutCyclesToCapsLock = true
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false

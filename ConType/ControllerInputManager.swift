@@ -18,6 +18,7 @@ enum MovementMode {
 final class JoystickInputModel: ObservableObject {
     @Published var leftStick: CGVector = .zero
     @Published var rightStick: CGVector = .zero
+    @Published var dPad: CGVector = .zero
 
     init(manager: ControllerInputManager) {
         // Subscribe to stick changes
@@ -31,12 +32,18 @@ final class JoystickInputModel: ObservableObject {
                 self?.rightStick = vector
             }
         }
+        manager.onDPadChanged = { [weak self] vector in
+            DispatchQueue.main.async {
+                self?.dPad = vector
+            }
+        }
     }
 }
 
 final class ControllerInputManager: NSObject {
     var onLeftStickChanged: ((CGVector) -> Void)?
     var onRightStickChanged: ((CGVector) -> Void)?
+    var onDPadChanged: ((CGVector) -> Void)?
     var onToggle: (() -> Void)?
     var onMove: ((OverlayMoveDirection, OverlayMoveTrigger) -> Void)?
     var onMouseMove: ((CGVector) -> Void)?
@@ -60,6 +67,9 @@ final class ControllerInputManager: NSObject {
     var isToggleEnabled = true
     var toggleBinding: ControllerToggleBinding = .default
     var actionBindings: ControllerActionBindings = .default
+    var leftStickInputType: AxisInputType = .overlayMovement
+    var rightStickInputType: AxisInputType = .mouseMovement
+    var padInputType: AxisInputType = .overlayMovement
     var dismissWithGuideButton = true
     var isOverlayVisible = false
     var joystickMode: JoystickMovementMode = .limited
@@ -245,9 +255,10 @@ final class ControllerInputManager: NSObject {
         bindAssignableButton(gamepad.leftTrigger, as: .leftTrigger)
         bindAssignableButton(gamepad.rightTrigger, as: .rightTrigger)
 
-        bindDirectionalInput(gamepad.dpad)
-        bindAnalogStick(gamepad.leftThumbstick, from: .leftStick)
-        bindAnalogStick(gamepad.rightThumbstick, from: .rightStick, mouseMode: true)
+        
+        bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
+        bindAnalogStick(gamepad.leftThumbstick, from: .leftStick, inputType: leftStickInputType )
+        bindAnalogStick(gamepad.rightThumbstick, from: .rightStick, inputType: rightStickInputType )
     }
 
     private func configureThumbstickButtonPresses(from controller: GCController) {
@@ -264,7 +275,12 @@ final class ControllerInputManager: NSObject {
     private func configureMicroGamepad(_ gamepad: GCMicroGamepad) {
         bindAssignableButton(gamepad.buttonA, as: .south)
         bindAssignableButton(gamepad.buttonX, as: .west)
-        bindDirectionalInput(gamepad.dpad)
+        bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
+    }
+    
+    private func configureAxisInput() {
+        // Handle binding axis inputs dynamically
+        // Left Stick, Right Stick, D-pad as overlay movement or mouse movement
     }
 
     private func bindGuideButton(_ button: GCControllerButtonInput?, source: String) {
@@ -314,29 +330,35 @@ final class ControllerInputManager: NSObject {
         }
     }
 
-    private func bindDirectionalInput(_ directionPad: GCControllerDirectionPad) {
-        directionPad.left.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.setDirectionalInput(.left, pressed: pressed)
-        }
-
-        directionPad.right.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.setDirectionalInput(.right, pressed: pressed)
-        }
-
-        directionPad.up.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.setDirectionalInput(.up, pressed: pressed)
-        }
-
-        directionPad.down.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.setDirectionalInput(.down, pressed: pressed)
-        }
-    }
+//    private func bindDirectionalInput(_ directionPad: GCControllerDirectionPad) {
+//        directionPad.left.pressedChangedHandler = { [weak self] _, _, pressed in
+//            self?.setDirectionalInput(.left, pressed: pressed)
+//        }
+//
+//        directionPad.right.pressedChangedHandler = { [weak self] _, _, pressed in
+//            self?.setDirectionalInput(.right, pressed: pressed)
+//        }
+//
+//        directionPad.up.pressedChangedHandler = { [weak self] _, _, pressed in
+//            self?.setDirectionalInput(.up, pressed: pressed)
+//        }
+//
+//        directionPad.down.pressedChangedHandler = { [weak self] _, _, pressed in
+//            self?.setDirectionalInput(.down, pressed: pressed)
+//        }
+//    }
     
     // MARK: - Analog Stick Handling
-    private func bindAnalogStick(_ stick: GCControllerDirectionPad, from source: MovementMode, mouseMode: Bool = false) {
+    private func bindAnalogStick(_ stick: GCControllerDirectionPad, from source: MovementMode, inputType: AxisInputType) {
+        stick.valueChangedHandler = nil // Clear any existing handler to avoid conflicts when re-binding
+        
+        if inputType == .none {
+            return
+        }
+        
         stick.valueChangedHandler = { [weak self] _, xValue, yValue in
             guard let self = self else { return }
-            self.handleAnalogStick(x: xValue, y: yValue, joystickMode: mouseMode ? .mouse : self.joystickMode, from: source)
+            self.handleAnalogStick(x: xValue, y: yValue, joystickMode: inputType == .mouseMovement ? .mouse : self.joystickMode, from: source)
         }
     }
     
@@ -356,8 +378,8 @@ final class ControllerInputManager: NSObject {
             onLeftStickChanged?(raw)
         case .rightStick:
             onRightStickChanged?(raw)
-        default:
-            break
+        case .dpad:
+            onDPadChanged?(raw)
         }
 
         // Low-pass filter to reduce jitter

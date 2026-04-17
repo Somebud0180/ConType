@@ -30,113 +30,133 @@ struct SettingsView: View {
     private let twoDecimalFormatter = Decimal.FormatStyle().precision(.fractionLength(2))
     
     var body: some View {
-        Form {
-            Section("Your Controller") {
-                if let detectedController = settings.detectedController {
-                    let guideButtons = displayedGuideButtons(for: detectedController)
-                    
-                    HStack {
-                        Text("Detected Controller:")
-                        Spacer()
-                        Text(detectedController.name)
-                            .multilineTextAlignment(.trailing)
+        TabView {
+            Tab("Main", systemImage: "gearshape") {
+                Form {
+                    Section("Your Controller") {
+                        if let detectedController = settings.detectedController {
+                            let guideButtons = displayedGuideButtons(for: detectedController)
+                            
+                            HStack {
+                                Text("Detected Controller:")
+                                Spacer()
+                                Text(detectedController.name)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            
+                            HStack {
+                                Text("Your controller's guide ")
+                                Image(systemName: "gamecontroller.circle.fill")
+                                    .foregroundStyle(.primary)
+                                Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 6) {
+                                    ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
+                                        guideButtonGlyph(guideButton)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("No controller detected")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     
-                    HStack {
-                        Text("Your controller's guide ")
-                        Image(systemName: "gamecontroller.circle.fill")
-                            .foregroundStyle(.primary)
-                        Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
+                    Section("General") {
+                        LabeledContent("Keyboard Shortcut") {
+                            keyboardShortcutButton
+                        }
                         
-                        Spacer()
+                        LabeledContent("Controller Shortcut") {
+                            controllerToggleButton
+                        }
                         
-                        HStack(spacing: 6) {
-                            ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
-                                guideButtonGlyph(guideButton)
+                        if let keyboardValidationMessage {
+                            Text(keyboardValidationMessage)
+                                .foregroundStyle(.red)
+                        }
+                        
+                        Toggle("Shift hotkey cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
+                        Toggle("Dismiss with guide button", isOn: $settings.dismissWithGuideButton)
+                        Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
+                        
+                        VStack(alignment: .leading) {
+                            Picker("Keyboard stick movement style", selection: $stickMovementStyle) {
+                                Text("4 Directional").tag(JoystickMovementMode.limited)
+                                Text("8 Directional").tag(JoystickMovementMode.full)
+                            }
+                            .onSubmit {
+                                settings.stickMovementStyle = stickMovementStyle
+                            }
+                            .pickerStyle(.segmented)
+                            .listRowSeparator(.hidden)
+                            
+                            Text(movementDecription)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .animation(.easeInOut)
+                        }
+                    }
+                    
+                    Section("Others") {
+                        HStack {
+                            Text("Accessibility Permissions: ")
+                            Spacer()
+                            Text(isAccessibilityTrusted ? "Granted" : "Not Granted")
+                                .foregroundStyle(isAccessibilityTrusted ? .green : .red)
+                        }
+                        HStack {
+                            Button("Restart Onboarding") {
+                                onRestartOnboarding()
                             }
                         }
                     }
-                } else {
-                    Text("No controller detected")
-                        .foregroundStyle(.secondary)
                 }
+                .formStyle(.grouped)
             }
             
-            Section("General") {
-                LabeledContent("Keyboard Shortcut") {
-                    keyboardShortcutButton
-                }
-                
-                LabeledContent("Controller Shortcut") {
-                    controllerToggleButton
-                }
-                
-                if let keyboardValidationMessage {
-                    Text(keyboardValidationMessage)
-                        .foregroundStyle(.red)
-                }
-                
-                Toggle("Shift hotkey cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
-                Toggle("Dismiss with guide button", isOn: $settings.dismissWithGuideButton)
-                Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
-                
-                VStack(alignment: .leading) {
-                    Picker("Keyboard stick movement style", selection: $stickMovementStyle) {
-                        Text("4 Directional").tag(JoystickMovementMode.limited)
-                        Text("8 Directional").tag(JoystickMovementMode.full)
-                    }
-                    .onSubmit {
-                        settings.stickMovementStyle = stickMovementStyle
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowSeparator(.hidden)
-                    
-                    Text(movementDecription)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .animation(.easeInOut)
-                }
-            }
-            
-            Section("Controller Hotkeys") {
-                ForEach(ControllerActionBinding.allCases) { action in
-                    LabeledContent(action.title) {
-                        controllerActionPickerButton(for: action)
-                    }
-                }
-                
-                HStack {
-                    Button("Reset Hotkeys") {
-                        settings.keyboardHotkey = defaultKeyboardShortcut
-                        settings.controllerToggleBinding = .default
-                        settings.controllerActionBindings = .default
+            Tab("Input", systemImage: "gamecontroller") {
+                Form {
+                    Section("Joystick Configuration") {
+                        stickDeadzoneConfig
                     }
                     
-                    Button("Reset Defaults") {
-                        settings.keyboardHotkey = defaultKeyboardShortcut
-                        settings.controllerToggleBinding = .default
-                        settings.controllerActionBindings = .default
-                        settings.shiftShortcutCyclesToCapsLock = true
+                    Section("Mouse Configuration") {
+                        Slider(value: $settings.mouseSensitivity, in: 400...2000) {
+                            Text("Mouse Sensitivity")
+                        }
+                        
+                        Slider(value: $settings.mouseSmoothing, in: 0...1.0) {
+                            Text("Mouse Smoothing")
+                        }
+                    }
+                    
+                    Section("Controller Hotkeys") {
+                        ForEach(ControllerActionBinding.allCases) { action in
+                            LabeledContent(action.title) {
+                                controllerActionPickerButton(for: action)
+                            }
+                        }
+                        
+                        HStack {
+                            Button("Reset Hotkeys") {
+                                settings.keyboardHotkey = defaultKeyboardShortcut
+                                settings.controllerToggleBinding = .default
+                                settings.controllerActionBindings = .default
+                            }
+                            
+                            Button("Reset Defaults") {
+                                settings.keyboardHotkey = defaultKeyboardShortcut
+                                settings.controllerToggleBinding = .default
+                                settings.controllerActionBindings = .default
+                                settings.shiftShortcutCyclesToCapsLock = true
+                            }
+                        }
                     }
                 }
-            }
-            
-            Section("Joystick Configuration") {
-                stickDeadzoneConfig
-            }
-            
-            Section("Others") {
-                HStack {
-                    Text("Accessibility Permissions: ")
-                    Spacer()
-                    Text(isAccessibilityTrusted ? "Granted" : "Not Granted")
-                        .foregroundStyle(isAccessibilityTrusted ? .green : .red)
-                }
-                HStack {
-                    Button("Restart Onboarding") {
-                        onRestartOnboarding()
-                    }
-                }
+                .formStyle(.grouped)
             }
         }
         .onDisappear {
@@ -144,7 +164,6 @@ struct SettingsView: View {
             endControllerToggleRecording()
             endControllerActionPicker()
         }
-        .formStyle(.grouped)
         .frame(width: 560, height: 520)
     }
     
