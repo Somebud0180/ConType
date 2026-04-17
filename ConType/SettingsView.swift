@@ -3,11 +3,12 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject var joystick: JoystickInputModel
     let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
     let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     let onCancelControllerCapture: () -> Void
     let onRestartOnboarding: () -> Void
-
+    
     @State private var isAccessibilityTrusted = AccessibilityPermission.isTrusted()
     @State private var keyboardKeyDownMonitor: Any?
     @State private var keyboardFlagsMonitor: Any?
@@ -15,36 +16,40 @@ struct SettingsView: View {
     @State private var keyboardValidationMessage: String?
     @State private var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
     @State private var keyboardPressedModifiers: NSEvent.ModifierFlags = []
-
+    
     @State private var isRecordingControllerHotkey = false
     @State private var activeControllerActionPicker: ControllerActionBinding?
     @State private var stickMovementStyle = JoystickMovementMode.limited
-
+    @State private var leftStickDeadzone: CGFloat = 0.2
+    @State private var rightStickDeadzone: CGFloat = 0.2
+    
     private let waitingKeyboardText = "Waiting for keyboard input..."
     private let waitingControllerText = "Waiting for controller input..."
     private let defaultKeyboardShortcut = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
-
+    
+    private let twoDecimalFormatter = Decimal.FormatStyle().precision(.fractionLength(2))
+    
     var body: some View {
         Form {
             Section("Your Controller") {
                 if let detectedController = settings.detectedController {
                     let guideButtons = displayedGuideButtons(for: detectedController)
-
+                    
                     HStack {
                         Text("Detected Controller:")
                         Spacer()
                         Text(detectedController.name)
                             .multilineTextAlignment(.trailing)
                     }
-
+                    
                     HStack {
                         Text("Your controller's guide ")
                         Image(systemName: "gamecontroller.circle.fill")
                             .foregroundStyle(.primary)
                         Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
-
+                        
                         Spacer()
-
+                        
                         HStack(spacing: 6) {
                             ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
                                 guideButtonGlyph(guideButton)
@@ -61,11 +66,11 @@ struct SettingsView: View {
                 LabeledContent("Keyboard Shortcut") {
                     keyboardShortcutButton
                 }
-
+                
                 LabeledContent("Controller Shortcut") {
-                        controllerToggleButton
+                    controllerToggleButton
                 }
-
+                
                 if let keyboardValidationMessage {
                     Text(keyboardValidationMessage)
                         .foregroundStyle(.red)
@@ -92,21 +97,21 @@ struct SettingsView: View {
                         .animation(.easeInOut)
                 }
             }
-
+            
             Section("Controller Hotkeys") {
                 ForEach(ControllerActionBinding.allCases) { action in
                     LabeledContent(action.title) {
                         controllerActionPickerButton(for: action)
                     }
                 }
-
+                
                 HStack {
                     Button("Reset Hotkeys") {
                         settings.keyboardHotkey = defaultKeyboardShortcut
                         settings.controllerToggleBinding = .default
                         settings.controllerActionBindings = .default
                     }
-
+                    
                     Button("Reset Defaults") {
                         settings.keyboardHotkey = defaultKeyboardShortcut
                         settings.controllerToggleBinding = .default
@@ -115,7 +120,11 @@ struct SettingsView: View {
                     }
                 }
             }
-
+            
+            Section("Joystick Configuration") {
+                stickDeadzoneConfig
+            }
+            
             Section("Others") {
                 HStack {
                     Text("Accessibility Permissions: ")
@@ -148,7 +157,7 @@ struct SettingsView: View {
         
         return "This style doesn't exist"
     }
-
+    
     private var keyboardShortcutButton: some View {
         Button {
             beginKeyboardHotkeyRecording()
@@ -168,28 +177,28 @@ struct SettingsView: View {
             keyboardShortcutPopover
         }
     }
-
+    
     private var keyboardShortcutPopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Press Keyboard Shortcut")
                 .font(.headline)
-
+            
             RecordingDisplayContainer {
                 Text(keyboardLiveRecordingText)
                     .font(.system(.body, design: .monospaced).weight(.semibold))
                     .foregroundStyle(keyboardLiveRecordingText == waitingKeyboardText ? .secondary : .primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-
+            
             Divider()
-
+            
             Text("Example")
                 .font(.subheadline.weight(.semibold))
-
+            
             Text(defaultKeyboardShortcut.displayText)
                 .font(.system(.footnote, design: .monospaced))
                 .foregroundStyle(.secondary)
-
+            
             Text("Press Esc to cancel.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -197,7 +206,7 @@ struct SettingsView: View {
         .padding(12)
         .frame(width: 300)
     }
-
+    
     private var controllerToggleButton: some View {
         Button {
             beginControllerToggleRecording()
@@ -216,12 +225,12 @@ struct SettingsView: View {
             controllerTogglePopover
         }
     }
-
+    
     private var controllerTogglePopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Press Controller Shortcut")
                 .font(.headline)
-
+            
             RecordingDisplayContainer {
                 controllerChordView(
                     guidePressed: settings.controllerCaptureState.isGuidePressed,
@@ -229,19 +238,19 @@ struct SettingsView: View {
                     waitingText: waitingControllerText
                 )
             }
-
+            
             Divider()
-
+            
             Text("Example")
                 .font(.subheadline.weight(.semibold))
-
+            
             controllerChordView(
                 guidePressed: true,
                 buttons: [.west],
                 waitingText: waitingControllerText
             )
             .foregroundStyle(.secondary)
-
+            
             HStack {
                 Spacer()
                 Button("Cancel") {
@@ -252,10 +261,10 @@ struct SettingsView: View {
         .padding(12)
         .frame(width: 340)
     }
-
+    
     private func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {
         let selectedButton = settings.controllerActionBindings.button(for: action)
-
+        
         return Button {
             if activeControllerActionPicker == action {
                 endControllerActionPicker()
@@ -280,19 +289,19 @@ struct SettingsView: View {
             controllerActionPickerPopover(for: action)
         }
     }
-
+    
     private func controllerActionPickerPopover(for action: ControllerActionBinding) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Choose Controller Button")
                 .font(.headline)
-
+            
             Text("Press a controller button or click an option below.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-
+            
             ForEach(ControllerAssignableButton.allCases) { button in
                 let isSelected = settings.controllerActionBindings.button(for: action) == button
-
+                
                 Button {
                     setControllerActionButton(button, for: action)
                 } label: {
@@ -301,9 +310,9 @@ struct SettingsView: View {
                             buttonGlyph(button)
                             Text(button.displayTitle(for: settings.controllerGlyphStyle))
                         }
-
+                        
                         Spacer(minLength: 8)
-
+                        
                         if isSelected {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(Color.accentColor)
@@ -318,9 +327,9 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
-
+            
             Divider()
-
+            
             HStack {
                 Spacer()
                 Button("Done") {
@@ -331,7 +340,7 @@ struct SettingsView: View {
         .padding(12)
         .frame(width: 320)
     }
-
+    
     private var keyboardRecordingPresentedBinding: Binding<Bool> {
         Binding(
             get: {
@@ -344,7 +353,7 @@ struct SettingsView: View {
             }
         )
     }
-
+    
     private var controllerToggleRecordingPresentedBinding: Binding<Bool> {
         Binding(
             get: {
@@ -357,20 +366,20 @@ struct SettingsView: View {
             }
         )
     }
-
+    
     private var keyboardLiveRecordingText: String {
         if let keyboardPreviewShortcut {
             return keyboardPreviewShortcut.displayText
         }
-
+        
         let activeModifiers = keyboardPressedModifiers.intersection([.control, .option, .command, .shift])
         if !activeModifiers.isEmpty {
             return modifierDisplayText(from: activeModifiers)
         }
-
+        
         return waitingKeyboardText
     }
-
+    
     private func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
         var parts: [String] = []
         if modifiers.contains(.control) { parts.append("Control") }
@@ -379,18 +388,18 @@ struct SettingsView: View {
         if modifiers.contains(.shift) { parts.append("Shift") }
         return parts.joined(separator: " + ")
     }
-
+    
     private func orderedButtons(from pressedButtons: Set<ControllerAssignableButton>) -> [ControllerAssignableButton] {
         ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
     }
-
+    
     private func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
         if detectedController.guideButtons.isEmpty {
             return [.menu]
         }
         return detectedController.guideButtons
     }
-
+    
     @ViewBuilder
     private func controllerChordView(
         guidePressed: Bool,
@@ -409,19 +418,19 @@ struct SettingsView: View {
                         guideGlyph()
                         Text("Guide")
                     }
-
+                    
                     if !buttons.isEmpty {
                         Text("+")
                             .foregroundStyle(.secondary)
                     }
                 }
-
+                
                 ForEach(Array(buttons.enumerated()), id: \.element) { index, button in
                     if index > 0 {
                         Text("+")
                             .foregroundStyle(.secondary)
                     }
-
+                    
                     HStack(spacing: 6) {
                         buttonGlyph(button)
                         Text(button.displayTitle(for: settings.controllerGlyphStyle))
@@ -432,7 +441,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-
+    
     private func guideGlyph(size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             systemAsset: true,
@@ -441,7 +450,7 @@ struct SettingsView: View {
             size: size
         )
     }
-
+    
     @ViewBuilder
     private func guideButtonGlyph(_ button: ControllerGuideButton, size: CGFloat = 20) -> some View {
         let title = button.displayTitle(for: settings.controllerGlyphStyle)
@@ -468,7 +477,7 @@ struct SettingsView: View {
                 .accessibilityLabel(Text(title))
         }
     }
-
+    
     private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
@@ -476,77 +485,77 @@ struct SettingsView: View {
             size: size
         )
     }
-
+    
     private func beginKeyboardHotkeyRecording() {
         endKeyboardHotkeyRecording()
         endControllerToggleRecording()
         endControllerActionPicker()
-
+        
         isRecordingKeyboardHotkey = true
         keyboardValidationMessage = nil
         keyboardPreviewShortcut = nil
         keyboardPressedModifiers = []
-
+        
         keyboardFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
             guard isRecordingKeyboardHotkey else { return event }
-
+            
             keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             keyboardPreviewShortcut = nil
             keyboardValidationMessage = nil
             return nil
         }
-
+        
         keyboardKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard isRecordingKeyboardHotkey else { return event }
-
+            
             if event.keyCode == 53 {
                 endKeyboardHotkeyRecording()
                 return nil
             }
-
+            
             keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-
+            
             guard let shortcut = KeyboardHotkeyManager.shortcut(from: event) else {
                 return nil
             }
-
+            
             keyboardPreviewShortcut = shortcut
-
+            
             guard KeyboardHotkeyManager.isValidShortcut(shortcut) else {
                 keyboardValidationMessage = "Use at least one modifier key (Command/Option/Control/Shift)."
                 return nil
             }
-
+            
             keyboardValidationMessage = nil
             settings.keyboardHotkey = shortcut
             endKeyboardHotkeyRecording()
             return nil
         }
     }
-
+    
     private func endKeyboardHotkeyRecording() {
         isRecordingKeyboardHotkey = false
         keyboardPreviewShortcut = nil
         keyboardPressedModifiers = []
-
+        
         if let keyboardKeyDownMonitor {
             NSEvent.removeMonitor(keyboardKeyDownMonitor)
             self.keyboardKeyDownMonitor = nil
         }
-
+        
         if let keyboardFlagsMonitor {
             NSEvent.removeMonitor(keyboardFlagsMonitor)
             self.keyboardFlagsMonitor = nil
         }
     }
-
+    
     private func beginControllerToggleRecording() {
         endControllerToggleRecording()
         endKeyboardHotkeyRecording()
         endControllerActionPicker()
-
+        
         isRecordingControllerHotkey = true
-
+        
         onRequestControllerBindingCapture { binding in
             DispatchQueue.main.async {
                 settings.controllerToggleBinding = binding
@@ -554,16 +563,16 @@ struct SettingsView: View {
             }
         }
     }
-
+    
     private func endControllerToggleRecording(cancelCapture: Bool = true) {
         let wasRecording = isRecordingControllerHotkey
         isRecordingControllerHotkey = false
-
+        
         if cancelCapture && wasRecording {
             onCancelControllerCapture()
         }
     }
-
+    
     private func controllerActionPickerPresentedBinding(for action: ControllerActionBinding) -> Binding<Bool> {
         Binding(
             get: {
@@ -578,18 +587,18 @@ struct SettingsView: View {
             }
         )
     }
-
+    
     private func beginControllerActionPicker(for action: ControllerActionBinding) {
         endControllerToggleRecording()
         endKeyboardHotkeyRecording()
-
+        
         activeControllerActionPicker = action
         armControllerActionButtonCapture(for: action)
     }
-
+    
     private func armControllerActionButtonCapture(for action: ControllerActionBinding) {
         guard activeControllerActionPicker == action else { return }
-
+        
         onRequestControllerActionButtonCapture { button in
             DispatchQueue.main.async {
                 guard activeControllerActionPicker == action else { return }
@@ -598,20 +607,105 @@ struct SettingsView: View {
             }
         }
     }
-
+    
     private func endControllerActionPicker() {
         let wasActive = activeControllerActionPicker != nil
         activeControllerActionPicker = nil
-
+        
         if wasActive {
             onCancelControllerCapture()
         }
     }
-
+    
     private func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
         var updated = settings.controllerActionBindings
         updated.setButton(button, for: action)
         settings.controllerActionBindings = updated
+    }
+    
+    private var stickDeadzoneConfig: some View {
+        VStack(alignment: .leading) {
+            Text("Left Stick")
+                .font(.headline)
+            HStack(spacing: 24) {
+                stickDeadzoneVisualizer(for: .leftStick)
+                
+                stickSliders(localDeadzone: $leftStickDeadzone, settingsDeadzone: $settings.leftStickDeadzone)
+                
+                Text(Decimal.FormatStyle.FormatInput($leftStickDeadzone.wrappedValue), format: twoDecimalFormatter)
+                    .frame(width: 40, alignment: .trailing)
+            }
+            .padding(.horizontal, 12)
+            
+            Divider()
+            
+            Text("Right Stick")
+                .font(.headline)
+            HStack(spacing: 24) {
+                stickDeadzoneVisualizer(for: .rightStick)
+                
+                stickSliders(localDeadzone: $rightStickDeadzone, settingsDeadzone: $settings.rightStickDeadzone)
+                
+                Text(Decimal.FormatStyle.FormatInput($rightStickDeadzone.wrappedValue), format: twoDecimalFormatter)
+                    .frame(width: 40, alignment: .trailing)
+            }
+            .padding(.horizontal, 12)
+        }
+    }
+    
+    @ViewBuilder
+    private func stickSliders(localDeadzone: Binding<CGFloat>, settingsDeadzone: Binding<CGFloat>) -> some View {
+        Slider(value: Binding<Double>(
+            get: { Double(localDeadzone.wrappedValue) },
+            set: { localDeadzone.wrappedValue = CGFloat(($0 * 100).rounded() / 100) }
+        ), in: 0.0...0.8) {
+            Text("Deadzone")
+        }
+        .onSubmit {
+            settingsDeadzone.wrappedValue = localDeadzone.wrappedValue
+        }
+    }
+    
+    @ViewBuilder
+    private func stickDeadzoneVisualizer(for stick: MovementMode, size: CGFloat = 100) -> some View {
+        
+        let stickPosition: CGVector = switch stick {
+        case .leftStick: joystick.leftStick
+        case .rightStick: joystick.rightStick
+        default: .zero
+        }
+        
+        let deadzoneRadius: CGFloat = switch stick {
+        case .leftStick: settings.leftStickDeadzone
+        case .rightStick: settings.rightStickDeadzone
+        default: .zero
+        }
+        
+        Group {
+            switch stick {
+            case .leftStick, .rightStick:
+                ZStack {
+                    // Outer circle (joystick range)
+                    Circle()
+                        .stroke(Color.primary.opacity(0.3), lineWidth: 2)
+                        .frame(width: size, height: size)
+                    // Deadzone circle
+                    Circle()
+                        .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
+                        .frame(width: size * deadzoneRadius, height: size * deadzoneRadius)
+                    // Stick dot
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 14, height: 14)
+                        .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
+                    // Y is inverted for UI (up is positive)
+                        .shadow(radius: 2)
+                }
+                .frame(width: size, height: size)
+            default:
+                EmptyView()
+            }
+        }
     }
 }
 
@@ -665,6 +759,7 @@ private struct ControllerGlyphBadge: View {
 #Preview {
     SettingsView(
         settings: AppSettings(),
+        joystick: JoystickInputModel(manager: ControllerInputManager()),
         onRequestControllerBindingCapture: { _ in },
         onRequestControllerActionButtonCapture: { _ in },
         onCancelControllerCapture: {},

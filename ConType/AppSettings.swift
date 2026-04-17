@@ -337,13 +337,22 @@ enum WindowSize {
 
 @MainActor
 final class AppSettings: ObservableObject {
+    // Bindings
     @Published var keyboardHotkey = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
     @Published var controllerToggleBinding: ControllerToggleBinding = .default
     @Published var controllerActionBindings: ControllerActionBindings = .default
+    
+    // Preferences
     @Published var shiftShortcutCyclesToCapsLock = true
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
     @Published var stickMovementStyle: JoystickMovementMode = .limited
+    @Published var leftStickDeadzone: CGFloat = 0.2
+    @Published var rightStickDeadzone: CGFloat = 0.2
+    @Published var mouseSensitivity: CGFloat = 400.0
+    @Published var mouseSmoothing: CGFloat = 0.5
+    
+    // App state
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
     @Published var detectedController: DetectedController?

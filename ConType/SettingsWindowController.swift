@@ -6,6 +6,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
 
     private let settings: AppSettings
+    private let joystick: JoystickInputModel
     private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
@@ -14,12 +15,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     init(
         settings: AppSettings,
+        joystick: JoystickInputModel,
         onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
         onRestartOnboarding: @escaping () -> Void
     ) {
         self.settings = settings
+        self.joystick = joystick
         self.onRequestControllerBindingCapture = onRequestControllerBindingCapture
         self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
         self.onCancelControllerCapture = onCancelControllerCapture
@@ -51,6 +54,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let hostingController = NSHostingController(
             rootView: SettingsView(
                 settings: settings,
+                joystick: joystick,
                 onRequestControllerBindingCapture: onRequestControllerBindingCapture,
                 onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
                 onCancelControllerCapture: onCancelControllerCapture,

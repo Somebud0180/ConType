@@ -7,6 +7,7 @@ import SwiftUI
 final class AppCoordinator: ObservableObject {
     @Published private(set) var isOverlayVisible = false
     let settings = AppSettings()
+    let joystick: JoystickInputModel
 
     private enum ToggleSource {
         case menuBar
@@ -29,6 +30,7 @@ final class AppCoordinator: ObservableObject {
     private lazy var overlayController = OverlayWindowController(settings: settings)
     private lazy var settingsController = SettingsWindowController(
         settings: settings,
+        joystick: joystick,
         onRequestControllerBindingCapture: { [weak self] onCaptured in
             self?.controllerInputManager.captureNextToggleBinding(onCaptured)
         },
@@ -59,6 +61,8 @@ final class AppCoordinator: ObservableObject {
     }
 
     init() {
+        joystick = JoystickInputModel(manager: controllerInputManager)
+        
         hotkeyManager.onToggle = { [weak self] in
             Task { @MainActor in
                 self?.toggleOverlay(source: .keyboardShortcut)
@@ -228,6 +232,10 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
         controllerInputManager.isOverlayVisible = isOverlayVisible
         controllerInputManager.joystickMode = settings.stickMovementStyle
+        controllerInputManager.leftStickDeadzone = settings.leftStickDeadzone
+        controllerInputManager.rightStickDeadzone = settings.rightStickDeadzone
+        controllerInputManager.mouseSensitivity = settings.mouseSensitivity
+        controllerInputManager.mouseSmoothingAlpha = settings.mouseSmoothing
 
         settings.$keyboardHotkey
             .sink { [weak self] value in
