@@ -231,7 +231,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.actionBindings = settings.controllerActionBindings
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
         controllerInputManager.isOverlayVisible = isOverlayVisible
-        controllerInputManager.joystickMode = settings.keyboardMovementStyle
+        controllerInputManager.keyboardMovementStyle = settings.keyboardMovementStyle
         controllerInputManager.leftStickDeadzone = settings.leftStickDeadzone
         controllerInputManager.rightStickDeadzone = settings.rightStickDeadzone
         controllerInputManager.mouseSensitivity = settings.mouseSensitivity
@@ -260,7 +260,37 @@ final class AppCoordinator: ObservableObject {
                 self?.controllerInputManager.dismissWithGuideButton = value
             }
             .store(in: &cancellables)
+        
+        settings.$keyboardMovementStyle
+            .sink { [weak self] value in
+                self?.controllerInputManager.keyboardMovementStyle = value
+            }
+            .store(in: &cancellables)
 
+        settings.$leftStickDeadzone
+            .sink { [weak self] value in
+                self?.controllerInputManager.leftStickDeadzone = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$rightStickDeadzone
+            .sink { [weak self] value in
+                self?.controllerInputManager.rightStickDeadzone = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$mouseSensitivity
+            .sink { [weak self] value in
+                self?.controllerInputManager.mouseSensitivity = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$mouseSmoothing
+            .sink { [weak self] value in
+                self?.controllerInputManager.mouseSmoothingAlpha = value
+            }
+            .store(in: &cancellables)
+        
         configureOpenAppOnStartup()
 
         setAccessoryMode()

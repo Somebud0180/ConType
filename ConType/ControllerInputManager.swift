@@ -72,7 +72,7 @@ final class ControllerInputManager: NSObject {
     var padInputType: AxisInputType = .overlayMovement
     var dismissWithGuideButton = true
     var isOverlayVisible = false
-    var joystickMode: KeyboardMovementMode = .limited
+    var keyboardMovementStyle: KeyboardMovementMode = .limited
     var leftStickDeadzone: CGFloat = 0.20
     var rightStickDeadzone: CGFloat = 0.20
     var mouseSensitivity: CGFloat = 400.0
@@ -358,11 +358,11 @@ final class ControllerInputManager: NSObject {
         
         stick.valueChangedHandler = { [weak self] _, xValue, yValue in
             guard let self = self else { return }
-            self.handleAnalogStick(x: xValue, y: yValue, joystickMode: inputType == .mouseMovement ? .mouse : self.joystickMode, from: source)
+            self.handleAnalogStick(x: xValue, y: yValue, keyboardMovementStyle: inputType == .mouseMovement ? .mouse : self.keyboardMovementStyle, from: source)
         }
     }
     
-    private func handleAnalogStick(x: Float, y: Float, joystickMode: KeyboardMovementMode, from source: MovementMode) {
+    private func handleAnalogStick(x: Float, y: Float, keyboardMovementStyle: KeyboardMovementMode, from source: MovementMode) {
         // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
@@ -389,7 +389,7 @@ final class ControllerInputManager: NSObject {
 
         // let filteredMagnitude = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
 
-        switch joystickMode {
+        switch keyboardMovementStyle {
         case .mouse:
             // Start or stop analog timer depending on magnitude vs deadZone
             if rawMagnitude > joystickDeadzone {
@@ -421,7 +421,7 @@ final class ControllerInputManager: NSObject {
                 return
             }
 
-            let newDir = discreteDirection(for: filteredStick, mode: joystickMode)
+            let newDir = discreteDirection(for: filteredStick, mode: keyboardMovementStyle)
             if newDir != lastAnalogDirection {
                 // release previous, press new
                 if let last = lastAnalogDirection {
