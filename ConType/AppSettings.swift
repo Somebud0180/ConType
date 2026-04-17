@@ -363,7 +363,7 @@ final class AppSettings: ObservableObject {
     @Published var shiftShortcutCyclesToCapsLock = true
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
-    @Published var stickMovementStyle: JoystickMovementMode = .limited
+    @Published var keyboardMovementStyle: KeyboardMovementMode = .limited
     @Published var leftStickDeadzone: CGFloat = 0.2
     @Published var rightStickDeadzone: CGFloat = 0.2
     @Published var mouseSensitivity: CGFloat = 400.0

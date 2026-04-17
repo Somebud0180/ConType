@@ -19,7 +19,7 @@ struct SettingsView: View {
     
     @State private var isRecordingControllerHotkey = false
     @State private var activeControllerActionPicker: ControllerActionBinding?
-    @State private var stickMovementStyle = JoystickMovementMode.limited
+    @State private var keyboardMovementStyle = KeyboardMovementMode.limited
     @State private var leftStickDeadzone: CGFloat = 0.2
     @State private var rightStickDeadzone: CGFloat = 0.2
     
@@ -83,12 +83,12 @@ struct SettingsView: View {
                         Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
                         
                         VStack(alignment: .leading) {
-                            Picker("Keyboard stick movement style", selection: $stickMovementStyle) {
-                                Text("4 Directional").tag(JoystickMovementMode.limited)
-                                Text("8 Directional").tag(JoystickMovementMode.full)
+                            Picker("Keyboard stick movement style", selection: $keyboardMovementStyle) {
+                                Text("4 Directional").tag(KeyboardMovementMode.limited)
+                                Text("8 Directional").tag(KeyboardMovementMode.full)
                             }
                             .onSubmit {
-                                settings.stickMovementStyle = stickMovementStyle
+                                settings.keyboardMovementStyle = keyboardMovementStyle
                             }
                             .pickerStyle(.segmented)
                             .listRowSeparator(.hidden)
@@ -168,9 +168,9 @@ struct SettingsView: View {
     }
     
     private var movementDecription: String {
-        if $settings.stickMovementStyle.wrappedValue == JoystickMovementMode.limited {
+        if $settings.keyboardMovementStyle.wrappedValue == KeyboardMovementMode.limited {
             return "In this style, the joystick navigates the keyboard like a d-pad."
-        } else if $settings.stickMovementStyle.wrappedValue == JoystickMovementMode.full {
+        } else if $settings.keyboardMovementStyle.wrappedValue == KeyboardMovementMode.full {
             return "In this style, the joystick nvaigates the keyboard more freely, with diagonal movements."
         }
         

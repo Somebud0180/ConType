@@ -2,7 +2,7 @@ import Foundation
 import GameController
 import Combine
 
-enum JoystickMovementMode {
+enum KeyboardMovementMode {
     case limited    // 4 Directional
     case full       // 8 Directional
     case mouse      // Similar to full but with different handling
@@ -72,7 +72,7 @@ final class ControllerInputManager: NSObject {
     var padInputType: AxisInputType = .overlayMovement
     var dismissWithGuideButton = true
     var isOverlayVisible = false
-    var joystickMode: JoystickMovementMode = .limited
+    var joystickMode: KeyboardMovementMode = .limited
     var leftStickDeadzone: CGFloat = 0.20
     var rightStickDeadzone: CGFloat = 0.20
     var mouseSensitivity: CGFloat = 400.0
@@ -362,7 +362,7 @@ final class ControllerInputManager: NSObject {
         }
     }
     
-    private func handleAnalogStick(x: Float, y: Float, joystickMode: JoystickMovementMode, from source: MovementMode) {
+    private func handleAnalogStick(x: Float, y: Float, joystickMode: KeyboardMovementMode, from source: MovementMode) {
         // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
@@ -435,7 +435,7 @@ final class ControllerInputManager: NSObject {
         }
     }
     
-    private func discreteDirection(for vector: CGVector, mode: JoystickMovementMode) -> OverlayMoveDirection {
+    private func discreteDirection(for vector: CGVector, mode: KeyboardMovementMode) -> OverlayMoveDirection {
         let angle = atan2(vector.dy, vector.dx) // -π..π
         // Convert to degrees 0..360 where 0 = right, 90 = up
         var degrees = angle * 180.0 / .pi

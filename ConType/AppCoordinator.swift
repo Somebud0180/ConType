@@ -231,7 +231,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.actionBindings = settings.controllerActionBindings
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
         controllerInputManager.isOverlayVisible = isOverlayVisible
-        controllerInputManager.joystickMode = settings.stickMovementStyle
+        controllerInputManager.joystickMode = settings.keyboardMovementStyle
         controllerInputManager.leftStickDeadzone = settings.leftStickDeadzone
         controllerInputManager.rightStickDeadzone = settings.rightStickDeadzone
         controllerInputManager.mouseSensitivity = settings.mouseSensitivity
