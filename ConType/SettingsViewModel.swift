@@ -319,11 +319,12 @@ final class SettingsViewModel: ObservableObject {
         }
         .buttonStyle(.bordered)
         .popover(isPresented: controllerActionPickerPresentedBinding(for: action), arrowEdge: .bottom) { [self] in
-            controllerActionPickerPopover(for: action)
+            controllerActionPickerPopover(for: action, selected: selectedButton)
         }
     }
     
-    func controllerActionPickerPopover(for action: ControllerActionBinding) -> some View {
+    @ViewBuilder
+    func controllerActionPickerPopover(for action: ControllerActionBinding, selected: ControllerAssignableButton) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Choose Controller Button")
                 .font(.headline)
@@ -333,7 +334,7 @@ final class SettingsViewModel: ObservableObject {
                 .foregroundStyle(.secondary)
             
             ForEach(ControllerAssignableButton.allCases) { [self] button in
-                let isSelected = settings.controllerActionBindings.button(for: action) == button
+                let isSelected = selected == button
                 
                 Button {
                     self.setControllerActionButton(button, for: action)
@@ -355,7 +356,7 @@ final class SettingsViewModel: ObservableObject {
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
+                            .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.05))
                     )
                 }
                 .buttonStyle(.plain)
@@ -788,4 +789,17 @@ final class SettingsViewModel: ObservableObject {
             settingsDeadzone.wrappedValue = localDeadzone.wrappedValue
         }
     }
+}
+
+#Preview {
+    let vm = SettingsViewModel(
+        settings: AppSettings(),
+        joystick: JoystickInputModel(manager: ControllerInputManager()),
+        onRequestControllerBindingCapture: { _ in },
+        onRequestControllerActionButtonCapture: { _ in },
+        onCancelControllerCapture: {},
+        onRestartOnboarding: {}
+    )
+    
+    SettingsView(viewModel: vm)
 }
