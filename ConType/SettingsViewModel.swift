@@ -156,9 +156,11 @@ final class SettingsViewModel: ObservableObject {
 	}
 
 	func endKeyboardHotkeyRecording() {
-		isRecordingKeyboardHotkey = false
-		keyboardPreviewShortcut = nil
-		keyboardPressedModifiers = []
+        DispatchQueue.main.async {
+            self.isRecordingKeyboardHotkey = false
+            self.keyboardPreviewShortcut = nil
+            self.keyboardPressedModifiers = []
+        }
 
 		if let keyboardKeyDownMonitor {
 			NSEvent.removeMonitor(keyboardKeyDownMonitor)
@@ -189,14 +191,16 @@ final class SettingsViewModel: ObservableObject {
 		}
 	}
 
-	func endControllerToggleRecording(cancelCapture: Bool = true) {
-		let wasRecording = isRecordingControllerHotkey
-		isRecordingControllerHotkey = false
-
-		if cancelCapture && wasRecording {
-			onCancelControllerCapture()
-		}
-	}
+    func endControllerToggleRecording(cancelCapture: Bool = true) {
+        DispatchQueue.main.async {
+            let wasRecording = self.isRecordingControllerHotkey
+            self.isRecordingControllerHotkey = false
+            
+            if cancelCapture && wasRecording {
+                self.onCancelControllerCapture()
+            }
+        }
+    }
 
 	// MARK: - Controller action picker
 
