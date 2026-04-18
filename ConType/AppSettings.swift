@@ -2,10 +2,12 @@ import AppKit
 import Combine
 import Foundation
 
-enum AxisInputType: String, CaseIterable, Equatable {
+enum AxisInputType: String, CaseIterable, Identifiable {
     case none
     case overlayMovement
     case mouseMovement
+    
+    var id: String { rawValue }
     
     var title: String {
         switch self {
@@ -238,6 +240,10 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enlargeWindow
     case shrinkWindow
 
+    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock]
+    
+    static let mouseActions: [ControllerActionBinding] = [.mouseLeftClick, .mouseRightClick]
+    
     var id: String { rawValue }
 
     var title: String {
@@ -366,7 +372,7 @@ final class AppSettings: ObservableObject {
     @Published var keyboardMovementStyle: KeyboardMovementMode = .limited
     @Published var leftStickDeadzone: CGFloat = 0.2
     @Published var rightStickDeadzone: CGFloat = 0.2
-    @Published var mouseSensitivity: CGFloat = 400.0
+    @Published var mouseSensitivity: CGFloat = 300.0
     @Published var mouseSmoothing: CGFloat = 0.5
     
     // App state

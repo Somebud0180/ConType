@@ -2,782 +2,243 @@ import AppKit
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject var settings: AppSettings
-    @ObservedObject var joystick: JoystickInputModel
-    let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
-    let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
-    let onCancelControllerCapture: () -> Void
-    let onRestartOnboarding: () -> Void
-    
-    @State private var isAccessibilityTrusted = AccessibilityPermission.isTrusted()
-    @State private var keyboardKeyDownMonitor: Any?
-    @State private var keyboardFlagsMonitor: Any?
-    @State private var isRecordingKeyboardHotkey = false
-    @State private var keyboardValidationMessage: String?
-    @State private var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
-    @State private var keyboardPressedModifiers: NSEvent.ModifierFlags = []
-    
-    @State private var isRecordingControllerHotkey = false
-    @State private var activeControllerActionPicker: ControllerActionBinding?
-    @State private var keyboardMovementStyle = KeyboardMovementMode.limited
-    @State private var leftStickDeadzone: CGFloat = 0.2
-    @State private var rightStickDeadzone: CGFloat = 0.2
-    
-    private let waitingKeyboardText = "Waiting for keyboard input..."
-    private let waitingControllerText = "Waiting for controller input..."
-    private let defaultKeyboardShortcut = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
-    
-    private let twoDecimalFormatter = Decimal.FormatStyle().precision(.fractionLength(2))
+    @ObservedObject var viewModel: SettingsViewModel
+    private var settings: AppSettings { viewModel.settings }
+    private var joystick: JoystickInputModel { viewModel.joystick }
     
     var body: some View {
-        TabView {
-            Tab("Main", systemImage: "gearshape") {
-                Form {
-                    Section("Your Controller") {
-                        if let detectedController = settings.detectedController {
-                            let guideButtons = displayedGuideButtons(for: detectedController)
-                            
-                            HStack {
-                                Text("Detected Controller:")
-                                Spacer()
-                                Text(detectedController.name)
-                                    .multilineTextAlignment(.trailing)
+        NavigationStack {
+            TabView {
+                Tab("Main", systemImage: "gearshape") {
+                    Form {
+                        Section("Your Controller") {
+                            if let detectedController = settings.detectedController {
+                                let guideButtons = viewModel.displayedGuideButtons(for: detectedController)
+                                
+                                HStack {
+                                    Text("Detected Controller:")
+                                    Spacer()
+                                    Text(detectedController.name)
+                                        .multilineTextAlignment(.trailing)
+                                }
+                                
+                                HStack {
+                                    Text("Your controller's guide ")
+                                    Image(systemName: "gamecontroller.circle.fill")
+                                        .foregroundStyle(.primary)
+                                    Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 6) {
+                                        ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
+                                            viewModel.controllerGuideGlyphs(guideButton)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("No controller detected")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        Section("General") {
+                            LabeledContent("Keyboard Shortcut") {
+                                viewModel.keyboardShortcutButton
                             }
                             
+                            LabeledContent("Controller Shortcut") {
+                                viewModel.controllerToggleButton
+                            }
+                            
+                            if let keyboardValidationMessage = viewModel.keyboardValidationMessage {
+                                Text(keyboardValidationMessage)
+                                    .foregroundStyle(.red)
+                            }
+                            
+                            Toggle("Open app on startup", isOn: Binding(
+                                get: { viewModel.settings.openAppOnStartup },
+                                set: { viewModel.settings.openAppOnStartup = $0 }
+                            ))
+                        }
+                        
+                        Section("Others") {
                             HStack {
-                                Text("Your controller's guide ")
-                                Image(systemName: "gamecontroller.circle.fill")
-                                    .foregroundStyle(.primary)
-                                Text(" \(guideButtons.count == 1 ? "button" : "buttons"):")
-                                
+                                Text("Accessibility Permissions: ")
                                 Spacer()
+                                Text(viewModel.isAccessibilityTrusted ? "Granted" : "Not Granted")
+                                    .foregroundStyle(viewModel.isAccessibilityTrusted ? .green : .red)
+                            }
+                            HStack {
+                                Button("Restart Onboarding") {
+                                    viewModel.restartOnboarding()
+                                }
+                            }
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
+                
+                Tab("Input", systemImage: "gamecontroller") {
+                    Form {
+                        Section("Controller Configuration") {
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "LS",
+                                    fallbackText: "LS",
+                                    size: 24
+                                )
                                 
-                                HStack(spacing: 6) {
-                                    ForEach(Array(guideButtons.enumerated()), id: \.offset) { _, guideButton in
-                                        guideButtonGlyph(guideButton)
+                                Picker("Left Stick", selection: Binding(
+                                    get: { viewModel.settings.leftStickInputType },
+                                    set: { viewModel.settings.leftStickInputType = $0 }
+                                )) {
+                                    ForEach(AxisInputType.allCases) { type in
+                                        Text(type.title).tag(type)
                                     }
                                 }
                             }
-                        } else {
-                            Text("No controller detected")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    
-                    Section("General") {
-                        LabeledContent("Keyboard Shortcut") {
-                            keyboardShortcutButton
-                        }
-                        
-                        LabeledContent("Controller Shortcut") {
-                            controllerToggleButton
-                        }
-                        
-                        if let keyboardValidationMessage {
-                            Text(keyboardValidationMessage)
-                                .foregroundStyle(.red)
-                        }
-                        
-                        Toggle("Shift hotkey cycles to Caps Lock", isOn: $settings.shiftShortcutCyclesToCapsLock)
-                        Toggle("Dismiss with guide button", isOn: $settings.dismissWithGuideButton)
-                        Toggle("Open app on startup", isOn: $settings.openAppOnStartup)
-                        
-                        VStack(alignment: .leading) {
-                            Picker("Keyboard stick movement style", selection: $keyboardMovementStyle) {
-                                Text("4 Directional").tag(KeyboardMovementMode.limited)
-                                Text("8 Directional").tag(KeyboardMovementMode.full)
-                            }
-                            .onSubmit {
-                                settings.keyboardMovementStyle = keyboardMovementStyle
-                            }
-                            .pickerStyle(.segmented)
-                            .listRowSeparator(.hidden)
                             
-                            Text(movementDecription)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .animation(.easeInOut)
-                        }
-                    }
-                    
-                    Section("Others") {
-                        HStack {
-                            Text("Accessibility Permissions: ")
-                            Spacer()
-                            Text(isAccessibilityTrusted ? "Granted" : "Not Granted")
-                                .foregroundStyle(isAccessibilityTrusted ? .green : .red)
-                        }
-                        HStack {
-                            Button("Restart Onboarding") {
-                                onRestartOnboarding()
-                            }
-                        }
-                    }
-                }
-                .formStyle(.grouped)
-            }
-            
-            Tab("Input", systemImage: "gamecontroller") {
-                Form {
-                    Section("Joystick Configuration") {
-                        stickDeadzoneConfig
-                    }
-                    
-                    Section("Mouse Configuration") {
-                        Slider(value: $settings.mouseSensitivity, in: 400...2000) {
-                            Text("Mouse Sensitivity")
-                        }
-                        
-                        Slider(value: $settings.mouseSmoothing, in: 0...1.0) {
-                            Text("Mouse Smoothing")
-                        }
-                    }
-                    
-                    Section("Controller Hotkeys") {
-                        ForEach(ControllerActionBinding.allCases) { action in
-                            LabeledContent(action.title) {
-                                controllerActionPickerButton(for: action)
-                            }
-                        }
-                        
-                        HStack {
-                            Button("Reset Hotkeys") {
-                                settings.keyboardHotkey = defaultKeyboardShortcut
-                                settings.controllerToggleBinding = .default
-                                settings.controllerActionBindings = .default
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "RS",
+                                    fallbackText: "RS",
+                                    size: 24
+                                )
+                                
+                                Picker("Right Stick", selection: Binding(
+                                    get: { viewModel.settings.rightStickInputType },
+                                    set: { viewModel.settings.rightStickInputType = $0 }
+                                )) {
+                                    ForEach(AxisInputType.allCases) { type in
+                                        Text(type.title).tag(type)
+                                    }
+                                }
                             }
                             
-                            Button("Reset Defaults") {
-                                settings.keyboardHotkey = defaultKeyboardShortcut
-                                settings.controllerToggleBinding = .default
-                                settings.controllerActionBindings = .default
-                                settings.shiftShortcutCyclesToCapsLock = true
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "DPad",
+                                    fallbackText: "DPad",
+                                    size: 24
+                                )
+                                
+                                Picker("D-pad", selection: Binding(
+                                    get: { viewModel.settings.padInputType },
+                                    set: { viewModel.settings.padInputType = $0 }
+                                )) {
+                                    ForEach(AxisInputType.allCases) { type in
+                                        Text(type.title).tag(type)
+                                    }
+                                }
+                            }
+                            
+                            NavigationLink(destination: HotkeySettingsView(viewModel: viewModel)) {
+                                Text("Hotkey Actions")
+                            }
+                            
+                            Toggle("Shift hotkey cycles to Caps Lock", isOn: Binding(
+                                get: { viewModel.settings.shiftShortcutCyclesToCapsLock },
+                                set: { viewModel.settings.shiftShortcutCyclesToCapsLock = $0 }
+                            ))
+                            Toggle("Dismiss with guide button", isOn: Binding(
+                                get: { viewModel.settings.dismissWithGuideButton },
+                                set: { viewModel.settings.dismissWithGuideButton = $0 }
+                            ))
+                            
+                            VStack(alignment: .leading) {
+                                Picker("Keyboard movement style", selection: $viewModel.keyboardMovementStyle) {
+                                    Text("4 Directional").tag(KeyboardMovementMode.limited)
+                                    Text("8 Directional").tag(KeyboardMovementMode.full)
+                                }
+                                .onSubmit {
+                                    settings.keyboardMovementStyle = viewModel.keyboardMovementStyle
+                                }
+                                .pickerStyle(.segmented)
+                                .listRowSeparator(.hidden)
+                                
+                                Text(viewModel.movementDescription)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .animation(.easeInOut)
+                            }
+                        }
+                        
+                        Section("Joystick Deadzone") {
+                            viewModel.stickDeadzoneConfig
+                        }
+                        
+                        Section("Mouse Configuration") {
+                            viewModel.mouseConfig
+                        }
+                        
+                        Section("Others") {
+                            
+                            HStack {
+                                Button("Reset Hotkeys") {
+                                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
+                                    settings.controllerToggleBinding = .default
+                                    settings.controllerActionBindings = .default
+                                }
+                                
+                                Button("Reset Defaults") {
+                                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
+                                    settings.controllerToggleBinding = .default
+                                    settings.controllerActionBindings = .default
+                                    settings.shiftShortcutCyclesToCapsLock = true
+                                    settings.dismissWithGuideButton = true
+                                    settings.keyboardMovementStyle = .limited
+                                    settings.leftStickDeadzone = 0.2
+                                    settings.rightStickDeadzone = 0.2
+                                    settings.mouseSensitivity = 300
+                                    settings.mouseSmoothing = 0.5
+                                }
                             }
                         }
                     }
+                    .formStyle(.grouped)
                 }
-                .formStyle(.grouped)
             }
+            .onDisappear {
+                viewModel.endKeyboardHotkeyRecording()
+                viewModel.endControllerToggleRecording()
+                viewModel.endControllerActionPicker()
+            }
+            .frame(width: 560, height: 520)
         }
-        .onDisappear {
-            endKeyboardHotkeyRecording()
-            endControllerToggleRecording()
-            endControllerActionPicker()
+    }
+}
+
+struct HotkeySettingsView: View {
+    @ObservedObject var viewModel: SettingsViewModel
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Keyboard Actions") {
+                    ForEach(ControllerActionBinding.keyboardActions) { action in
+                        LabeledContent(action.title) {
+                            viewModel.controllerActionPickerButton(for: action)
+                        }
+                    }
+                }
+                Section("Mouse Actions") {
+                    ForEach(ControllerActionBinding.mouseActions) { action in
+                        LabeledContent(action.title) {
+                            viewModel.controllerActionPickerButton(for: action)
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Hotkey Actions")
         }
         .frame(width: 560, height: 520)
-    }
-    
-    private var movementDecription: String {
-        if $settings.keyboardMovementStyle.wrappedValue == KeyboardMovementMode.limited {
-            return "In this style, the joystick navigates the keyboard like a d-pad."
-        } else if $settings.keyboardMovementStyle.wrappedValue == KeyboardMovementMode.full {
-            return "In this style, the joystick nvaigates the keyboard more freely, with diagonal movements."
-        }
-        
-        return "This style doesn't exist"
-    }
-    
-    private var keyboardShortcutButton: some View {
-        Button {
-            beginKeyboardHotkeyRecording()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "keyboard")
-                    .foregroundStyle(.secondary)
-                    .imageScale(.large)
-                Text(settings.keyboardHotkey.displayText)
-                    .font(.system(.body, design: .monospaced))
-            }
-            .frame(width: 230, alignment: .leading)
-            .frame(minHeight: 32)
-        }
-        .buttonStyle(.bordered)
-        .popover(isPresented: keyboardRecordingPresentedBinding, arrowEdge: .bottom) {
-            keyboardShortcutPopover
-        }
-    }
-    
-    private var keyboardShortcutPopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Press Keyboard Shortcut")
-                .font(.headline)
-            
-            RecordingDisplayContainer {
-                Text(keyboardLiveRecordingText)
-                    .font(.system(.body, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(keyboardLiveRecordingText == waitingKeyboardText ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            
-            Divider()
-            
-            Text("Example")
-                .font(.subheadline.weight(.semibold))
-            
-            Text(defaultKeyboardShortcut.displayText)
-                .font(.system(.footnote, design: .monospaced))
-                .foregroundStyle(.secondary)
-            
-            Text("Press Esc to cancel.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .frame(width: 300)
-    }
-    
-    private var controllerToggleButton: some View {
-        Button {
-            beginControllerToggleRecording()
-        } label: {
-            HStack(spacing: 8) {
-                guideGlyph(size: 26)
-                Text("+")
-                    .foregroundStyle(.secondary)
-                buttonGlyph(settings.controllerToggleBinding.button, size: 26)
-            }
-            .frame(width: 230, alignment: .leading)
-            .frame(minHeight: 32)
-        }
-        .buttonStyle(.bordered)
-        .popover(isPresented: controllerToggleRecordingPresentedBinding, arrowEdge: .bottom) {
-            controllerTogglePopover
-        }
-    }
-    
-    private var controllerTogglePopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Press Controller Shortcut")
-                .font(.headline)
-            
-            RecordingDisplayContainer {
-                controllerChordView(
-                    guidePressed: settings.controllerCaptureState.isGuidePressed,
-                    buttons: orderedButtons(from: settings.controllerCaptureState.pressedButtons),
-                    waitingText: waitingControllerText
-                )
-            }
-            
-            Divider()
-            
-            Text("Example")
-                .font(.subheadline.weight(.semibold))
-            
-            controllerChordView(
-                guidePressed: true,
-                buttons: [.west],
-                waitingText: waitingControllerText
-            )
-            .foregroundStyle(.secondary)
-            
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    endControllerToggleRecording()
-                }
-            }
-        }
-        .padding(12)
-        .frame(width: 340)
-    }
-    
-    private func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {
-        let selectedButton = settings.controllerActionBindings.button(for: action)
-        
-        return Button {
-            if activeControllerActionPicker == action {
-                endControllerActionPicker()
-            } else {
-                beginControllerActionPicker(for: action)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                buttonGlyph(selectedButton)
-                Text(selectedButton.displayTitle(for: settings.controllerGlyphStyle))
-                    .font(.system(.body, design: .monospaced))
-                Spacer()
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 230, alignment: .leading)
-            .frame(minHeight: 24)
-        }
-        .buttonStyle(.bordered)
-        .popover(isPresented: controllerActionPickerPresentedBinding(for: action), arrowEdge: .bottom) {
-            controllerActionPickerPopover(for: action)
-        }
-    }
-    
-    private func controllerActionPickerPopover(for action: ControllerActionBinding) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Choose Controller Button")
-                .font(.headline)
-            
-            Text("Press a controller button or click an option below.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            
-            ForEach(ControllerAssignableButton.allCases) { button in
-                let isSelected = settings.controllerActionBindings.button(for: action) == button
-                
-                Button {
-                    setControllerActionButton(button, for: action)
-                } label: {
-                    HStack {
-                        HStack(spacing: 8) {
-                            buttonGlyph(button)
-                            Text(button.displayTitle(for: settings.controllerGlyphStyle))
-                        }
-                        
-                        Spacer(minLength: 8)
-                        
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-            
-            Divider()
-            
-            HStack {
-                Spacer()
-                Button("Done") {
-                    endControllerActionPicker()
-                }
-            }
-        }
-        .padding(12)
-        .frame(width: 320)
-    }
-    
-    private var keyboardRecordingPresentedBinding: Binding<Bool> {
-        Binding(
-            get: {
-                isRecordingKeyboardHotkey
-            },
-            set: { isPresented in
-                if !isPresented {
-                    endKeyboardHotkeyRecording()
-                }
-            }
-        )
-    }
-    
-    private var controllerToggleRecordingPresentedBinding: Binding<Bool> {
-        Binding(
-            get: {
-                isRecordingControllerHotkey
-            },
-            set: { isPresented in
-                if !isPresented {
-                    endControllerToggleRecording()
-                }
-            }
-        )
-    }
-    
-    private var keyboardLiveRecordingText: String {
-        if let keyboardPreviewShortcut {
-            return keyboardPreviewShortcut.displayText
-        }
-        
-        let activeModifiers = keyboardPressedModifiers.intersection([.control, .option, .command, .shift])
-        if !activeModifiers.isEmpty {
-            return modifierDisplayText(from: activeModifiers)
-        }
-        
-        return waitingKeyboardText
-    }
-    
-    private func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
-        var parts: [String] = []
-        if modifiers.contains(.control) { parts.append("Control") }
-        if modifiers.contains(.option) { parts.append("Option") }
-        if modifiers.contains(.command) { parts.append("Command") }
-        if modifiers.contains(.shift) { parts.append("Shift") }
-        return parts.joined(separator: " + ")
-    }
-    
-    private func orderedButtons(from pressedButtons: Set<ControllerAssignableButton>) -> [ControllerAssignableButton] {
-        ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
-    }
-    
-    private func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
-        if detectedController.guideButtons.isEmpty {
-            return [.menu]
-        }
-        return detectedController.guideButtons
-    }
-    
-    @ViewBuilder
-    private func controllerChordView(
-        guidePressed: Bool,
-        buttons: [ControllerAssignableButton],
-        waitingText: String
-    ) -> some View {
-        if !guidePressed && buttons.isEmpty {
-            Text(waitingText)
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            HStack(spacing: 6) {
-                if guidePressed {
-                    HStack(spacing: 6) {
-                        guideGlyph()
-                        Text("Guide")
-                    }
-                    
-                    if !buttons.isEmpty {
-                        Text("+")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                
-                ForEach(Array(buttons.enumerated()), id: \.element) { index, button in
-                    if index > 0 {
-                        Text("+")
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    HStack(spacing: 6) {
-                        buttonGlyph(button)
-                        Text(button.displayTitle(for: settings.controllerGlyphStyle))
-                    }
-                }
-            }
-            .font(.system(.body, design: .monospaced).weight(.semibold))
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-    
-    private func guideGlyph(size: CGFloat = 20) -> some View {
-        ControllerGlyphBadge(
-            systemAsset: true,
-            assetName: "gamecontroller.circle.fill",
-            fallbackText: "Guide",
-            size: size
-        )
-    }
-    
-    @ViewBuilder
-    private func guideButtonGlyph(_ button: ControllerGuideButton, size: CGFloat = 20) -> some View {
-        let title = button.displayTitle(for: settings.controllerGlyphStyle)
-        if let assetName = button.glyphAssetName(for: settings.controllerGlyphStyle) {
-            ControllerGlyphBadge(
-                assetName: assetName,
-                fallbackText: title,
-                size: size
-            )
-        } else {
-            Text(title)
-                .font(.system(size: max(10, size * 0.45), weight: .semibold, design: .monospaced))
-                .lineLimit(1)
-                .padding(.horizontal, max(4, size * 0.24))
-                .frame(height: size)
-                .background(
-                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
-                )
-                .accessibilityLabel(Text(title))
-        }
-    }
-    
-    private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
-        ControllerGlyphBadge(
-            assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
-            fallbackText: button.fallbackGlyphText,
-            size: size
-        )
-    }
-    
-    private func beginKeyboardHotkeyRecording() {
-        endKeyboardHotkeyRecording()
-        endControllerToggleRecording()
-        endControllerActionPicker()
-        
-        isRecordingKeyboardHotkey = true
-        keyboardValidationMessage = nil
-        keyboardPreviewShortcut = nil
-        keyboardPressedModifiers = []
-        
-        keyboardFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
-            guard isRecordingKeyboardHotkey else { return event }
-            
-            keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            keyboardPreviewShortcut = nil
-            keyboardValidationMessage = nil
-            return nil
-        }
-        
-        keyboardKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard isRecordingKeyboardHotkey else { return event }
-            
-            if event.keyCode == 53 {
-                endKeyboardHotkeyRecording()
-                return nil
-            }
-            
-            keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            
-            guard let shortcut = KeyboardHotkeyManager.shortcut(from: event) else {
-                return nil
-            }
-            
-            keyboardPreviewShortcut = shortcut
-            
-            guard KeyboardHotkeyManager.isValidShortcut(shortcut) else {
-                keyboardValidationMessage = "Use at least one modifier key (Command/Option/Control/Shift)."
-                return nil
-            }
-            
-            keyboardValidationMessage = nil
-            settings.keyboardHotkey = shortcut
-            endKeyboardHotkeyRecording()
-            return nil
-        }
-    }
-    
-    private func endKeyboardHotkeyRecording() {
-        isRecordingKeyboardHotkey = false
-        keyboardPreviewShortcut = nil
-        keyboardPressedModifiers = []
-        
-        if let keyboardKeyDownMonitor {
-            NSEvent.removeMonitor(keyboardKeyDownMonitor)
-            self.keyboardKeyDownMonitor = nil
-        }
-        
-        if let keyboardFlagsMonitor {
-            NSEvent.removeMonitor(keyboardFlagsMonitor)
-            self.keyboardFlagsMonitor = nil
-        }
-    }
-    
-    private func beginControllerToggleRecording() {
-        endControllerToggleRecording()
-        endKeyboardHotkeyRecording()
-        endControllerActionPicker()
-        
-        isRecordingControllerHotkey = true
-        
-        onRequestControllerBindingCapture { binding in
-            DispatchQueue.main.async {
-                settings.controllerToggleBinding = binding
-                endControllerToggleRecording(cancelCapture: false)
-            }
-        }
-    }
-    
-    private func endControllerToggleRecording(cancelCapture: Bool = true) {
-        let wasRecording = isRecordingControllerHotkey
-        isRecordingControllerHotkey = false
-        
-        if cancelCapture && wasRecording {
-            onCancelControllerCapture()
-        }
-    }
-    
-    private func controllerActionPickerPresentedBinding(for action: ControllerActionBinding) -> Binding<Bool> {
-        Binding(
-            get: {
-                activeControllerActionPicker == action
-            },
-            set: { isPresented in
-                if isPresented {
-                    beginControllerActionPicker(for: action)
-                } else if activeControllerActionPicker == action {
-                    endControllerActionPicker()
-                }
-            }
-        )
-    }
-    
-    private func beginControllerActionPicker(for action: ControllerActionBinding) {
-        endControllerToggleRecording()
-        endKeyboardHotkeyRecording()
-        
-        activeControllerActionPicker = action
-        armControllerActionButtonCapture(for: action)
-    }
-    
-    private func armControllerActionButtonCapture(for action: ControllerActionBinding) {
-        guard activeControllerActionPicker == action else { return }
-        
-        onRequestControllerActionButtonCapture { button in
-            DispatchQueue.main.async {
-                guard activeControllerActionPicker == action else { return }
-                setControllerActionButton(button, for: action)
-                armControllerActionButtonCapture(for: action)
-            }
-        }
-    }
-    
-    private func endControllerActionPicker() {
-        let wasActive = activeControllerActionPicker != nil
-        activeControllerActionPicker = nil
-        
-        if wasActive {
-            onCancelControllerCapture()
-        }
-    }
-    
-    private func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
-        var updated = settings.controllerActionBindings
-        updated.setButton(button, for: action)
-        settings.controllerActionBindings = updated
-    }
-    
-    private var stickDeadzoneConfig: some View {
-        VStack(alignment: .leading) {
-            Text("Left Stick")
-                .font(.headline)
-            HStack(spacing: 24) {
-                stickDeadzoneVisualizer(for: .leftStick)
-                
-                stickSliders(localDeadzone: $leftStickDeadzone, settingsDeadzone: $settings.leftStickDeadzone)
-                
-                Text(Decimal.FormatStyle.FormatInput($leftStickDeadzone.wrappedValue), format: twoDecimalFormatter)
-                    .frame(width: 40, alignment: .trailing)
-            }
-            .padding(.horizontal, 12)
-            
-            Divider()
-            
-            Text("Right Stick")
-                .font(.headline)
-            HStack(spacing: 24) {
-                stickDeadzoneVisualizer(for: .rightStick)
-                
-                stickSliders(localDeadzone: $rightStickDeadzone, settingsDeadzone: $settings.rightStickDeadzone)
-                
-                Text(Decimal.FormatStyle.FormatInput($rightStickDeadzone.wrappedValue), format: twoDecimalFormatter)
-                    .frame(width: 40, alignment: .trailing)
-            }
-            .padding(.horizontal, 12)
-        }
-    }
-    
-    @ViewBuilder
-    private func stickSliders(localDeadzone: Binding<CGFloat>, settingsDeadzone: Binding<CGFloat>) -> some View {
-        Slider(
-            value: Binding<Double>(
-            get: { Double(localDeadzone.wrappedValue) },
-            set: { localDeadzone.wrappedValue = CGFloat(($0 * 100).rounded() / 100) }),
-            in: 0.0...0.8,) {
-            Text("Deadzone")
-        }
-            .onChange(of: localDeadzone.wrappedValue) {
-                settingsDeadzone.wrappedValue = localDeadzone.wrappedValue
-            }
-    }
-    
-    @ViewBuilder
-    private func stickDeadzoneVisualizer(for stick: MovementMode, size: CGFloat = 100) -> some View {
-        
-        let stickPosition: CGVector = switch stick {
-        case .leftStick: joystick.leftStick
-        case .rightStick: joystick.rightStick
-        default: .zero
-        }
-        
-        let deadzoneRadius: CGFloat = switch stick {
-        case .leftStick: settings.leftStickDeadzone
-        case .rightStick: settings.rightStickDeadzone
-        default: .zero
-        }
-        
-        Group {
-            switch stick {
-            case .leftStick, .rightStick:
-                ZStack {
-                    // Outer circle (joystick range)
-                    Circle()
-                        .stroke(Color.primary.opacity(0.3), lineWidth: 2)
-                        .frame(width: size, height: size)
-                    // Deadzone circle
-                    Circle()
-                        .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
-                        .frame(width: size * deadzoneRadius, height: size * deadzoneRadius)
-                    // Stick dot
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 14, height: 14)
-                        .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
-                    // Y is inverted for UI (up is positive)
-                        .shadow(radius: 2)
-                }
-                .frame(width: size, height: size)
-            default:
-                EmptyView()
-            }
-        }
-    }
-}
-
-private struct RecordingDisplayContainer<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        HStack {
-            content
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.18), lineWidth: 1)
-        )
-    }
-}
-
-private struct ControllerGlyphBadge: View {
-    var systemAsset: Bool = false
-    let assetName: String
-    let fallbackText: String
-    var size: CGFloat = 20
-
-    var body: some View {
-        ZStack {
-            if systemAsset {
-                Image(systemName: assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(max(2, size * 0.1))
-            } else {
-                Image(assetName)
-                    .resizable()
-                    .renderingMode(.original)
-                    .scaledToFit()
-                    .colorMultiply(Color.primary)
-            }
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel(Text(fallbackText))
     }
 }
 
 #Preview {
-    SettingsView(
+    let vm = SettingsViewModel(
         settings: AppSettings(),
         joystick: JoystickInputModel(manager: ControllerInputManager()),
         onRequestControllerBindingCapture: { _ in },
@@ -785,4 +246,6 @@ private struct ControllerGlyphBadge: View {
         onCancelControllerCapture: {},
         onRestartOnboarding: {}
     )
+
+    SettingsView(viewModel: vm)
 }

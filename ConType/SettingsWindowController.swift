@@ -51,15 +51,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             return window
         }
 
+        let viewModel = SettingsViewModel(
+            settings: settings,
+            joystick: joystick,
+            onRequestControllerBindingCapture: onRequestControllerBindingCapture,
+            onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
+            onCancelControllerCapture: onCancelControllerCapture,
+            onRestartOnboarding: onRestartOnboarding
+        )
+
         let hostingController = NSHostingController(
-            rootView: SettingsView(
-                settings: settings,
-                joystick: joystick,
-                onRequestControllerBindingCapture: onRequestControllerBindingCapture,
-                onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
-                onCancelControllerCapture: onCancelControllerCapture,
-                onRestartOnboarding: onRestartOnboarding
-            )
+            rootView: SettingsView(viewModel: viewModel)
         )
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
