@@ -747,6 +747,13 @@ final class SettingsViewModel: ObservableObject {
         deadzoneRadius: CGFloat,
         size: CGFloat = 100
     ) -> some View {
+        let length = sqrt(stickPosition.dx * stickPosition.dx + stickPosition.dy * stickPosition.dy)
+        let stick = if length > 1.0 {
+            CGVector(dx: stickPosition.dx / length, dy: stickPosition.dy / length)
+        } else {
+            stickPosition
+        }
+        
         ZStack {
             // Outer circle (joystick range)
             Circle()
@@ -760,7 +767,7 @@ final class SettingsViewModel: ObservableObject {
             Circle()
                 .fill(Color.accentColor)
                 .frame(width: 14, height: 14)
-                .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
+                .offset(x: stick.dx * (size/2 - 7), y: -stick.dy * (size/2 - 7))
                 .shadow(radius: 2)
         }
         .onChange(of: stickPosition) {
@@ -803,3 +810,4 @@ final class SettingsViewModel: ObservableObject {
     
     SettingsView(viewModel: vm)
 }
+
