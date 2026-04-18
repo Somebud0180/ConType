@@ -68,7 +68,6 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         window.title = "Welcome to ConType"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.level = .floating
         window.minSize = NSSize(width: 360, height: 400)
         window.maxSize = NSSize(width: 540, height: 600)
 

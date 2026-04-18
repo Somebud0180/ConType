@@ -380,4 +380,5 @@ final class AppSettings: ObservableObject {
     @Published var controllerCaptureState: ControllerCaptureState = .empty
     @Published var detectedController: DetectedController?
     @Published var windowSize: WindowSize = .small
+    @Published var windowPosition: NSPoint = .zero
 }
