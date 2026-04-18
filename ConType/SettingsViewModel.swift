@@ -14,6 +14,7 @@ final class SettingsViewModel: ObservableObject {
 	// Dependencies
 	let settings: AppSettings
 	let joystick: JoystickInputModel
+    private var cancellables = Set<AnyCancellable>()
 
 	// Callbacks
 	private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
@@ -67,6 +68,18 @@ final class SettingsViewModel: ObservableObject {
         self.mouseSensitivity = settings.mouseSensitivity
         self.mouseSmoothing = settings.mouseSmoothing
 		self.keyboardMovementStyle = settings.keyboardMovementStyle
+        
+        settings.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+        
+        joystick.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
 	}
 
 	func restartOnboarding() {
@@ -727,38 +740,37 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
-    struct StickDeadzoneVisualizer: View {
-        let stickPosition: CGVector
-        let deadzoneRadius: CGFloat
-        var size: CGFloat = 100
-        
-        var body: some View {
-            ZStack {
-                // Outer circle (joystick range)
-                Circle()
-                    .stroke(Color.primary.opacity(0.3), lineWidth: 2)
-                    .frame(width: size, height: size)
-                // Deadzone circle
-                Circle()
-                    .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
-                    .frame(width: size * deadzoneRadius, height: size * deadzoneRadius)
-                // Stick dot
-                Circle()
-                    .fill(Color.accentColor)
-                    .frame(width: 14, height: 14)
-                    .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
-                    .shadow(radius: 2)
-            }
-            .onChange(of: stickPosition) {
-                // Haptic feedback when crossing deadzone boundary
-                let distance = sqrt(stickPosition.dx * stickPosition.dx + stickPosition.dy * stickPosition.dy)
-                if (distance < deadzoneRadius && distance > deadzoneRadius - 0.05) ||
-                    (distance > deadzoneRadius && distance < deadzoneRadius + 0.05) {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-                }
-            }
-            .frame(width: size, height: size)
+    @ViewBuilder
+    func StickDeadzoneVisualizer(
+        stickPosition: CGVector,
+        deadzoneRadius: CGFloat,
+        size: CGFloat = 100
+    ) -> some View {
+        ZStack {
+            // Outer circle (joystick range)
+            Circle()
+                .stroke(Color.primary.opacity(0.3), lineWidth: 2)
+                .frame(width: size, height: size)
+            // Deadzone circle
+            Circle()
+                .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
+                .frame(width: size * deadzoneRadius, height: size * deadzoneRadius)
+            // Stick dot
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 14, height: 14)
+                .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
+                .shadow(radius: 2)
         }
+        .onChange(of: stickPosition) {
+            // Haptic feedback when crossing deadzone boundary
+            let distance = sqrt(stickPosition.dx * stickPosition.dx + stickPosition.dy * stickPosition.dy)
+            if (distance < deadzoneRadius && distance > deadzoneRadius - 0.05) ||
+                (distance > deadzoneRadius && distance < deadzoneRadius + 0.05) {
+                NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+            }
+        }
+        .frame(width: size, height: size)
     }
     
     @ViewBuilder

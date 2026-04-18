@@ -226,20 +226,7 @@ struct SettingsView: View {
             }
             .confirmationDialog("Reset All Settings?", isPresented: $showResetDefaultsDialog, titleVisibility: .visible) {
                 Button("Reset Defaults", role: .destructive) {
-                    // Reset all settings except open on startup
-                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
-                    settings.controllerToggleBinding = .default
-                    settings.controllerActionBindings = .default
-                    settings.leftStickInputType = .overlayMovement
-                    settings.rightStickInputType = .mouseMovement
-                    settings.padInputType = .overlayMovement
-                    settings.shiftShortcutCyclesToCapsLock = true
-                    settings.dismissWithGuideButton = true
-                    settings.keyboardMovementStyle = .limited
-                    settings.leftStickDeadzone = 0.2
-                    settings.rightStickDeadzone = 0.2
-                    settings.mouseSensitivity = 300
-                    settings.mouseSmoothing = 0.5
+                    viewModel.resetDefaults()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
