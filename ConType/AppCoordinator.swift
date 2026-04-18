@@ -229,6 +229,9 @@ final class AppCoordinator: ObservableObject {
         hotkeyManager.shortcut = settings.keyboardHotkey
         controllerInputManager.toggleBinding = settings.controllerToggleBinding
         controllerInputManager.actionBindings = settings.controllerActionBindings
+        controllerInputManager.leftStickInputType = settings.leftStickInputType
+        controllerInputManager.rightStickInputType = settings.rightStickInputType
+        controllerInputManager.padInputType = settings.padInputType
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
         controllerInputManager.isOverlayVisible = isOverlayVisible
         controllerInputManager.keyboardMovementStyle = settings.keyboardMovementStyle
@@ -252,6 +255,24 @@ final class AppCoordinator: ObservableObject {
         settings.$controllerActionBindings
             .sink { [weak self] value in
                 self?.controllerInputManager.actionBindings = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$leftStickInputType
+            .sink { [weak self] value in
+                self?.controllerInputManager.leftStickInputType = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$rightStickInputType
+            .sink { [weak self] value in
+                self?.controllerInputManager.rightStickInputType = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$padInputType
+            .sink { [weak self] value in
+                self?.controllerInputManager.padInputType = value
             }
             .store(in: &cancellables)
 

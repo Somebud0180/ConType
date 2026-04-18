@@ -68,9 +68,19 @@ final class ControllerInputManager: NSObject {
     var isToggleEnabled = true
     var toggleBinding: ControllerToggleBinding = .default
     var actionBindings: ControllerActionBindings = .default
-    var leftStickInputType: AxisInputType = .overlayMovement
-    var rightStickInputType: AxisInputType = .mouseMovement
-    var padInputType: AxisInputType = .overlayMovement
+    
+    var leftStickInputType: AxisInputType = .overlayMovement {
+        didSet { rebindSticksIfNeeded() }
+    }
+    
+    var rightStickInputType: AxisInputType = .mouseMovement {
+        didSet { rebindSticksIfNeeded() }
+    }
+    
+    var padInputType: AxisInputType = .overlayMovement {
+        didSet { rebindSticksIfNeeded() }
+    }
+    
     var dismissWithGuideButton = true
     var isOverlayVisible = false
     var keyboardMovementStyle: KeyboardMovementMode = .limited
@@ -257,11 +267,25 @@ final class ControllerInputManager: NSObject {
         bindAssignableButton(gamepad.rightTrigger, as: .rightTrigger)
 
         
-        bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
-        bindAnalogStick(gamepad.leftThumbstick, from: .leftStick, inputType: leftStickInputType )
-        bindAnalogStick(gamepad.rightThumbstick, from: .rightStick, inputType: rightStickInputType )
+        bindSticks(gamepad)
     }
-
+    
+    func bindSticks(_ gamepad: GCExtendedGamepad) {
+        bindAnalogStick(gamepad.leftThumbstick, from: .leftStick, inputType: leftStickInputType)
+        bindAnalogStick(gamepad.rightThumbstick, from: .rightStick, inputType: rightStickInputType)
+        bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
+    }
+    
+    private func rebindSticksIfNeeded() {
+        for controller in GCController.controllers() {
+            if let gamepad = controller.extendedGamepad {
+                bindSticks(gamepad)
+            } else if let gamepad = controller.microGamepad {
+                bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
+            }
+        }
+    }
+    
     private func configureThumbstickButtonPresses(from controller: GCController) {
         let buttons = controller.physicalInputProfile.buttons
         buttons[GCInputLeftThumbstickButton]?.pressedChangedHandler = { [weak self] _, _, pressed in
