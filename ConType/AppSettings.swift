@@ -12,8 +12,8 @@ enum AxisInputType: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .none: return "None"
-        case .overlayMovement: return "Overlay Movement"
-        case .mouseMovement: return "Mouse Movement"
+        case .overlayMovement: return "Control Keyboard"
+        case .mouseMovement: return "Control Mouse"
         }
     }
 }

@@ -40,4 +40,88 @@ final class ConTypeUITests: XCTestCase {
             XCUIApplication().launch()
         }
     }
+
+    @MainActor
+    func testKeyboardShortcutConfiguration() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Automate keyboard shortcut configuration and assert UI/AppSettings update
+    }
+
+    @MainActor
+    func testControllerShortcutConfiguration() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Automate controller shortcut configuration and assert UI/AppSettings update
+    }
+
+    @MainActor
+    func testMouseSettingConfiguration() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Automate mouse setting changes and assert UI updates and AppSettings update
+    }
+
+    @MainActor
+    func testDeadzoneConfiguration() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Automate deadzone slider changes and assert visualizer and AppSettings update
+    }
+
+    @MainActor
+    func testResetDefaultConfiguration() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Automate reset/defaults and assert all settings/UI/AppSettings reset
+    }
+
+    @MainActor
+    func checkIfConfigurationApplies() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: For each setting, change via UI and assert AppSettings reflects the change
+    }
+
+    @MainActor
+    func testControllerActionPickerImmediateFeedback() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Open controller action picker, select action, assert highlight and label update immediately
+    }
+
+    @MainActor
+    func testControllerActionPickerReflectsControllerInput() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Simulate controller input while picker is open, assert correct key is highlighted
+    }
+
+    @MainActor
+    func testNoPublishingFromViewUpdateError() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Interact with all settings, assert no SwiftUI publishing errors occur
+    }
+
+    @MainActor
+    func testKeyboardMovementStyleChange() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Change keyboard movement style, assert description and AppSettings update
+    }
+
+    @MainActor
+    func testAccessibilityPermissionIndicator() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Toggle accessibility permission, assert indicator updates
+    }
+
+    @MainActor
+    func testOnboardingRestart() throws {
+        let app = XCUIApplication()
+        app.launch()
+        // TODO: Trigger onboarding restart, assert onboarding UI/callback
+    }
 }

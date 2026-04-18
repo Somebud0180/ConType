@@ -72,6 +72,30 @@ final class SettingsViewModel: ObservableObject {
 	func restartOnboarding() {
 		onRestartOnboarding()
 	}
+    
+    func resetDefaults() {
+        // Reset all settings except open on startup
+        settings.keyboardHotkey = defaultKeyboardShortcut
+        settings.controllerToggleBinding = .default
+        settings.controllerActionBindings = .default
+        settings.leftStickInputType = .overlayMovement
+        settings.rightStickInputType = .mouseMovement
+        settings.padInputType = .overlayMovement
+        settings.shiftShortcutCyclesToCapsLock = true
+        settings.dismissWithGuideButton = true
+        settings.keyboardMovementStyle = .limited
+        settings.leftStickDeadzone = 0.2
+        settings.rightStickDeadzone = 0.2
+        settings.mouseSensitivity = 300
+        settings.mouseSmoothing = 0.5
+        
+        // Update local state to reflect changes
+        keyboardMovementStyle = settings.keyboardMovementStyle
+        leftStickDeadzone = settings.leftStickDeadzone
+        rightStickDeadzone = settings.rightStickDeadzone
+        mouseSensitivity = settings.mouseSensitivity
+        mouseSmoothing = settings.mouseSmoothing
+    }
 
 	deinit {
 		if let keyboardKeyDownMonitor {
@@ -108,52 +132,45 @@ final class SettingsViewModel: ObservableObject {
 
 	// MARK: - Keyboard hotkey recording
 
-	func beginKeyboardHotkeyRecording() {
-		endKeyboardHotkeyRecording()
-		endControllerToggleRecording()
-		endControllerActionPicker()
+    func beginKeyboardHotkeyRecording() {
+        if !isRecordingKeyboardHotkey {
+            if isRecordingControllerHotkey { endControllerToggleRecording() }
+            if activeControllerActionPicker != nil { endControllerActionPicker() }
+            isRecordingKeyboardHotkey = true
+            keyboardValidationMessage = nil
+            keyboardPreviewShortcut = nil
+            keyboardPressedModifiers = []
 
-		isRecordingKeyboardHotkey = true
-		keyboardValidationMessage = nil
-		keyboardPreviewShortcut = nil
-		keyboardPressedModifiers = []
+            keyboardFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                guard let self = self, self.isRecordingKeyboardHotkey else { return event }
+                self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                self.keyboardPreviewShortcut = nil
+                self.keyboardValidationMessage = nil
+                return nil
+            }
 
-		keyboardFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-			guard let self = self, self.isRecordingKeyboardHotkey else { return event }
-
-			self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-			self.keyboardPreviewShortcut = nil
-			self.keyboardValidationMessage = nil
-			return nil
-		}
-
-		keyboardKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-			guard let self = self, self.isRecordingKeyboardHotkey else { return event }
-
-			if event.keyCode == 53 {
-				self.endKeyboardHotkeyRecording()
-				return nil
-			}
-
-			self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-
-			guard let shortcut = KeyboardHotkeyManager.shortcut(from: event) else {
-				return nil
-			}
-
-			self.keyboardPreviewShortcut = shortcut
-
-			guard KeyboardHotkeyManager.isValidShortcut(shortcut) else {
-				self.keyboardValidationMessage = "Use at least one modifier key (Command/Option/Control/Shift)."
-				return nil
-			}
-
-			self.keyboardValidationMessage = nil
-			self.settings.keyboardHotkey = shortcut
-			self.endKeyboardHotkeyRecording()
-			return nil
-		}
-	}
+            keyboardKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self, self.isRecordingKeyboardHotkey else { return event }
+                if event.keyCode == 53 {
+                    self.endKeyboardHotkeyRecording()
+                    return nil
+                }
+                self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                guard let shortcut = KeyboardHotkeyManager.shortcut(from: event) else {
+                    return nil
+                }
+                self.keyboardPreviewShortcut = shortcut
+                guard KeyboardHotkeyManager.isValidShortcut(shortcut) else {
+                    self.keyboardValidationMessage = "Use at least one modifier key (Command/Option/Control/Shift)."
+                    return nil
+                }
+                self.keyboardValidationMessage = nil
+                self.settings.keyboardHotkey = shortcut
+                self.endKeyboardHotkeyRecording()
+                return nil
+            }
+        }
+    }
 
 	func endKeyboardHotkeyRecording() {
         DispatchQueue.main.async {
@@ -175,27 +192,26 @@ final class SettingsViewModel: ObservableObject {
 
 	// MARK: - Controller toggle recording
 
-	func beginControllerToggleRecording() {
-		endControllerToggleRecording()
-		endKeyboardHotkeyRecording()
-		endControllerActionPicker()
-
-		isRecordingControllerHotkey = true
-
-		onRequestControllerBindingCapture { [weak self] binding in
-			DispatchQueue.main.async {
-				guard let self = self else { return }
-				self.settings.controllerToggleBinding = binding
-				self.endControllerToggleRecording(cancelCapture: false)
-			}
-		}
-	}
+    func beginControllerToggleRecording() {
+        if !isRecordingControllerHotkey {
+            if isRecordingKeyboardHotkey { endKeyboardHotkeyRecording() }
+            if activeControllerActionPicker != nil { endControllerActionPicker() }
+            isRecordingControllerHotkey = true
+            onRequestControllerBindingCapture { [weak self] binding in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.settings.controllerToggleBinding = binding
+                    self.endControllerToggleRecording(cancelCapture: false)
+                }
+            }
+        }
+    }
 
     func endControllerToggleRecording(cancelCapture: Bool = true) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             let wasRecording = self.isRecordingControllerHotkey
             self.isRecordingControllerHotkey = false
-            
             if cancelCapture && wasRecording {
                 self.onCancelControllerCapture()
             }
@@ -234,11 +250,15 @@ final class SettingsViewModel: ObservableObject {
 		}
 	}
 
-	func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
-		var updated = settings.controllerActionBindings
-		updated.setButton(button, for: action)
-		settings.controllerActionBindings = updated
-	}
+    func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
+        DispatchQueue.main.async {
+            var updated = self.settings.controllerActionBindings
+            updated.setButton(button, for: action)
+            self.settings.controllerActionBindings = updated
+            // Force view update if needed
+            self.objectWillChange.send()
+        }
+    }
 
 	// MARK: - Utilities
 
@@ -728,6 +748,14 @@ final class SettingsViewModel: ObservableObject {
                     .frame(width: 14, height: 14)
                     .offset(x: stickPosition.dx * (size/2 - 7), y: -stickPosition.dy * (size/2 - 7))
                     .shadow(radius: 2)
+            }
+            .onChange(of: stickPosition) {
+                // Haptic feedback when crossing deadzone boundary
+                let distance = sqrt(stickPosition.dx * stickPosition.dx + stickPosition.dy * stickPosition.dy)
+                if (distance < deadzoneRadius && distance > deadzoneRadius - 0.05) ||
+                    (distance > deadzoneRadius && distance < deadzoneRadius + 0.05) {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+                }
             }
             .frame(width: size, height: size)
         }

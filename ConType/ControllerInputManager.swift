@@ -15,6 +15,7 @@ enum MovementMode {
 }
 
 // ObservableObject for SwiftUI to observe joystick input
+@MainActor
 final class JoystickInputModel: ObservableObject {
     @Published var leftStick: CGVector = .zero
     @Published var rightStick: CGVector = .zero

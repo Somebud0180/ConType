@@ -6,6 +6,17 @@ struct SettingsView: View {
     private var settings: AppSettings { viewModel.settings }
     private var joystick: JoystickInputModel { viewModel.joystick }
     
+    // Remove old reset state
+    //@State var isResettingHotkeys: Bool = false
+    //@State var isResettingDefaults: Bool = false
+    
+    // New state for confirmation dialogs
+    @State private var showResetHotkeysDialog = false
+    @State private var showResetDefaultsDialog = false
+    
+    // Intermediate state for keyboard movement style picker
+    @State private var keyboardMovementStyleSelection: KeyboardMovementMode = .limited
+    
     var body: some View {
         NavigationStack {
             TabView {
@@ -147,12 +158,13 @@ struct SettingsView: View {
                             ))
                             
                             VStack(alignment: .leading) {
-                                Picker("Keyboard movement style", selection: $viewModel.keyboardMovementStyle) {
+                                Picker("Keyboard movement style", selection: $keyboardMovementStyleSelection) {
                                     Text("4 Directional").tag(KeyboardMovementMode.limited)
                                     Text("8 Directional").tag(KeyboardMovementMode.full)
                                 }
-                                .onSubmit {
-                                    settings.keyboardMovementStyle = viewModel.keyboardMovementStyle
+                                .onChange(of: keyboardMovementStyleSelection) {
+                                    // Only update the view model when the selection changes
+                                    viewModel.keyboardMovementStyle = keyboardMovementStyleSelection
                                 }
                                 .pickerStyle(.segmented)
                                 .listRowSeparator(.hidden)
@@ -173,31 +185,26 @@ struct SettingsView: View {
                         }
                         
                         Section("Others") {
-                            
                             HStack {
-                                Button("Reset Hotkeys") {
-                                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
-                                    settings.controllerToggleBinding = .default
-                                    settings.controllerActionBindings = .default
+                                Button("Reset Hotkeys", role: .destructive) {
+                                    showResetHotkeysDialog = true
                                 }
-                                
-                                Button("Reset Defaults") {
-                                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
-                                    settings.controllerToggleBinding = .default
-                                    settings.controllerActionBindings = .default
-                                    settings.shiftShortcutCyclesToCapsLock = true
-                                    settings.dismissWithGuideButton = true
-                                    settings.keyboardMovementStyle = .limited
-                                    settings.leftStickDeadzone = 0.2
-                                    settings.rightStickDeadzone = 0.2
-                                    settings.mouseSensitivity = 300
-                                    settings.mouseSmoothing = 0.5
+                                Button("Reset Defaults", role: .destructive) {
+                                    showResetDefaultsDialog = true
                                 }
+                                Spacer()
                             }
                         }
                     }
                     .formStyle(.grouped)
                 }
+            }
+            .onAppear {
+                // Sync intermediate state with view model
+                keyboardMovementStyleSelection = viewModel.keyboardMovementStyle
+            }
+            .onChange(of: viewModel.keyboardMovementStyle) {
+                keyboardMovementStyleSelection = viewModel.keyboardMovementStyle
             }
             .onDisappear {
                 viewModel.endKeyboardHotkeyRecording()
@@ -205,6 +212,39 @@ struct SettingsView: View {
                 viewModel.endControllerActionPicker()
             }
             .frame(width: 560, height: 520)
+            // Confirmation dialogs for reset actions
+            .confirmationDialog("Reset Hotkeys?", isPresented: $showResetHotkeysDialog, titleVisibility: .visible) {
+                Button("Reset Hotkeys", role: .destructive) {
+                    // Reset hotkeys to default
+                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
+                    settings.controllerToggleBinding = .default
+                    settings.controllerActionBindings = .default
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will reset your keyboard and controller shortcuts and hotkeys to their default values. This action cannot be undone.")
+            }
+            .confirmationDialog("Reset All Settings?", isPresented: $showResetDefaultsDialog, titleVisibility: .visible) {
+                Button("Reset Defaults", role: .destructive) {
+                    // Reset all settings except open on startup
+                    settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
+                    settings.controllerToggleBinding = .default
+                    settings.controllerActionBindings = .default
+                    settings.leftStickInputType = .overlayMovement
+                    settings.rightStickInputType = .mouseMovement
+                    settings.padInputType = .overlayMovement
+                    settings.shiftShortcutCyclesToCapsLock = true
+                    settings.dismissWithGuideButton = true
+                    settings.keyboardMovementStyle = .limited
+                    settings.leftStickDeadzone = 0.2
+                    settings.rightStickDeadzone = 0.2
+                    settings.mouseSensitivity = 300
+                    settings.mouseSmoothing = 0.5
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will reset all your settings (except \"Open app on startup\") to their default values. This action cannot be undone.")
+            }
         }
     }
 }
