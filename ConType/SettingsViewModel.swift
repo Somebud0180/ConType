@@ -91,6 +91,7 @@ final class SettingsViewModel: ObservableObject {
         settings.keyboardHotkey = defaultKeyboardShortcut
         settings.controllerToggleBinding = .default
         settings.controllerActionBindings = .default
+        settings.keyboardLayout = .QWERTY
         settings.leftStickInputType = .overlayMovement
         settings.rightStickInputType = .mouseMovement
         settings.padInputType = .overlayMovement
@@ -101,6 +102,8 @@ final class SettingsViewModel: ObservableObject {
         settings.rightStickDeadzone = 0.2
         settings.mouseSensitivity = 300
         settings.mouseSmoothing = 0.5
+        settings.windowSize = .small
+        settings.windowPosition = .zero
         
         // Update local state to reflect changes
         keyboardMovementStyle = settings.keyboardMovementStyle

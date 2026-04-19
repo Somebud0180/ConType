@@ -86,6 +86,12 @@ struct SettingsView: View {
                                 Button("Restart Onboarding") {
                                     viewModel.restartOnboarding()
                                 }
+                                Button("Reset Hotkeys", role: .destructive) {
+                                    showResetHotkeysDialog = true
+                                }
+                                Button("Reset Defaults", role: .destructive) {
+                                    showResetDefaultsDialog = true
+                                }
                             }
                         }
                     }
@@ -176,18 +182,6 @@ struct SettingsView: View {
                         
                         Section("Joystick Deadzone") {
                             viewModel.stickDeadzoneConfig
-                        }
-                        
-                        Section("Others") {
-                            HStack {
-                                Button("Reset Hotkeys", role: .destructive) {
-                                    showResetHotkeysDialog = true
-                                }
-                                Button("Reset Defaults", role: .destructive) {
-                                    showResetDefaultsDialog = true
-                                }
-                                Spacer()
-                            }
                         }
                     }
                     .formStyle(.grouped)
