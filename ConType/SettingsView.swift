@@ -198,6 +198,20 @@ struct SettingsView: View {
                     }
                     .formStyle(.grouped)
                 }
+                
+                Tab("Keyboard", systemImage: "keyboard") {
+                    Form {
+                        Picker("Keyboard Layout", selection: Binding(
+                            get: { viewModel.settings.keyboardLayout },
+                            set: { viewModel.settings.keyboardLayout = $0 }
+                        )) {
+                            ForEach(KeyboardLayout.all) { layout in
+                                Text(layout.name).tag(layout)
+                            }
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
             }
             .onAppear {
                 // Sync intermediate state with view model

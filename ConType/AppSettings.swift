@@ -363,6 +363,7 @@ final class AppSettings: ObservableObject {
     @Published var controllerActionBindings: ControllerActionBindings = .default
     
     // Preferences
+    @Published var keyboardLayout: KeyboardLayout = .QWERTY
     @Published var leftStickInputType: AxisInputType = .overlayMovement
     @Published var rightStickInputType: AxisInputType = .mouseMovement
     @Published var padInputType: AxisInputType = .overlayMovement
