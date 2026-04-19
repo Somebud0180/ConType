@@ -376,10 +376,242 @@ final class AppSettings: ObservableObject {
     @Published var mouseSensitivity: CGFloat = 300.0
     @Published var mouseSmoothing: CGFloat = 0.5
     
-    // App state
+    // Overlay
+    @Published var windowSize: WindowSize = .small
+    @Published var windowPosition: NSPoint = .zero
+    
+    // App state (Does not persist)
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
     @Published var controllerCaptureState: ControllerCaptureState = .empty
     @Published var detectedController: DetectedController?
-    @Published var windowSize: WindowSize = .small
-    @Published var windowPosition: NSPoint = .zero
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+        load()
+        
+        $keyboardHotkey
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $controllerToggleBinding
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $controllerActionBindings
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $keyboardLayout
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $leftStickInputType
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $rightStickInputType
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $padInputType
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $shiftShortcutCyclesToCapsLock
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $dismissWithGuideButton
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $openAppOnStartup
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $keyboardMovementStyle
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $leftStickDeadzone
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $rightStickDeadzone
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $mouseSensitivity
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $mouseSmoothing
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $windowSize
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $windowPosition
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        // The remaining variables doesn't persist/need to be saved
+    }
+    
+    // MARK: - Save Code
+    private static var settingsURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = appSupport.appendingPathComponent("ConType", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("settings.json")
+    }
+    
+    func save() {
+        debugPrint("[AppSettings] Saving app settings")
+        let codable = AppSettingsCodable(
+            keyboardHotkey: keyboardHotkey,
+            controllerToggleBinding: controllerToggleBinding,
+            controllerActionBindings: controllerActionBindings,
+            keyboardLayoutName: keyboardLayout.name,
+            leftStickInputType: leftStickInputType,
+            rightStickInputType: rightStickInputType,
+            padInputType: padInputType,
+            shiftShortcutCyclesToCapsLock: shiftShortcutCyclesToCapsLock,
+            dismissWithGuideButton: dismissWithGuideButton,
+            openAppOnStartup: openAppOnStartup,
+            keyboardMovementStyle: keyboardMovementStyle,
+            leftStickDeadzone: leftStickDeadzone,
+            rightStickDeadzone: rightStickDeadzone,
+            mouseSensitivity: mouseSensitivity,
+            mouseSmoothing: mouseSmoothing,
+            windowSize: windowSize,
+            windowPosition: CodablePoint(windowPosition)
+        )
+        do {
+            debugPrint("[AppSettings] Saving app settings to file...")
+            let data = try JSONEncoder().encode(codable)
+            try data.write(to: Self.settingsURL, options: [.atomic])
+        } catch {
+            print("[AppSettings] Failed to save settings: \(error)")
+        }
+    }
+    
+    func load() {
+        debugPrint("[AppSettings] Loading app settings")
+        let url = Self.settingsURL
+        guard let data = try? Data(contentsOf: url) else { return }
+        do {
+            debugPrint("[AppSettings] Restoring app settings from file...")
+            let codable = try JSONDecoder().decode(AppSettingsCodable.self, from: data)
+            self.keyboardHotkey = codable.keyboardHotkey
+            self.controllerToggleBinding = codable.controllerToggleBinding
+            self.controllerActionBindings = codable.controllerActionBindings
+            // Restore layout by name
+            if let layout = KeyboardLayout.all.first(where: { $0.name == codable.keyboardLayoutName }) {
+                self.keyboardLayout = layout
+            }
+            self.leftStickInputType = codable.leftStickInputType
+            self.rightStickInputType = codable.rightStickInputType
+            self.padInputType = codable.padInputType
+            self.shiftShortcutCyclesToCapsLock = codable.shiftShortcutCyclesToCapsLock
+            self.dismissWithGuideButton = codable.dismissWithGuideButton
+            self.openAppOnStartup = codable.openAppOnStartup
+            self.keyboardMovementStyle = codable.keyboardMovementStyle
+            self.leftStickDeadzone = codable.leftStickDeadzone
+            self.rightStickDeadzone = codable.rightStickDeadzone
+            self.mouseSensitivity = codable.mouseSensitivity
+            self.mouseSmoothing = codable.mouseSmoothing
+            self.windowSize = codable.windowSize
+            self.windowPosition = codable.windowPosition.nsPoint
+        } catch {
+            print("[AppSettings] Failed to load settings: \(error)")
+        }
+    }
+}
+
+// MARK: - Codable helpers
+extension KeyboardHotkeyManager.Shortcut: Codable {
+    enum CodingKeys: String, CodingKey {
+        case key
+        case modifiers
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(key, forKey: .key)
+        try container.encode(modifiers.rawValue, forKey: .modifiers)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let key = try container.decode(String.self, forKey: .key)
+        let modifiersRaw = try container.decode(UInt.self, forKey: .modifiers)
+        self.init(key: key, modifiers: NSEvent.ModifierFlags(rawValue: modifiersRaw))
+    }
+}
+extension ControllerToggleBinding: Codable {}
+extension ControllerActionBindings: Codable {}
+extension ControllerAssignableButton: Codable {}
+extension ControllerActionBinding: Codable {}
+extension AxisInputType: Codable {}
+extension WindowSize: Codable {
+    enum CodingKeys: String, CodingKey {
+        case value
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .small: try container.encode("small", forKey: .value)
+        case .medium: try container.encode("medium", forKey: .value)
+        case .large: try container.encode("large", forKey: .value)
+        }
+    }
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let value = try container.decode(String.self, forKey: .value)
+        switch value {
+        case "small": self = .small
+        case "medium": self = .medium
+        case "large": self = .large
+        default: self = .small
+        }
+    }
+}
+extension KeyboardMovementMode: Codable {
+    enum CodingKeys: String, CodingKey { case value }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .limited: try container.encode("limited", forKey: .value)
+        case .full: try container.encode("full", forKey: .value)
+        case .mouse: try container.encode("mouse", forKey: .value)
+        }
+    }
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let value = try container.decode(String.self, forKey: .value)
+        switch value {
+        case "limited": self = .limited
+        case "full": self = .full
+        case "mouse": self = .mouse
+        default: self = .limited
+        }
+    }
+}
+
+struct CodablePoint: Codable {
+    var x: CGFloat
+    var y: CGFloat
+    
+    init(_ point: NSPoint) {
+        self.x = point.x
+        self.y = point.y
+    }
+    var nsPoint: NSPoint { NSPoint(x: x, y: y) }
+}
+
+private struct AppSettingsCodable: Codable {
+    var keyboardHotkey: KeyboardHotkeyManager.Shortcut
+    var controllerToggleBinding: ControllerToggleBinding
+    var controllerActionBindings: ControllerActionBindings
+    var keyboardLayoutName: String
+    var leftStickInputType: AxisInputType
+    var rightStickInputType: AxisInputType
+    var padInputType: AxisInputType
+    var shiftShortcutCyclesToCapsLock: Bool
+    var dismissWithGuideButton: Bool
+    var openAppOnStartup: Bool
+    var keyboardMovementStyle: KeyboardMovementMode
+    var leftStickDeadzone: CGFloat
+    var rightStickDeadzone: CGFloat
+    var mouseSensitivity: CGFloat
+    var mouseSmoothing: CGFloat
+    var windowSize: WindowSize
+    var windowPosition: CodablePoint
 }

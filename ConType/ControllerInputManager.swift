@@ -465,8 +465,6 @@ final class ControllerInputManager: NSObject {
         // Convert to degrees 0..360 where 0 = right, 90 = up
         var degrees = angle * 180.0 / .pi
         if degrees < 0 { degrees += 360.0 }
-        debugPrint("Analog stick angle: \(degrees)° (dx: \(vector.dx), dy: \(vector.dy))")
-        debugPrint("Joystick mode: \(mode), magnitude: \(sqrt(vector.dx * vector.dx + vector.dy * vector.dy))")
         
         // Cardinal and diagonal angular ranges
         switch mode {

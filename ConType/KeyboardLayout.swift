@@ -67,8 +67,7 @@ struct KeyboardLayout: Identifiable, Hashable {
     
     static let all: [KeyboardLayout] = [
         KeyboardLayout.QWERTY,
-        KeyboardLayout.alignedQWERTY,
-        // Add more layouts here
+        KeyboardLayout.alignedQWERTY
     ]
 }
 

@@ -22,7 +22,6 @@ final class MouseEmitter {
             return false
         }
         event.post(tap: .cghidEventTap)
-        debugPrint("Emitting mouse event: \(event)")
         return true
     }
 

@@ -35,7 +35,7 @@ final class KeyboardHotkeyManager {
             return
         }
         
-        debugPrint("Failed to create event tap for keyboard hotkey. Stopping hotkey monitoring.")
+        debugPrint("[KeyboardHotkeyManager] Failed to create event tap for keyboard hotkey. Stopping hotkey monitoring.")
         stop()
     }
 

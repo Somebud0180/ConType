@@ -60,7 +60,7 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
-    init() {
+    init() {        
         joystick = JoystickInputModel(manager: controllerInputManager)
         
         hotkeyManager.onToggle = { [weak self] in
