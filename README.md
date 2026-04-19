@@ -8,6 +8,9 @@
 Inspired by virtual keyboards in games and other operating systems, ConType brings a controller-based keyboard (+ mouse) to the desktop, specifically for Mac.
 Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 
+## AI Disclosure
+AI was heavily used in the very early stages of the app. Involving the base code and an early version of the interface. Further work specially those relating to the keyboard emulation and more was done by AI. Some debugging sessions were also assisted by AI, either for inquiry or direct code generation.
+
 ## Features
 - **Virtual keyboard**
   <br>Shiny and neatly resembles a real keyboard (Roughly based on the Magic Keyboard)
@@ -36,3 +39,6 @@ Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 <br>ConType is easily configurable via the settings panel. Configure shortcuts, joystick deadzone, and more here.
 <img width="80%" alt="Settings" src="https://github.com/user-attachments/assets/e80f7db8-f0a7-4fc8-9a65-92670a4d1641" />
 </p>
+
+## Credits
+- [**AXorcist**](https://github.com/steipete/AXorcist/), they had a really useful documentation regarding the Mac's accessibility permission. I was referencing their code and a [DeepWiki](https://deepwiki.com/steipete/AXorcist/13.4-permission-helpers) of their repo.
