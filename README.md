@@ -9,7 +9,7 @@ Inspired by virtual keyboards in games and other operating systems, ConType brin
 Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 
 ## AI Disclosure
-AI was heavily used in the very early stages of the app. Involving the base code and an early version of the interface. Further work specially those relating to the keyboard emulation and more was done by AI. Some debugging sessions were also assisted by AI, either for inquiry or direct code generation.
+AI was heavily used in the very early stages of the app. Involving the base code and an early version of the interface. Further work like those relating to the keyboard emulation and the initial controller setup was done by AI. Some debugging sessions were also assisted by AI, either for inquiry or direct code generation. **No AI is/was/will be used for any work related to graphics/art both in app and in the repo**
 
 ## Features
 - **Virtual keyboard**
@@ -41,4 +41,5 @@ AI was heavily used in the very early stages of the app. Involving the base code
 </p>
 
 ## Credits
+- [Kenney Input Prompts](https://kenney.nl/assets/input-prompts), plain well made controller glyphs.
 - [**AXorcist**](https://github.com/steipete/AXorcist/), they had a really useful documentation regarding the Mac's accessibility permission. I was referencing their code and a [DeepWiki](https://deepwiki.com/steipete/AXorcist/13.4-permission-helpers) of their repo.
