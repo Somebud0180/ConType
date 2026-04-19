@@ -1,5 +1,7 @@
 import AppKit
 import SwiftUI
+import Combine
+import ApplicationServices
 
 struct SettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
@@ -20,7 +22,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             TabView {
-                Tab("Main", systemImage: "gearshape") {
+                Tab("General", systemImage: "gearshape") {
                     Form {
                         Section("Your Controller") {
                             if let detectedController = settings.detectedController {
@@ -144,10 +146,6 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            NavigationLink(destination: HotkeySettingsView(viewModel: viewModel)) {
-                                Text("Hotkey Actions")
-                            }
-                            
                             Toggle("Shift hotkey cycles to Caps Lock", isOn: Binding(
                                 get: { viewModel.settings.shiftShortcutCyclesToCapsLock },
                                 set: { viewModel.settings.shiftShortcutCyclesToCapsLock = $0 }
@@ -180,10 +178,6 @@ struct SettingsView: View {
                             viewModel.stickDeadzoneConfig
                         }
                         
-                        Section("Mouse Configuration") {
-                            viewModel.mouseConfig
-                        }
-                        
                         Section("Others") {
                             HStack {
                                 Button("Reset Hotkeys", role: .destructive) {
@@ -201,18 +195,55 @@ struct SettingsView: View {
                 
                 Tab("Keyboard", systemImage: "keyboard") {
                     Form {
-                        Picker("Keyboard Layout", selection: Binding(
-                            get: { viewModel.settings.keyboardLayout },
-                            set: { viewModel.settings.keyboardLayout = $0 }
-                        )) {
-                            ForEach(KeyboardLayout.all) { layout in
-                                Text(layout.name).tag(layout)
+                        Section("Keyboard Layout") {
+                            Picker("Keyboard Layout", selection: Binding(
+                                get: { viewModel.settings.keyboardLayout },
+                                set: { viewModel.settings.keyboardLayout = $0 }
+                            )) {
+                                ForEach(KeyboardLayout.all) { layout in
+                                    Text(layout.name).tag(layout)
+                                }
+                            }
+                            
+                            
+                            KeyboardOverlayView(
+                                settings: settings,
+                                viewModel: KeyboardOverlayViewModel(settings: settings),
+                                onKeyPressed: { _, _ in }
+                            )
+                            .frame(width: 500, height: 220)
+                            .disabled(true)
+                        }
+                        
+                        Section("Keyboard Actions") {
+                            ForEach(ControllerActionBinding.keyboardActions) { action in
+                                LabeledContent(action.title) {
+                                    viewModel.controllerActionPickerButton(for: action)
+                                }
+                            }
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
+                
+                Tab("Mouse", systemImage: "computermouse") {
+                    Form {
+                        Section("Mouse Configuration") {
+                            viewModel.mouseConfig
+                        }
+                        
+                        Section("Mouse Actions") {
+                            ForEach(ControllerActionBinding.mouseActions) { action in
+                                LabeledContent(action.title) {
+                                    viewModel.controllerActionPickerButton(for: action)
+                                }
                             }
                         }
                     }
                     .formStyle(.grouped)
                 }
             }
+            .tabViewStyle(.tabBarOnly)
             .onAppear {
                 // Sync intermediate state with view model
                 keyboardMovementStyleSelection = viewModel.keyboardMovementStyle
@@ -247,34 +278,6 @@ struct SettingsView: View {
                 Text("This will reset all your settings (except \"Open app on startup\") to their default values. This action cannot be undone.")
             }
         }
-    }
-}
-
-struct HotkeySettingsView: View {
-    @ObservedObject var viewModel: SettingsViewModel
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Keyboard Actions") {
-                    ForEach(ControllerActionBinding.keyboardActions) { action in
-                        LabeledContent(action.title) {
-                            viewModel.controllerActionPickerButton(for: action)
-                        }
-                    }
-                }
-                Section("Mouse Actions") {
-                    ForEach(ControllerActionBinding.mouseActions) { action in
-                        LabeledContent(action.title) {
-                            viewModel.controllerActionPickerButton(for: action)
-                        }
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .navigationTitle("Hotkey Actions")
-        }
-        .frame(width: 560, height: 520)
     }
 }
 
