@@ -41,5 +41,9 @@ AI was heavily used in the very early stages of the app. Involving the base code
 </p>
 
 ## Credits
-- [Kenney Input Prompts](https://kenney.nl/assets/input-prompts), plain well made controller glyphs.
+- [**Kenney Input Prompts**](https://kenney.nl/assets/input-prompts), plain well made controller glyphs.
 - [**AXorcist**](https://github.com/steipete/AXorcist/), they had a really useful documentation regarding the Mac's accessibility permission. I was referencing their code and a [DeepWiki](https://deepwiki.com/steipete/AXorcist/13.4-permission-helpers) of their repo.
+
+---
+Made with ❤️, made with [Hack Club](https://hackclub.com/).
+<br>Created for [FlavorTown](https://flavortown.hackclub.com/), a Hack Club event.
