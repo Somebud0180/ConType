@@ -217,85 +217,95 @@ struct KeyboardOverlayView: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: KeyboardOverlayViewModel
+    @State var keyRefs: [KeyReference] = []
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
-    var keyRefs: [KeyReference] = []
 
     var body: some View {
         GeometryReader { proxy in
             let metrics = layoutMetrics(in: proxy.size)
-
-            ZStack {
-                RoundedRectangle(cornerRadius: metrics.windowCornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: metrics.windowCornerRadius, style: .continuous)
-                            .strokeBorder(.white.opacity(0.26), lineWidth: 1)
-                    )
-
-                VStack(spacing: metrics.rowSpacing) {
-                    ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
-                        let rowWidths = widths(for: row, metrics: metrics)
-
-                        HStack(spacing: metrics.columnSpacing) {
-                            ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
-                                let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
-                                let cornerRadii = cornerRadii(forRow: rowIndex, column: columnIndex, rowCount: viewModel.rows.count, columnCount: row.count, metrics: metrics)
-                                let isModifierLatched = {
-                                    if case .toggleModifier(let modifier) = key.role {
-                                        return viewModel.isModifierActive(modifier)
-                                    }
-                                    return false
-                                }()
-                                let isCommandCluster = isCommandClusterKey(key)
-                                let prefersShiftLegend = viewModel.prefersShiftLegend(for: key)
-                                let controllerShortcutButton = controllerShortcutButton(for: key)
-                                let keyWidth = rowWidths[key.id] ?? max(1, metrics.baseUnitWidth)
-                                let keyColor: Color = colorScheme == .dark ? Color.white : Color.black
-                                let fillColor: Color = isSelected || isModifierLatched
-                                    ? keyColor.opacity(0.36)
-                                    : (isCommandCluster ? keyColor.opacity(0.23) : keyColor.opacity(0.16))
-                                let strokeColor: Color = isSelected || isModifierLatched
-                                    ? Color.white.opacity(0.75)
-                                    : (isCommandCluster ? Color.white.opacity(0.34) : Color.white.opacity(0.22))
-
-                                Button {
-                                    viewModel.select(row: rowIndex, column: columnIndex)
-                                    viewModel.activate(key, using: onKeyPressed)
-                                } label: {
-                                    keyLabel(
-                                        for: key,
-                                        metrics: metrics,
-                                        prefersShiftLegend: prefersShiftLegend,
-                                        controllerShortcutButton: controllerShortcutButton
-                                    )
-                                        .frame(width: keyWidth, height: metrics.keyHeight)
-                                        .scaleEffect(isModifierLatched ? 0.9 : 1)
-                                        .background(
-                                            UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
-                                                .fill(fillColor)
-                                        )
-                                    
-                                        .overlay(
-                                            UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
-                                                .strokeBorder(strokeColor, lineWidth: 1)
-                                        )
-                                        .animation(keyAnimation, value: isModifierLatched)
-                                        .animation(keyAnimation, value: prefersShiftLegend)
+            
+            VStack(spacing: metrics.rowSpacing) {
+                ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
+                    let rowWidths = widths(for: row, metrics: metrics)
+                    
+                    HStack(spacing: metrics.columnSpacing) {
+                        ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
+                            let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
+                            let cornerRadii = cornerRadii(forRow: rowIndex, column: columnIndex, rowCount: viewModel.rows.count, columnCount: row.count, metrics: metrics)
+                            let isModifierLatched = {
+                                if case .toggleModifier(let modifier) = key.role {
+                                    return viewModel.isModifierActive(modifier)
                                 }
-                                .buttonStyle(.plain)
+                                return false
+                            }()
+                            let isCommandCluster = isCommandClusterKey(key)
+                            let prefersShiftLegend = viewModel.prefersShiftLegend(for: key)
+                            let controllerShortcutButton = controllerShortcutButton(for: key)
+                            let keyWidth = rowWidths[key.id] ?? max(1, metrics.baseUnitWidth)
+                            let keyColor: Color = colorScheme == .dark ? Color.white : Color.black
+                            let fillColor: Color = isSelected || isModifierLatched
+                            ? keyColor.opacity(0.36)
+                            : (isCommandCluster ? keyColor.opacity(0.23) : keyColor.opacity(0.16))
+                            let strokeColor: Color = isSelected || isModifierLatched
+                            ? Color.white.opacity(0.75)
+                            : (isCommandCluster ? Color.white.opacity(0.34) : Color.white.opacity(0.22))
+                            
+                            Button {
+                                viewModel.select(row: rowIndex, column: columnIndex)
+                                viewModel.activate(key, using: onKeyPressed)
+                            } label: {
+                                keyLabel(
+                                    for: key,
+                                    metrics: metrics,
+                                    prefersShiftLegend: prefersShiftLegend,
+                                    controllerShortcutButton: controllerShortcutButton
+                                )
+                                .frame(width: keyWidth, height: metrics.keyHeight)
+                                .scaleEffect(isModifierLatched ? 0.9 : 1)
+                                .background(
+                                    UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
+                                        .fill(fillColor)
+                                )
+                                
+                                .overlay(
+                                    UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
+                                        .strokeBorder(strokeColor, lineWidth: 1)
+                                )
+                                .animation(keyAnimation, value: isModifierLatched)
+                                .animation(keyAnimation, value: prefersShiftLegend)
                                 .onAppear {
                                     keyRefs.append(KeyReference(size: CGSize(width: keyWidth, height: metrics.keyHeight), rowIndex: rowIndex, columnIndex: columnIndex))
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
-                .padding(metrics.innerPadding)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(metrics.outerPadding)
+            .padding(metrics.innerPadding)
+            .glassEffect(in: .rect(cornerRadius: metrics.windowCornerRadius, style: .continuous))
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
+    }
+    
+    // Returns keys toward a vertical direction from a given key position
+    private func keysToward(_ toward: OverlayMoveDirection, rowIndex: Int, colIndex: Int) -> [KeyReference] {
+        let verticalDirection = 1 * (toward == .up ? -1 : 1)
+        
+        for key in keyRefs {
+            if key.rowIndex == rowIndex + verticalDirection {
+                let totalWidthInDir = keyRefs.filter { $0.rowIndex == key.rowIndex + verticalDirection }.reduce(0) { $0 + $1.size.width }
+                let totalWidthCurrent = keyRefs.filter { $0.rowIndex == rowIndex }.reduce(0) { $0 + $1.size.width }
+                let centerPosition = totalWidthCurrent - key.size.width / 2
+                
+                // Check for keys above center position using totaldWidthInDir
+                if key.rowIndex == rowIndex + verticalDirection && key.size.width / 2 + totalWidthInDir > centerPosition {
+                    return [key]
+                }
+            }
+        }
+        
+        return []
     }
 
     private func keyLabel(
@@ -550,13 +560,12 @@ struct KeyboardOverlayView: View {
 
     private func layoutMetrics(in size: CGSize) -> KeyboardLayoutMetrics {
         let side = min(size.width, size.height)
-        let outerPadding = max(6, min(14, side * 0.02))
         let innerPadding = max(10, min(20, side * 0.03))
         let rowSpacing = max(8, min(18, size.height * 0.03))
         let columnSpacing = max(6, min(14, size.width * 0.008))
 
-        let contentWidth = max(1, size.width - ((outerPadding + innerPadding) * 2))
-        let contentHeight = max(1, size.height - ((outerPadding + innerPadding) * 2))
+        let contentWidth = max(1, size.width - (innerPadding * 2))
+        let contentHeight = max(1, size.height - (innerPadding * 2))
 
         let referenceRow = viewModel.rows.first ?? []
         let referenceUnits = max(1, referenceRow.reduce(CGFloat(0)) { $0 + $1.widthUnits })
@@ -572,7 +581,6 @@ struct KeyboardOverlayView: View {
             columnSpacing: columnSpacing,
             rowSpacing: rowSpacing,
             innerPadding: innerPadding,
-            outerPadding: outerPadding,
             contentWidth: contentWidth,
             activeLegendFontSize: max(9, min(22, keyHeight * 0.32)),
             inactiveLegendFontSize: max(6, min(16, keyHeight * 0.23)),
@@ -596,7 +604,6 @@ struct KeyboardOverlayView: View {
         let columnSpacing: CGFloat
         let rowSpacing: CGFloat
         let innerPadding: CGFloat
-        let outerPadding: CGFloat
         let contentWidth: CGFloat
         let activeLegendFontSize: CGFloat
         let inactiveLegendFontSize: CGFloat
