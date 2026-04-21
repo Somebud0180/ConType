@@ -19,6 +19,12 @@ enum OverlayMoveTrigger {
     case holdRepeat
 }
 
+struct KeyReference {
+    let size: CGSize
+    let rowIndex: Int
+    let columnIndex: Int
+}
+
 @MainActor
 final class KeyboardOverlayViewModel: ObservableObject {
     private let settings: AppSettings
@@ -212,6 +218,7 @@ struct KeyboardOverlayView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: KeyboardOverlayViewModel
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
+    var keyRefs: [KeyReference] = []
 
     var body: some View {
         GeometryReader { proxy in
@@ -267,6 +274,7 @@ struct KeyboardOverlayView: View {
                                             UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                                 .fill(fillColor)
                                         )
+                                    
                                         .overlay(
                                             UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                                 .strokeBorder(strokeColor, lineWidth: 1)
@@ -275,6 +283,9 @@ struct KeyboardOverlayView: View {
                                         .animation(keyAnimation, value: prefersShiftLegend)
                                 }
                                 .buttonStyle(.plain)
+                                .onAppear {
+                                    keyRefs.append(KeyReference(size: CGSize(width: keyWidth, height: metrics.keyHeight), rowIndex: rowIndex, columnIndex: columnIndex))
+                                }
                             }
                         }
                     }
@@ -470,7 +481,7 @@ struct KeyboardOverlayView: View {
             needed = textWidth(key.baseLabel, font: labelFont) + textWidth(commandSymbol, font: symbolFont) + metrics.commandSymbolInset + horizontalPadding
         }
         
-        if let shortcutButton = controllerShortcutButton(for: key) {
+        if controllerShortcutButton(for: key) != nil {
             let labelFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .medium)
             needed = textWidth(key.baseLabel, font: labelFont) + metrics.commandSymbolInset + horizontalPadding
         }
@@ -600,6 +611,27 @@ struct KeyboardOverlayView: View {
         let keyCornerRadius: CGFloat
         let outerKeyCornerRadius: CGFloat
         let windowCornerRadius: CGFloat
+    }
+}
+
+struct SizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    
+    // Combine values if multiple children set the preference (use first/last/max as needed)
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue() // Use the latest value
+    }
+}
+
+extension View {
+    func measureSize(perform action: @escaping (CGSize) -> Void) -> some View {
+        background(
+            GeometryReader { geometry in
+                Color.clear // Invisible background to avoid affecting layout
+                    .preference(key: SizePreferenceKey.self, value: geometry.size)
+            }
+        )
+        .onPreferenceChange(SizePreferenceKey.self, perform: action)
     }
 }
 
