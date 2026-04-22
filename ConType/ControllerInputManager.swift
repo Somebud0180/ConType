@@ -601,7 +601,7 @@ final class ControllerInputManager: NSObject {
     }
 
     private func supportedGuideButtons(for controller: GCController) -> [ControllerGuideButton] {
-        guard let gamepad = controller.extendedGamepad else {
+        guard controller.extendedGamepad != nil else {
             return []
         }
 
