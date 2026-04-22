@@ -83,6 +83,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
             } else if allowsWrap {
                 selectedColumn = max(0, rows[selectedRow].count - 1)
             }
+            
         case .right:
             let maxColumn = max(0, rows[selectedRow].count - 1)
             if selectedColumn < maxColumn {
@@ -90,6 +91,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
             } else if allowsWrap {
                 selectedColumn = 0
             }
+            
         case .up:
             if selectedRow > 0 {
                 let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -98,11 +100,12 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.first {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn = min(best.columnIndex, rows[selectedRow].count - 1)
                 }
             } else if allowsWrap {
                 selectedRow = rows.count - 1
             }
+            
         case .down:
             if selectedRow < rows.count - 1 {
                 let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -111,12 +114,13 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.first {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn = min(best.columnIndex, rows[selectedRow].count - 1)
                 }
             } else if allowsWrap {
                 selectedRow = 0
             }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+            
         case .upLeft:
             if selectedRow > 0 {
                 let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -125,12 +129,14 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.first {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn = min(best.columnIndex, rows[selectedRow].count - 1)
                 }
             } else if allowsWrap {
                 selectedRow = rows.count - 1
-                selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+                selectedColumn -= 1
             }
+            selectedColumn = min(selectedColumn - 1, rows[selectedRow].count - 1)
+            
         case .upRight:
             if selectedRow > 0 {
                 let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -139,12 +145,14 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.last {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn += 1
                 }
+                selectedColumn = min(selectedColumn - 1, rows[selectedRow].count - 1)
             } else if allowsWrap {
                 selectedRow = rows.count - 1
-                selectedColumn = min(selectedColumn, rows[selectedRow].count + 1)
+                selectedColumn = min(selectedColumn + 1, rows[selectedRow].count - 1)
             }
+            
         case .downLeft:
             if selectedRow > 0 {
                 let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -153,12 +161,14 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.first {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn = min(best.columnIndex, rows[selectedRow].count - 1)
                 }
             } else if allowsWrap {
-                selectedRow = rows.count + 1
-                selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+                selectedRow = 0
+                selectedColumn -= 1
             }
+            selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+            
         case .downRight:
             if selectedRow > 0 {
                 let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
@@ -167,13 +177,15 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 
                 if let best = bestCandidate.first {
                     selectedRow = best.rowIndex
-                    selectedColumn = best.columnIndex
+                    selectedColumn = min(best.columnIndex, rows[selectedRow].count - 1)
                 }
             } else if allowsWrap {
-                selectedRow = rows.count + 1
-                selectedColumn = min(selectedColumn, rows[selectedRow].count + 1)
+                selectedRow = 0
+                selectedColumn += 1
             }
+            selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         }
+        
         return previousRow != selectedRow || previousColumn != selectedColumn
     }
 
@@ -367,15 +379,15 @@ struct KeyboardOverlayView: View {
     var body: some View {
         GeometryReader { proxy in
             let metrics = layoutMetrics(in: proxy.size)
-            let initialYOrigin = metrics.innerPadding // Start with inner padding
+            let initialYOrigin = metrics.innerPadding
             
             VStack(spacing: metrics.rowSpacing) {
                 ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
                     let rowWidths = widths(for: row, metrics: metrics)
-                    let currentRowYOrigin = initialYOrigin + (CGFloat(rowIndex) * (metrics.keyHeight + metrics.rowSpacing)) // Calculate Y origin
+                    let currentRowYOrigin = initialYOrigin + (CGFloat(rowIndex) * (metrics.keyHeight)) // Calculate Y origin
                     
                     HStack(spacing: metrics.columnSpacing) {
-                        var currentXOriginForRow: CGFloat = metrics.innerPadding // Reset X origin for each row
+                        var currentXOriginForRow: CGFloat = metrics.innerPadding // Calculate X origin for each row
                         
                         ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
                             let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
@@ -412,29 +424,33 @@ struct KeyboardOverlayView: View {
                                 .frame(width: keyWidth, height: keyHeight)
                                 .scaleEffect(isModifierLatched ? 0.9 : 1)
                                 .background(
-                                    UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
-                                        .fill(fillColor)
+                                    GeometryReader { geometry in
+                                        UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
+                                            .fill(fillColor)
+                                            .onAppear {
+                                                debugPrint("Key \(key.baseLabel) has size: \(geometry.size)")
+                                                
+                                                // --- Calculate and store origin ---
+                                                let keyOriginX = currentXOriginForRow
+                                                let keyOriginY = currentRowYOrigin
+                                                
+                                                viewModel.keyRefs.append(KeyReference(
+                                                    size: geometry.size,
+                                                    rowIndex: rowIndex,
+                                                    columnIndex: columnIndex,
+                                                    xOrigin: keyOriginX,
+                                                    yOrigin: keyOriginY
+                                                ))
+                                                
+                                                // Update the X origin for the next key in the row
+                                                currentXOriginForRow += geometry.size.width + metrics.columnSpacing
+                                            }
+                                    }
                                 )
                                 .overlay(
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                         .strokeBorder(strokeColor, lineWidth: 1)
                                 )
-                                .onAppear {
-                                    // --- Calculate and store origin ---
-                                    let keyOriginX = currentXOriginForRow
-                                    let keyOriginY = currentRowYOrigin
-                                    
-                                    viewModel.keyRefs.append(KeyReference(
-                                        size: CGSize(width: keyWidth, height: keyHeight),
-                                        rowIndex: rowIndex,
-                                        columnIndex: columnIndex,
-                                        xOrigin: keyOriginX, // Store calculated origin
-                                        yOrigin: keyOriginY  // Store calculated origin
-                                    ))
-                                    
-                                    // Update the X origin for the next key in the row
-                                    currentXOriginForRow += keyWidth + metrics.columnSpacing
-                                }
                             }
                             .buttonStyle(.plain)
                         }
@@ -773,7 +789,7 @@ extension View {
     func measureSize(perform action: @escaping (CGSize) -> Void) -> some View {
         background(
             GeometryReader { geometry in
-                Color.clear // Invisible background to avoid affecting layout
+                Color.gray.opacity(0.01) // Invisible background to avoid affecting layout
                     .preference(key: SizePreferenceKey.self, value: geometry.size)
             }
         )
