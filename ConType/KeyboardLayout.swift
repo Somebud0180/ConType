@@ -164,11 +164,13 @@ extension KeyboardLayout {
                 VirtualKey(
                     baseLabel: "Control",
                     keyCode: 59,
+                    widthUnits: 1.2,
                     role: .toggleModifier(.control)
                 ),
                 VirtualKey(
                     baseLabel: "Option",
                     keyCode: 58,
+                    widthUnits: 1.2,
                     role: .toggleModifier(.option)
                 ),
                 VirtualKey(
@@ -268,11 +270,13 @@ extension KeyboardLayout {
                 VirtualKey(
                     baseLabel: "Control",
                     keyCode: 59,
+                    widthUnits: 1.2,
                     role: .toggleModifier(.control)
                 ),
                 VirtualKey(
                     baseLabel: "Option",
                     keyCode: 58,
+                    widthUnits: 1.2,
                     role: .toggleModifier(.option)
                 ),
                 VirtualKey(
