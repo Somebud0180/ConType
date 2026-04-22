@@ -96,9 +96,9 @@ final class KeyboardOverlayViewModel: ObservableObject {
         case .up:
             if selectedRow > 0 || allowsWrap {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
-                let candidates = keyRefs.filter { $0.rowIndex == targetRow }
+                let candidates = keyRefs.filter{ $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -112,7 +112,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -126,7 +126,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -141,7 +141,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -156,7 +156,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -171,7 +171,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
+                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -332,6 +332,8 @@ final class KeyboardOverlayViewModel: ObservableObject {
         
         let sortedRefs = matches.map { $0.ref }
         
+        debugPrint("Sorted candidates by overlap and distance: \(sortedRefs.map { "row:\($0.rowIndex) col:\($0.columnIndex) overlap:\(String(format: "%.1f", matches.first(where: { $0.ref == $0.ref })?.overlap ?? 0)) distance:\(String(format: "%.1f", matches.first(where: { $0.ref == $0.ref })?.distance ?? 0))" })")
+        
         switch selectionBias {
         case .overlapPreferringClosest:
             if let best = sortedRefs.first {
@@ -404,28 +406,8 @@ struct KeyboardOverlayView: View {
                                 .frame(width: keyWidth, height: keyHeight)
                                 .scaleEffect(isModifierLatched ? 0.9 : 1)
                                 .background(
-                                    GeometryReader { geometry in
                                         UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                             .fill(fillColor)
-                                            .onAppear {
-                                                debugPrint("Key \(key.baseLabel) has size: \(geometry.size)")
-                                                
-                                                // --- Calculate and store origin ---
-                                                let keyOriginX = currentXOriginForRow
-                                                let keyOriginY = currentRowYOrigin
-                                                
-                                                viewModel.keyRefs.append(KeyReference(
-                                                    size: geometry.size,
-                                                    rowIndex: rowIndex,
-                                                    columnIndex: columnIndex,
-                                                    xOrigin: keyOriginX,
-                                                    yOrigin: keyOriginY
-                                                ))
-                                                
-                                                // Update the X origin for the next key in the row
-                                                currentXOriginForRow += geometry.size.width + metrics.columnSpacing
-                                            }
-                                    }
                                 )
                                 .overlay(
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
@@ -433,6 +415,29 @@ struct KeyboardOverlayView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .background(
+                                GeometryReader { geometry in
+                                    Color.red
+                                        .onAppear {
+                                            debugPrint("Key \(key.baseLabel) has size: \(geometry.size)")
+                                            
+                                            // --- Calculate and store origin ---
+                                            let keyOriginX = currentXOriginForRow
+                                            let keyOriginY = currentRowYOrigin
+                                            
+                                            viewModel.keyRefs.append(KeyReference(
+                                                size: geometry.size,
+                                                rowIndex: rowIndex,
+                                                columnIndex: columnIndex,
+                                                xOrigin: keyOriginX,
+                                                yOrigin: keyOriginY
+                                            ))
+                                            
+                                            // Update the X origin for the next key in the row
+                                            currentXOriginForRow += geometry.size.width + metrics.columnSpacing
+                                        }
+                                }
+                            )
                         }
                     }
                 }
