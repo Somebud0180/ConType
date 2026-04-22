@@ -23,6 +23,13 @@ struct KeyReference {
     let size: CGSize
     let rowIndex: Int
     let columnIndex: Int
+    let xOrigin: CGFloat
+    let yOrigin: CGFloat
+}
+
+enum SelectionBias {
+    case overlapPreferringClosest // Prioritize overlap, then closest center
+    case twoOverlaps              // Return up to two overlapping keys (caller needs to handle)
 }
 
 @MainActor
@@ -31,6 +38,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     @Published var keyboardLayout: KeyboardLayout
+    @Published var keyRefs: [KeyReference] = []
     @Published private(set) var selectedRow = 0
     @Published private(set) var selectedColumn = 0
     @Published private(set) var activeModifierKeys: Set<ModifierToggleKey> = []
@@ -84,30 +92,87 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
         case .up:
             if selectedRow > 0 {
-                selectedRow -= 1
+                let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .overlapPreferringClosest)
+                
+                if let best = bestCandidate.first {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
             } else if allowsWrap {
                 selectedRow = rows.count - 1
             }
-            selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         case .down:
             if selectedRow < rows.count - 1 {
-                selectedRow += 1
+                let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .overlapPreferringClosest)
+                
+                if let best = bestCandidate.first {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
             } else if allowsWrap {
                 selectedRow = 0
             }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         case .upLeft:
-            move(.up, trigger: trigger)
-            move(.left, trigger: trigger)
+            if selectedRow > 0 {
+                let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .twoOverlaps)
+                
+                if let best = bestCandidate.first {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
+            } else if allowsWrap {
+                selectedRow = rows.count - 1
+                selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+            }
         case .upRight:
-            move(.up, trigger: trigger)
-            move(.right, trigger: trigger)
+            if selectedRow > 0 {
+                let candidates = keysToward(.up, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .twoOverlaps)
+                
+                if let best = bestCandidate.last {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
+            } else if allowsWrap {
+                selectedRow = rows.count - 1
+                selectedColumn = min(selectedColumn, rows[selectedRow].count + 1)
+            }
         case .downLeft:
-            move(.down, trigger: trigger)
-            move(.left, trigger: trigger)
+            if selectedRow > 0 {
+                let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .twoOverlaps)
+                
+                if let best = bestCandidate.first {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
+            } else if allowsWrap {
+                selectedRow = rows.count + 1
+                selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
+            }
         case .downRight:
-            move(.down, trigger: trigger)
-            move(.right, trigger: trigger)
+            if selectedRow > 0 {
+                let candidates = keysToward(.down, rowIndex: selectedRow, colIndex: selectedColumn)
+                let currentKeyRef = keyRefs.first { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }
+                let bestCandidate = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentKeyRef!, selectionBias: .twoOverlaps)
+                
+                if let best = bestCandidate.first {
+                    selectedRow = best.rowIndex
+                    selectedColumn = best.columnIndex
+                }
+            } else if allowsWrap {
+                selectedRow = rows.count + 1
+                selectedColumn = min(selectedColumn, rows[selectedRow].count + 1)
+            }
         }
         return previousRow != selectedRow || previousColumn != selectedColumn
     }
@@ -210,6 +275,86 @@ final class KeyboardOverlayViewModel: ObservableObject {
             activeModifierKeys.insert(.capsLock)
         }
     }
+    
+    // Returns keys toward a vertical direction from a given key position
+    func keysToward(_ toward: OverlayMoveDirection, rowIndex: Int, colIndex: Int) -> [KeyReference] {
+        let targetRowIndex: Int
+        switch toward {
+        case .up:
+            targetRowIndex = rowIndex - 1
+        case .down:
+            targetRowIndex = rowIndex + 1
+        default:
+            return []
+        }
+        
+        guard targetRowIndex >= 0, targetRowIndex < rows.count else {
+            return []
+        }
+        
+        // Filter keyRefs to only include keys in the target row.
+        return keyRefs.filter { $0.rowIndex == targetRowIndex }
+    }
+    
+    func bestKeyFromCandidates(
+        candidates: [KeyReference],
+        currentKeyReference: KeyReference,
+        selectionBias: SelectionBias = .overlapPreferringClosest
+    ) -> [KeyReference] {
+        guard !candidates.isEmpty else { return [] }
+        
+        let currentKeyCenterX = currentKeyReference.xOrigin + (currentKeyReference.size.width / 2.0)
+        let currentKeyLeft = currentKeyReference.xOrigin
+        let currentKeyRight = currentKeyReference.xOrigin + currentKeyReference.size.width
+        
+        var potentialCandidates: [KeyReference] = []
+        var closestKey: KeyReference? = nil
+        var minDistance: CGFloat = CGFloat.greatestFiniteMagnitude
+        
+        for candidate in candidates {
+            let candidateCenterX = candidate.xOrigin + (candidate.size.width / 2.0)
+            let distance = abs(currentKeyCenterX - candidateCenterX)
+            
+            // Check for horizontal overlap
+            let candidateLeft = candidate.xOrigin
+            let candidateRight = candidate.xOrigin + candidate.size.width
+            let hasOverlap = max(currentKeyLeft, candidateLeft) < min(currentKeyRight, candidateRight)
+            
+            if hasOverlap {
+                potentialCandidates.append(candidate)
+            }
+            
+            // Track the closest key regardless of overlap
+            if distance < minDistance {
+                minDistance = distance
+                closestKey = candidate
+            }
+        }
+        
+        // Sort potential overlapping candidates by proximity to current key's center.
+        potentialCandidates.sort { lhs, rhs in
+            let distL = abs((lhs.xOrigin + lhs.size.width / 2.0) - currentKeyCenterX)
+            let distR = abs((rhs.xOrigin + rhs.size.width / 2.0) - currentKeyCenterX)
+            return distL < distR
+        }
+        
+        // Apply selection bias
+        switch selectionBias {
+        case .overlapPreferringClosest:
+            if let best = potentialCandidates.first {
+                return [best]
+            } else {
+                return closestKey.map { [$0] } ?? []
+            }
+        case .twoOverlaps:
+            if !potentialCandidates.isEmpty {
+                // Return up to two main overlapping keys based on proximity to current key's center.
+                return Array(potentialCandidates.prefix(2))
+            } else {
+                return closestKey.map { [$0] } ?? []
+            }
+        }
+    }
 }
 
 struct KeyboardOverlayView: View {
@@ -217,18 +362,21 @@ struct KeyboardOverlayView: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: KeyboardOverlayViewModel
-    @State var keyRefs: [KeyReference] = []
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
 
     var body: some View {
         GeometryReader { proxy in
             let metrics = layoutMetrics(in: proxy.size)
+            let initialYOrigin = metrics.innerPadding // Start with inner padding
             
             VStack(spacing: metrics.rowSpacing) {
                 ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
                     let rowWidths = widths(for: row, metrics: metrics)
+                    let currentRowYOrigin = initialYOrigin + (CGFloat(rowIndex) * (metrics.keyHeight + metrics.rowSpacing)) // Calculate Y origin
                     
                     HStack(spacing: metrics.columnSpacing) {
+                        var currentXOriginForRow: CGFloat = metrics.innerPadding // Reset X origin for each row
+                        
                         ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
                             let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
                             let cornerRadii = cornerRadii(forRow: rowIndex, column: columnIndex, rowCount: viewModel.rows.count, columnCount: row.count, metrics: metrics)
@@ -242,6 +390,7 @@ struct KeyboardOverlayView: View {
                             let prefersShiftLegend = viewModel.prefersShiftLegend(for: key)
                             let controllerShortcutButton = controllerShortcutButton(for: key)
                             let keyWidth = rowWidths[key.id] ?? max(1, metrics.baseUnitWidth)
+                            let keyHeight = metrics.keyHeight // Use consistent key height from metrics
                             let keyColor: Color = colorScheme == .dark ? Color.white : Color.black
                             let fillColor: Color = isSelected || isModifierLatched
                             ? keyColor.opacity(0.36)
@@ -260,21 +409,31 @@ struct KeyboardOverlayView: View {
                                     prefersShiftLegend: prefersShiftLegend,
                                     controllerShortcutButton: controllerShortcutButton
                                 )
-                                .frame(width: keyWidth, height: metrics.keyHeight)
+                                .frame(width: keyWidth, height: keyHeight)
                                 .scaleEffect(isModifierLatched ? 0.9 : 1)
                                 .background(
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                         .fill(fillColor)
                                 )
-                                
                                 .overlay(
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                         .strokeBorder(strokeColor, lineWidth: 1)
                                 )
-                                .animation(keyAnimation, value: isModifierLatched)
-                                .animation(keyAnimation, value: prefersShiftLegend)
                                 .onAppear {
-                                    keyRefs.append(KeyReference(size: CGSize(width: keyWidth, height: metrics.keyHeight), rowIndex: rowIndex, columnIndex: columnIndex))
+                                    // --- Calculate and store origin ---
+                                    let keyOriginX = currentXOriginForRow
+                                    let keyOriginY = currentRowYOrigin
+                                    
+                                    viewModel.keyRefs.append(KeyReference(
+                                        size: CGSize(width: keyWidth, height: keyHeight),
+                                        rowIndex: rowIndex,
+                                        columnIndex: columnIndex,
+                                        xOrigin: keyOriginX, // Store calculated origin
+                                        yOrigin: keyOriginY  // Store calculated origin
+                                    ))
+                                    
+                                    // Update the X origin for the next key in the row
+                                    currentXOriginForRow += keyWidth + metrics.columnSpacing
                                 }
                             }
                             .buttonStyle(.plain)
@@ -286,26 +445,6 @@ struct KeyboardOverlayView: View {
             .glassEffect(in: .rect(cornerRadius: metrics.windowCornerRadius, style: .continuous))
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
-    }
-    
-    // Returns keys toward a vertical direction from a given key position
-    private func keysToward(_ toward: OverlayMoveDirection, rowIndex: Int, colIndex: Int) -> [KeyReference] {
-        let verticalDirection = 1 * (toward == .up ? -1 : 1)
-        
-        for key in keyRefs {
-            if key.rowIndex == rowIndex + verticalDirection {
-                let totalWidthInDir = keyRefs.filter { $0.rowIndex == key.rowIndex + verticalDirection }.reduce(0) { $0 + $1.size.width }
-                let totalWidthCurrent = keyRefs.filter { $0.rowIndex == rowIndex }.reduce(0) { $0 + $1.size.width }
-                let centerPosition = totalWidthCurrent - key.size.width / 2
-                
-                // Check for keys above center position using totaldWidthInDir
-                if key.rowIndex == rowIndex + verticalDirection && key.size.width / 2 + totalWidthInDir > centerPosition {
-                    return [key]
-                }
-            }
-        }
-        
-        return []
     }
 
     private func keyLabel(
