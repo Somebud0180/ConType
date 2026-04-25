@@ -413,31 +413,26 @@ struct KeyboardOverlayView: View {
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                         .strokeBorder(strokeColor, lineWidth: 1)
                                 )
+                                .onAppear {
+                                    debugPrint("Key \(key.baseLabel) has size: \(keyWidth)")
+                                    
+                                    // --- Calculate and store origin ---
+                                    let keyOriginX = currentXOriginForRow
+                                    let keyOriginY = currentRowYOrigin
+                                    
+                                    viewModel.keyRefs.append(KeyReference(
+                                        size: CGSize(width: keyWidth, height: keyHeight),
+                                        rowIndex: rowIndex,
+                                        columnIndex: columnIndex,
+                                        xOrigin: keyOriginX,
+                                        yOrigin: keyOriginY
+                                    ))
+                                    
+                                    // Update the X origin for the next key in the row
+                                    currentXOriginForRow += keyWidth + metrics.columnSpacing
+                                }
                             }
                             .buttonStyle(.plain)
-                            .background(
-                                GeometryReader { geometry in
-                                    Color.red
-                                        .onAppear {
-                                            debugPrint("Key \(key.baseLabel) has size: \(geometry.size)")
-                                            
-                                            // --- Calculate and store origin ---
-                                            let keyOriginX = currentXOriginForRow
-                                            let keyOriginY = currentRowYOrigin
-                                            
-                                            viewModel.keyRefs.append(KeyReference(
-                                                size: geometry.size,
-                                                rowIndex: rowIndex,
-                                                columnIndex: columnIndex,
-                                                xOrigin: keyOriginX,
-                                                yOrigin: keyOriginY
-                                            ))
-                                            
-                                            // Update the X origin for the next key in the row
-                                            currentXOriginForRow += geometry.size.width + metrics.columnSpacing
-                                        }
-                                }
-                            )
                         }
                     }
                 }
