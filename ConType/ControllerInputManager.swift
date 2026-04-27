@@ -681,7 +681,6 @@ final class ControllerInputManager: NSObject {
     }
 
     private func scheduleMoveRepeat(after delay: TimeInterval) {
-        print(delay)
         guard activeMoveDirection != nil else { return }
 
         let workItem = DispatchWorkItem { [weak self] in

@@ -50,6 +50,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
     @Published private(set) var activeModifierKeys: Set<ModifierToggleKey> = []
 
     var rows: [[VirtualKey]] { keyboardLayout.rows }
+    var lastKeys: [KeyReference] = []
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -189,6 +190,14 @@ final class KeyboardOverlayViewModel: ObservableObject {
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         }
         
+        lastKeys.append(KeyReference(
+            id: UUID(),
+            size: .zero,
+            rowIndex: selectedRow,
+            columnIndex: selectedColumn,
+            xOrigin: 0
+        ))
+        lastKeys = Array(lastKeys.suffix(5))
         return previousRow != selectedRow || previousColumn != selectedColumn
     }
 
@@ -329,6 +338,13 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
         }
         
+        for lastKey in lastKeys.reversed() {
+            let matching = matches.filter { $0.ref.rowIndex == lastKey.rowIndex && $0.ref.columnIndex == lastKey.columnIndex }
+            if !matching.isEmpty {
+                return matching.map { $0.ref }
+            }
+        }
+        
         // Sort by overlap width descending, then by center distance ascending
         matches.sort { lhs, rhs in
             if abs(lhs.overlap - rhs.overlap) > 0.001 {
@@ -338,8 +354,6 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
         
         let sortedRefs = matches.map { $0.ref }
-        
-        debugPrint("Sorted candidates by overlap and distance: \(sortedRefs.map { "row:\($0.rowIndex) col:\($0.columnIndex) overlap:\(String(format: "%.1f", matches.first(where: { $0.ref == $0.ref })?.overlap ?? 0)) distance:\(String(format: "%.1f", matches.first(where: { $0.ref == $0.ref })?.distance ?? 0))" })")
         
         switch selectionBias {
         case .overlapPreferringClosest:
@@ -357,3 +371,4 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
     }
 }
+
