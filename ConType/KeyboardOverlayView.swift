@@ -26,7 +26,6 @@ struct KeyboardOverlayView: View {
                     let rowWidths = widths(for: row, rowIndex: rowIndex, metrics: metrics)
                     
                     HStack(spacing: metrics.columnSpacing) {
-                        
                         ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
                             let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
                             let cornerRadii = cornerRadii(forRow: rowIndex, column: columnIndex, rowCount: viewModel.rows.count, columnCount: row.count, metrics: metrics)
@@ -75,7 +74,7 @@ struct KeyboardOverlayView: View {
                     }
                     .onChange(of: rowWidths) {
                         var xOrginForRow: CGFloat = metrics.innerPadding
-                        for key in rowWidths.keys {
+                        for key in row {
                             if let width = rowWidths[key.id] {
                                 if viewModel.keyRefs.firstIndex(where: { $0.id == key.id }) != nil {
                                     viewModel.keyRefs.removeAll(where: { $0.id == key.id })
