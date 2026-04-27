@@ -162,12 +162,12 @@ struct SettingsView: View {
                             ))
                             
                             VStack(alignment: .leading) {
-                                Picker("Keyboard movement style", selection: $keyboardMovementStyleSelection) {
+                                Picker("Keyboard movement style", selection: Binding(
+                                    get: { viewModel.settings.keyboardMovementStyle },
+                                    set: { viewModel.settings.keyboardMovementStyle = $0 }
+                                )) {
                                     Text("4 Directional").tag(KeyboardMovementMode.limited)
                                     Text("8 Directional").tag(KeyboardMovementMode.full)
-                                }
-                                .onChange(of: keyboardMovementStyleSelection) {
-                                    viewModel.keyboardMovementStyle = keyboardMovementStyleSelection
                                 }
                                 .pickerStyle(.segmented)
                                 .listRowSeparator(.hidden)
@@ -238,10 +238,6 @@ struct SettingsView: View {
             }
             .tabViewStyle(.tabBarOnly)
             .onAppear {
-                // Sync intermediate state with view model
-                keyboardMovementStyleSelection = viewModel.keyboardMovementStyle
-            }
-            .onChange(of: viewModel.keyboardMovementStyle) {
                 keyboardMovementStyleSelection = viewModel.keyboardMovementStyle
             }
             .onDisappear {

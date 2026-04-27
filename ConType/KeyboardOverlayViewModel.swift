@@ -79,6 +79,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
 
     @discardableResult
     func move(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger = .press) -> Bool {
+        debugPrint("Attempting move \(direction) with trigger \(trigger)")
         let previousRow = selectedRow
         let previousColumn = selectedColumn
         let allowsWrap = trigger == .press
@@ -100,34 +101,28 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
             
         case .up:
-            debugPrint("selectedRow")
             if selectedRow > 0 || allowsWrap {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter{ $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
                    let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
-                    debugPrint("Found currentRef and best")
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
-                    debugPrint("Failed to find currentRef and best")
                     selectedRow = targetRow
                 }
             }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
             
         case .down:
-            debugPrint("selectedRow")
             if selectedRow < rows.count - 1 || allowsWrap {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
                    let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
-                    debugPrint("Found currentRef and best")
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
-                    debugPrint("Failed to find currentRef and best")
                     selectedRow = targetRow
                 }
             }
