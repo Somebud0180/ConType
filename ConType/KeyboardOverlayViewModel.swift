@@ -26,11 +26,11 @@ enum OverlayMoveTrigger {
 }
 
 struct KeyReference: Equatable {
+    let id: UUID
     let size: CGSize
     let rowIndex: Int
     let columnIndex: Int
     let xOrigin: CGFloat
-    let yOrigin: CGFloat
 }
 
 enum SelectionBias {
@@ -100,28 +100,34 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
             
         case .up:
+            debugPrint("selectedRow")
             if selectedRow > 0 || allowsWrap {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter{ $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                    debugPrint("Found currentRef and best")
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
+                    debugPrint("Failed to find currentRef and best")
                     selectedRow = targetRow
                 }
             }
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
             
         case .down:
+            debugPrint("selectedRow")
             if selectedRow < rows.count - 1 || allowsWrap {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                    debugPrint("Found currentRef and best")
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
+                    debugPrint("Failed to find currentRef and best")
                     selectedRow = targetRow
                 }
             }
@@ -132,7 +138,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -147,7 +153,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -162,7 +168,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -177,7 +183,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let targetRow = selectedRow < rows.count - 1 ? selectedRow + 1 : 0
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
-                   let best = bestKeyFromCandidates(candidates: candidates.reversed(), currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
+                   let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {

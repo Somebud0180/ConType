@@ -478,7 +478,7 @@ final class AppSettings: ObservableObject {
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
         } catch {
-            print("[AppSettings] Failed to save settings: \(error)")
+            debugPrint("[AppSettings] Failed to save settings: \(error)")
         }
     }
     
@@ -510,7 +510,7 @@ final class AppSettings: ObservableObject {
             self.windowSize = codable.windowSize
             self.windowPosition = codable.windowPosition.nsPoint
         } catch {
-            print("[AppSettings] Failed to load settings: \(error)")
+            debugPrint("[AppSettings] Failed to load settings: \(error)")
         }
     }
 }

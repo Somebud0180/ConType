@@ -20,15 +20,12 @@ struct KeyboardOverlayView: View {
     var body: some View {
         GeometryReader { proxy in
             let metrics = layoutMetrics(in: proxy.size)
-            let initialYOrigin = metrics.innerPadding
             
             VStack(spacing: metrics.rowSpacing) {
                 ForEach(Array(viewModel.rows.enumerated()), id: \.offset) { rowIndex, row in
-                    let rowWidths = widths(for: row, metrics: metrics)
-                    let currentRowYOrigin = initialYOrigin + (CGFloat(rowIndex) * (metrics.keyHeight + metrics.rowSpacing))
+                    let rowWidths = widths(for: row, rowIndex: rowIndex, metrics: metrics)
                     
                     HStack(spacing: metrics.columnSpacing) {
-                        var currentXOriginForRow: CGFloat = metrics.innerPadding
                         
                         ForEach(Array(row.enumerated()), id: \.element.id) { columnIndex, key in
                             let isSelected = rowIndex == viewModel.selectedRow && columnIndex == viewModel.selectedColumn
@@ -72,31 +69,29 @@ struct KeyboardOverlayView: View {
                                     UnevenRoundedRectangle(cornerRadii: cornerRadii, style: .continuous)
                                         .strokeBorder(strokeColor, lineWidth: 1)
                                 )
-                                .onAppear {
-                                    debugPrint(rowWidths[key.id] ?? "Cannot find width")
-                                    debugPrint("Rendering key with id: \(key.id), found width: \(keyWidth)")
-                                    
-                                    // --- Calculate and store origin ---
-                                    let keyOriginX = currentXOriginForRow
-                                    let keyOriginY = currentRowYOrigin
-                                    
-                                    viewModel.keyRefs.append(KeyReference(
-                                        size: CGSize(width: keyWidth, height: keyHeight),
-                                        rowIndex: rowIndex,
-                                        columnIndex: columnIndex,
-                                        xOrigin: keyOriginX,
-                                        yOrigin: keyOriginY
-                                    ))
-                                    
-                                    // Update the X origin for the next key in the row
-                                    currentXOriginForRow += keyWidth + metrics.columnSpacing
-                                }
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .onAppear {
-                        debugPrint(rowWidths.map { "Key ID: \($0.key) Width: \($0.value)" })
+                    .onChange(of: rowWidths) {
+                        var xOrginForRow: CGFloat = metrics.innerPadding
+                        for key in rowWidths.keys {
+                            if let width = rowWidths[key.id] {
+                                if viewModel.keyRefs.firstIndex(where: { $0.id == key.id }) != nil {
+                                    viewModel.keyRefs.removeAll(where: { $0.id == key.id })
+                                }
+                                
+                                viewModel.keyRefs.append(KeyReference(
+                                    id: key.id,
+                                    size: CGSize(width: width, height: metrics.keyHeight),
+                                    rowIndex: rowIndex,
+                                    columnIndex: row.firstIndex(where: { $0.id == key.id }) ?? 0,
+                                    xOrigin: xOrginForRow,
+                                ))
+                                
+                                xOrginForRow += width + metrics.columnSpacing
+                            }
+                        }
                     }
                 }
             }
@@ -229,40 +224,40 @@ struct KeyboardOverlayView: View {
         }
     }
 
-    private func widths(for row: [VirtualKey], metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
-        debugPrint("For row with keys: \(row.map { $0.baseLabel })")
+    private func widths(for row: [VirtualKey], rowIndex: Int, metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
         guard !row.isEmpty else { return [:] }
-
+        debugPrint("Calculating widths for row \(rowIndex)")
+        
         let spacingWidth = CGFloat(max(0, row.count - 1)) * metrics.columnSpacing
         let availableKeyWidth = max(0, metrics.contentWidth - spacingWidth)
-
+        
         var resolved: [UUID: CGFloat] = [:]
-
+        
         let fixedKeys = row.filter { !$0.usesRemainingSpace }
         for key in fixedKeys {
             let baseWidth = key.widthUnits * metrics.baseUnitWidth
             resolved[key.id] = max(baseWidth, minimumFittingWidth(for: key, metrics: metrics))
         }
-
+        
         let fixedWidth = fixedKeys.reduce(CGFloat(0)) { partialResult, key in
             partialResult + (resolved[key.id] ?? 0)
         }
-
+        
         let remainingKeys = row.filter(\.usesRemainingSpace)
-//        guard !remainingKeys.isEmpty else { return resolved }
-
+        //        guard !remainingKeys.isEmpty else { return resolved }
+        
         let availableRemainingWidth = max(0, availableKeyWidth - fixedWidth)
         let minRemainingWidths = remainingKeys.map { minimumFittingWidth(for: $0, metrics: metrics) }
         let minRemainingSum = minRemainingWidths.reduce(CGFloat(0), +)
-
-//        if minRemainingSum > availableRemainingWidth, minRemainingSum > 0 {
-//            for (index, key) in remainingKeys.enumerated() {
-//                resolved[key.id] = availableRemainingWidth * (minRemainingWidths[index] / minRemainingSum)
-//            }
-//            print("Stage 1, resolved key widths:", resolved)
-//            return resolved
-//        }
-
+        
+        //        if minRemainingSum > availableRemainingWidth, minRemainingSum > 0 {
+        //            for (index, key) in remainingKeys.enumerated() {
+        //                resolved[key.id] = availableRemainingWidth * (minRemainingWidths[index] / minRemainingSum)
+        //            }
+        //            print("Stage 1, resolved key widths:", resolved)
+        //            return resolved
+        //        }
+        
         let remainingUnits = max(0.0001, remainingKeys.reduce(CGFloat(0)) { $0 + $1.widthUnits })
         let extraWidth = max(0, availableRemainingWidth - minRemainingSum)
         for (index, key) in remainingKeys.enumerated() {
@@ -270,7 +265,6 @@ struct KeyboardOverlayView: View {
             resolved[key.id] = minRemainingWidths[index] + (extraWidth * unitRatio)
         }
         
-        print("Stage 2, resolved key widths:", resolved)
         return resolved
     }
 
