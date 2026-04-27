@@ -113,7 +113,11 @@ final class ControllerInputManager: NSObject {
     private var lastAnalogDirection: OverlayMoveDirection? = nil
     private var analogTimer: Timer? = nil
     private var lastAnalogUpdate = Date()
-
+    
+    // Variables for handling input debounce
+    private var lastDirectionChangeDate: Date = .distantPast
+    private let directionDebounceInterval: TimeInterval = 0.1
+    
     // Variables for dpad hold repeat behavior
     private let padHoldRepeatInitialDelay: TimeInterval = 0.28
     private let padHoldRepeatInitialInterval: TimeInterval = 0.22
@@ -121,10 +125,10 @@ final class ControllerInputManager: NSObject {
     private let padHoldRepeatAcceleration: Double = 0.84
     
     // Variables for discrete stick hold repeat behavior
-    private var stickHoldRepeatInitialDelay: TimeInterval = 1.0
+    private var stickHoldRepeatInitialDelay: TimeInterval = 0.28
     private var stickHoldRepeatInitialInterval: TimeInterval = 0.30
     private var stickHoldRepeatMinimumInterval: TimeInterval = 0.08
-    private var stickHoldRepeatAcceleration: Double = 0.65
+    private var stickHoldRepeatAcceleration: Double = 0.9
     
     // Variables for mouse mode
     private var joystickTickInterval: TimeInterval = 1.0 / 60.0
@@ -447,15 +451,18 @@ final class ControllerInputManager: NSObject {
             }
 
             let newDir = discreteDirection(for: filteredStick, mode: keyboardMovementStyle)
+            let now = Date()
             if newDir != lastAnalogDirection {
-                // release previous, press new
-                if let last = lastAnalogDirection {
-                    setDirectionalInput(last, pressed: false)
+                if now.timeIntervalSince(lastDirectionChangeDate) >= directionDebounceInterval {
+                    // Release previous, press new
+                    if let last = lastAnalogDirection {
+                        setDirectionalInput(last, pressed: false)
+                    }
+                    lastAnalogDirection = newDir
+                    lastDirectionChangeDate = now
+                    updateRepeatTuning(for: source)
+                    setDirectionalInput(newDir, pressed: true)
                 }
-
-                lastAnalogDirection = newDir
-                updateRepeatTuning(for: source)
-                setDirectionalInput(newDir, pressed: true)
             }
         }
     }

@@ -371,8 +371,8 @@ final class AppSettings: ObservableObject {
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
     @Published var keyboardMovementStyle: KeyboardMovementMode = .limited
-    @Published var leftStickDeadzone: CGFloat = 0.2
-    @Published var rightStickDeadzone: CGFloat = 0.2
+    @Published var leftStickDeadzone: CGFloat = 0.4
+    @Published var rightStickDeadzone: CGFloat = 0.4
     @Published var mouseSensitivity: CGFloat = 300.0
     @Published var mouseSmoothing: CGFloat = 0.5
     
