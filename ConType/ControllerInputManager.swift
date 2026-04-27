@@ -121,7 +121,7 @@ final class ControllerInputManager: NSObject {
     private let padHoldRepeatAcceleration: Double = 0.84
     
     // Variables for discrete stick hold repeat behavior
-    private var stickHoldRepeatInitialDelay: TimeInterval = 0.36
+    private var stickHoldRepeatInitialDelay: TimeInterval = 1.0
     private var stickHoldRepeatInitialInterval: TimeInterval = 0.30
     private var stickHoldRepeatMinimumInterval: TimeInterval = 0.08
     private var stickHoldRepeatAcceleration: Double = 0.65
@@ -674,6 +674,7 @@ final class ControllerInputManager: NSObject {
     }
 
     private func scheduleMoveRepeat(after delay: TimeInterval) {
+        print(delay)
         guard activeMoveDirection != nil else { return }
 
         let workItem = DispatchWorkItem { [weak self] in

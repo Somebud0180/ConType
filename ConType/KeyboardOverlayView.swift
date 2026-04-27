@@ -225,7 +225,6 @@ struct KeyboardOverlayView: View {
 
     private func widths(for row: [VirtualKey], rowIndex: Int, metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
         guard !row.isEmpty else { return [:] }
-        debugPrint("Calculating widths for row \(rowIndex)")
         
         let spacingWidth = CGFloat(max(0, row.count - 1)) * metrics.columnSpacing
         let availableKeyWidth = max(0, metrics.contentWidth - spacingWidth)
