@@ -161,24 +161,22 @@ struct SettingsView: View {
                                 set: { viewModel.settings.dismissWithGuideButton = $0 }
                             ))
                             
-                            // Implement later (not really functional)
-//                            VStack(alignment: .leading) {
-//                                Picker("Keyboard movement style", selection: $keyboardMovementStyleSelection) {
-//                                    Text("4 Directional").tag(KeyboardMovementMode.limited)
-//                                    Text("8 Directional").tag(KeyboardMovementMode.full)
-//                                }
-//                                .onChange(of: keyboardMovementStyleSelection) {
-//                                    // Only update the view model when the selection changes
-//                                    viewModel.keyboardMovementStyle = keyboardMovementStyleSelection
-//                                }
-//                                .pickerStyle(.segmented)
-//                                .listRowSeparator(.hidden)
-//                                
-//                                Text(viewModel.movementDescription)
-//                                    .font(.footnote)
-//                                    .foregroundStyle(.secondary)
-//                                    .animation(.easeInOut)
-//                            }
+                            VStack(alignment: .leading) {
+                                Picker("Keyboard movement style", selection: $keyboardMovementStyleSelection) {
+                                    Text("4 Directional").tag(KeyboardMovementMode.limited)
+                                    Text("8 Directional").tag(KeyboardMovementMode.full)
+                                }
+                                .onChange(of: keyboardMovementStyleSelection) {
+                                    viewModel.keyboardMovementStyle = keyboardMovementStyleSelection
+                                }
+                                .pickerStyle(.segmented)
+                                .listRowSeparator(.hidden)
+                                
+                                Text(viewModel.movementDescription)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .animation(.easeInOut)
+                            }
                         }
                         
                         Section("Joystick Deadzone") {
