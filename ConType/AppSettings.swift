@@ -505,7 +505,6 @@ final class AppSettings: ObservableObject {
             windowPosition: CodablePoint(windowPosition)
         )
         do {
-            debugPrint(codable)
             debugPrint("[AppSettings] Saving app settings to file...")
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
@@ -515,7 +514,6 @@ final class AppSettings: ObservableObject {
     }
     
     func load() {
-        debugPrint("[AppSettings] Loading app settings")
         let url = Self.settingsURL
         guard let data = try? Data(contentsOf: url) else { return }
         do {

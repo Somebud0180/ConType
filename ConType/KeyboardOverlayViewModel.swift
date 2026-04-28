@@ -80,7 +80,6 @@ final class KeyboardOverlayViewModel: ObservableObject {
 
     @discardableResult
     func move(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger = .press) -> Bool {
-        debugPrint("Attempting move \(direction) with trigger \(trigger)")
         let previousRow = selectedRow
         let previousColumn = selectedColumn
         let allowsWrap = trigger == .press

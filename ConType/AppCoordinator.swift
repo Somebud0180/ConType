@@ -425,7 +425,7 @@ final class AppCoordinator: ObservableObject {
                 try launchAtLoginService.unregister()
             }
         } catch {
-            debugPrint("Failed to update launch-at-login setting:", error)
+            debugPrint("[AppSettings] Failed to update launch-at-login setting:", error)
         }
 
         let resolvedValue = isLaunchAtLoginEnabled

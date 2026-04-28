@@ -242,19 +242,10 @@ struct KeyboardOverlayView: View {
         }
         
         let remainingKeys = row.filter(\.usesRemainingSpace)
-        //        guard !remainingKeys.isEmpty else { return resolved }
         
         let availableRemainingWidth = max(0, availableKeyWidth - fixedWidth)
         let minRemainingWidths = remainingKeys.map { minimumFittingWidth(for: $0, metrics: metrics) }
         let minRemainingSum = minRemainingWidths.reduce(CGFloat(0), +)
-        
-        //        if minRemainingSum > availableRemainingWidth, minRemainingSum > 0 {
-        //            for (index, key) in remainingKeys.enumerated() {
-        //                resolved[key.id] = availableRemainingWidth * (minRemainingWidths[index] / minRemainingSum)
-        //            }
-        //            print("Stage 1, resolved key widths:", resolved)
-        //            return resolved
-        //        }
         
         let remainingUnits = max(0.0001, remainingKeys.reduce(CGFloat(0)) { $0 + $1.widthUnits })
         let extraWidth = max(0, availableRemainingWidth - minRemainingSum)
@@ -416,7 +407,6 @@ struct KeyboardOverlayView: View {
 
 #Preview {
     KeyboardOverlayView(settings: AppSettings(), viewModel: KeyboardOverlayViewModel(settings: AppSettings())) { key, _ in
-        print("Pressed \(key.baseLabel)")
     }
     .frame(width: 840, height: 280)
 }
