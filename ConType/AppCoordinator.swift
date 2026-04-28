@@ -387,8 +387,9 @@ final class AppCoordinator: ObservableObject {
         }
 
         let shouldShowForMissingPermission = !InputMonitoringPermission.isAuthorized()
+        let shouldShowAfterRestart = settings.restartedFromPermissionScreen
 
-        guard isFirstLaunch || shouldShowForMissingPermission else { return }
+        guard isFirstLaunch || shouldShowForMissingPermission || shouldShowAfterRestart else { return }
         presentOnboarding(startAtWelcome: isFirstLaunch)
     }
 

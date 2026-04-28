@@ -382,6 +382,9 @@ enum WindowSize {
 
 @MainActor
 final class AppSettings: ObservableObject {
+    // Onboarding
+    @Published var restartedFromPermissionScreen = false
+    
     // Bindings
     @Published var keyboardHotkey = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
     @Published var controllerToggleBinding: ControllerToggleBinding = .default
@@ -415,6 +418,9 @@ final class AppSettings: ObservableObject {
     init() {
         load()
         
+        $restartedFromPermissionScreen
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
         $keyboardHotkey
             .sink { [weak self] _ in self?.save() }
             .store(in: &cancellables)
@@ -478,8 +484,8 @@ final class AppSettings: ObservableObject {
     }
     
     func save() {
-        debugPrint("[AppSettings] Saving app settings")
         let codable = AppSettingsCodable(
+            restartedFromPermissionScreen: restartedFromPermissionScreen,
             keyboardHotkey: keyboardHotkey,
             controllerToggleBinding: controllerToggleBinding,
             controllerActionBindings: controllerActionBindings,
@@ -499,6 +505,7 @@ final class AppSettings: ObservableObject {
             windowPosition: CodablePoint(windowPosition)
         )
         do {
+            debugPrint(codable)
             debugPrint("[AppSettings] Saving app settings to file...")
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
@@ -514,6 +521,7 @@ final class AppSettings: ObservableObject {
         do {
             debugPrint("[AppSettings] Restoring app settings from file...")
             let codable = try JSONDecoder().decode(AppSettingsCodable.self, from: data)
+            self.restartedFromPermissionScreen = codable.restartedFromPermissionScreen
             self.keyboardHotkey = codable.keyboardHotkey
             self.controllerToggleBinding = codable.controllerToggleBinding
             self.controllerActionBindings = codable.controllerActionBindings
@@ -622,6 +630,7 @@ struct CodablePoint: Codable {
 }
 
 private struct AppSettingsCodable: Codable {
+    var restartedFromPermissionScreen: Bool
     var keyboardHotkey: KeyboardHotkeyManager.Shortcut
     var controllerToggleBinding: ControllerToggleBinding
     var controllerActionBindings: ControllerActionBindings

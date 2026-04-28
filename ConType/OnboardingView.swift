@@ -4,21 +4,32 @@ import SwiftUI
 
 @MainActor
 final class OnboardingViewModel: ObservableObject {
+    let settings: AppSettings
+    
     @Published private(set) var step = 0
     @Published private(set) var isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
+    @Published var isAwaitingPermissionGrant: Bool = false
 
     var onComplete: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)?
-
+    
     var isAwaitingActivation: Bool {
         step == 2
     }
 
     private var permissionPollTimer: Timer?
+    
+    init(settings: AppSettings) {
+        self.settings = settings
+    }
 
     func prepareForPresentation(startAtWelcome: Bool) {
         if startAtWelcome {
             step = 0
+        } else if settings.restartedFromPermissionScreen {
+            step = 1
+            settings.restartedFromPermissionScreen = false
+            startPermissionPollingIfNeeded()
         } else {
             step = InputMonitoringPermission.isAuthorized() ? 2 : 1
             startPermissionPollingIfNeeded()
@@ -46,10 +57,27 @@ final class OnboardingViewModel: ObservableObject {
             step = 2
             return
         }
+        
+        if isAwaitingPermissionGrant {
+            // From HoldToTalk Repository, by @jxucoder
+            // Restart app
+            settings.restartedFromPermissionScreen = true
+            settings.save()
+            
+            let url = Bundle.main.bundleURL
+            let config = NSWorkspace.OpenConfiguration()
+            config.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in
+                DispatchQueue.main.async {
+                    NSApp.terminate(nil)
+                }
+            }
+        }
 
         _ = InputMonitoringPermission.requestAuthorization()
         startPermissionPollingIfNeeded()
         refreshAccessibilityStatus(advanceFromPermissionStep: true)
+        isAwaitingPermissionGrant = true
     }
 
     func handleShortcutActivation() {
@@ -150,7 +178,7 @@ struct OnboardingView: View {
                     .font(.subheadline.weight(.semibold))
                     .padding(.top, 6)
             } else {
-                Text("After enabling in System Settings, this screen advances automatically.")
+                Text("If you already enabled the permission and can't advance to the next step, try restarting the app below.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
@@ -215,7 +243,8 @@ struct OnboardingView: View {
                 }
                 .keyboardShortcut(.defaultAction)
             case 1:
-                Button(viewModel.isAccessibilityTrusted ? "Next" : "Enable Permission") {
+                let text = viewModel.isAwaitingPermissionGrant ? "Quit & Reopen" : (viewModel.isAccessibilityTrusted ? "Next" : "Enable Permission")
+                Button(text) {                    
                     viewModel.handlePermissionButton()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -254,5 +283,5 @@ struct OnboardingView: View {
 }
 
 #Preview {
-    OnboardingView(settings: AppSettings(), viewModel: OnboardingViewModel())
+    OnboardingView(settings: AppSettings(), viewModel: OnboardingViewModel(settings: AppSettings()))
 }

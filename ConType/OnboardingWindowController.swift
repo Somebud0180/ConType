@@ -12,11 +12,12 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     }
 
     private let settings: AppSettings
-    private let viewModel = OnboardingViewModel()
+    private let viewModel: OnboardingViewModel
     private var window: NSWindow?
 
     init(settings: AppSettings) {
         self.settings = settings
+        self.viewModel = OnboardingViewModel(settings: settings)
         super.init()
 
         viewModel.onComplete = { [weak self] in
