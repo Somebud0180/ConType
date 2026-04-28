@@ -8,7 +8,7 @@ final class KeyEmitter {
 
     @discardableResult
     func emit(keyCode: CGKeyCode, modifiers: CGEventFlags = []) -> Bool {
-        guard AccessibilityPermission.isTrusted() else { return false }
+        guard InputMonitoringPermission.isAuthorized() else { return false }
 
         guard
             let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),

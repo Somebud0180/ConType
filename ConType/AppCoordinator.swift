@@ -349,7 +349,7 @@ final class AppCoordinator: ObservableObject {
             onboardingController.handleShortcutActivation()
         }
 
-        if !AccessibilityPermission.isTrusted() {
+        if !InputMonitoringPermission.isAuthorized() {
             presentOnboarding(startAtWelcome: false)
         }
 
@@ -386,7 +386,7 @@ final class AppCoordinator: ObservableObject {
             hasLaunchedBefore = true
         }
 
-        let shouldShowForMissingPermission = !AccessibilityPermission.isTrusted()
+        let shouldShowForMissingPermission = !InputMonitoringPermission.isAuthorized()
 
         guard isFirstLaunch || shouldShowForMissingPermission else { return }
         presentOnboarding(startAtWelcome: isFirstLaunch)
@@ -454,7 +454,7 @@ final class AppCoordinator: ObservableObject {
     }
 
     private func refreshHotkeyManagerState() {
-        let shouldRunHotkeyManager = AccessibilityPermission.isTrusted()
+        let shouldRunHotkeyManager = InputMonitoringPermission.isAuthorized()
 
         if shouldRunHotkeyManager {
             guard !isHotkeyManagerRunning else { return }

@@ -13,7 +13,7 @@ final class MouseEmitter {
     /// Returns true if the event was posted, false if accessibility permissions are missing.
     @discardableResult
     func moveCursor(by delta: CGVector) -> Bool {
-        guard AccessibilityPermission.isTrusted() else { return false }
+        guard InputMonitoringPermission.isAuthorized() else { return false }
         let current = NSEvent.mouseLocation
         // Note: NSEvent.mouseLocation uses a flipped origin (bottom-left is (0,0)),
         // but CGEvent expects screen coordinates (origin at bottom-left)
@@ -29,7 +29,7 @@ final class MouseEmitter {
     /// Returns true if the event was posted, false if accessibility permissions are missing.
     @discardableResult
     func moveCursor(to location: CGPoint) -> Bool {
-        guard AccessibilityPermission.isTrusted() else { return false }
+        guard InputMonitoringPermission.isAuthorized() else { return false }
         guard let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: location, mouseButton: .left) else {
             return false
         }
@@ -39,7 +39,7 @@ final class MouseEmitter {
 
     @discardableResult
     func emit(button: CGMouseButton, eventType: CGEventType) -> Bool {
-        guard AccessibilityPermission.isTrusted() else { return false }
+        guard InputMonitoringPermission.isAuthorized() else { return false }
         
         let actualMousePosition = CGPoint(x: NSEvent.mouseLocation.x, y: NSScreen.main!.frame.height - NSEvent.mouseLocation.y)
         

@@ -5,7 +5,7 @@ import SwiftUI
 @MainActor
 final class OnboardingViewModel: ObservableObject {
     @Published private(set) var step = 0
-    @Published private(set) var isAccessibilityTrusted = AccessibilityPermission.isTrusted()
+    @Published private(set) var isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
 
     var onComplete: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)?
@@ -20,7 +20,7 @@ final class OnboardingViewModel: ObservableObject {
         if startAtWelcome {
             step = 0
         } else {
-            step = AccessibilityPermission.isTrusted() ? 2 : 1
+            step = InputMonitoringPermission.isAuthorized() ? 2 : 1
             startPermissionPollingIfNeeded()
         }
 
@@ -47,7 +47,7 @@ final class OnboardingViewModel: ObservableObject {
             return
         }
 
-        _ = AccessibilityPermission.requestPrompt()
+        _ = InputMonitoringPermission.requestAuthorization()
         startPermissionPollingIfNeeded()
         refreshAccessibilityStatus(advanceFromPermissionStep: true)
     }
@@ -76,7 +76,7 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     private func refreshAccessibilityStatus(advanceFromPermissionStep: Bool) {
-        let trusted = AccessibilityPermission.isTrusted()
+        let trusted = InputMonitoringPermission.isAuthorized()
         let wasTrusted = isAccessibilityTrusted
         
         if wasTrusted != trusted {

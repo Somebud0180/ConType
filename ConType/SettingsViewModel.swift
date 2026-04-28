@@ -62,7 +62,7 @@ final class SettingsViewModel: ObservableObject {
 		self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
 		self.onCancelControllerCapture = onCancelControllerCapture
 		self.onRestartOnboarding = onRestartOnboarding
-		self.isAccessibilityTrusted = AccessibilityPermission.isTrusted()
+		self.isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
 		self.leftStickDeadzone = settings.leftStickDeadzone
 		self.rightStickDeadzone = settings.rightStickDeadzone
         self.mouseSensitivity = settings.mouseSensitivity
