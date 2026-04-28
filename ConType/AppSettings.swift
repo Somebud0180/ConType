@@ -198,7 +198,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .rightTrigger: return "RT"
         case .leftStickPress: return "L3"
         case .rightStickPress: return "R3"
-        case .none: return ""
+        case .none: return "nosign"
         }
     }
 
@@ -225,7 +225,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .rightStickPress:
             return "RStick_Press"
         case .none:
-            return ""
+            return "nosign"
         }
     }
 }

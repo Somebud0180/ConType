@@ -380,7 +380,6 @@ final class SettingsViewModel: ObservableObject {
     
     func genericGuideGlyph(size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
-            systemAsset: true,
             assetName: "gamecontroller.circle.fill",
             fallbackText: "Guide",
             size: size
@@ -668,24 +667,26 @@ final class SettingsViewModel: ObservableObject {
     }
     
     struct ControllerGlyphBadge: View {
-        var systemAsset: Bool = false
         let assetName: String
         let fallbackText: String
         var size: CGFloat = 20
         
         var body: some View {
+            let finalName = assetName.isEmpty ? "questionmark.circle.fill" : assetName
+            let hasAsset = NSImage(named: finalName) != nil
+            
             ZStack {
-                if systemAsset {
-                    Image(systemName: assetName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(max(2, size * 0.1))
-                } else {
-                    Image(assetName)
+                if hasAsset {
+                    Image(finalName)
                         .resizable()
                         .renderingMode(.original)
                         .scaledToFit()
                         .colorMultiply(Color.primary)
+                } else {
+                    Image(systemName: finalName)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(max(2, size * 0.1))
                 }
             }
             .frame(width: size, height: size)
