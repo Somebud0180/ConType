@@ -108,6 +108,14 @@ final class ControllerInputManager: NSObject {
     private var holdRepeatWorkItem: DispatchWorkItem?
     private var suppressGuideChordUntilRelease = false
     
+    // Arrow key emulation
+    private let keyEmitter = KeyEmitter()
+    private var arrowDirectionPressCounts: [OverlayMoveDirection: Int] = [:]
+    private var heldArrowDirectionOrder: [OverlayMoveDirection] = []
+    private var activeArrowMoveDirection: OverlayMoveDirection?
+    private var arrowHoldRepeatStep = 0
+    private var arrowHoldRepeatWorkItem: DispatchWorkItem?
+    
     // Internal state for analog handling
     private var filteredStick = CGVector(dx: 0, dy: 0)
     private var lastAnalogDirection: OverlayMoveDirection? = nil
@@ -190,7 +198,8 @@ final class ControllerInputManager: NSObject {
     }
 
     deinit {
-        stopMoveRepeat(clearDirection: true)
+        stopMoveRepeat(clearDirection: true, for: .overlayMovement)
+        stopMoveRepeat(clearDirection: true, for: .arrowKeys)
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -211,7 +220,8 @@ final class ControllerInputManager: NSObject {
         // Avoid stale pressed state from a disconnected device.
         isGuideHeld = false
         pressedAssignableButtons.removeAll()
-        stopMoveRepeat(clearDirection: true)
+        stopMoveRepeat(clearDirection: true, for: .overlayMovement)
+        stopMoveRepeat(clearDirection: true, for: .arrowKeys)
         lastAnalogDirection = nil
         stopAnalogTimerIfNeeded()
         filteredStick = CGVector(dx: 0, dy: 0)
@@ -387,11 +397,12 @@ final class ControllerInputManager: NSObject {
         
         stick.valueChangedHandler = { [weak self] _, xValue, yValue in
             guard let self = self else { return }
-            self.handleAnalogStick(x: xValue, y: yValue, keyboardMovementStyle: inputType == .mouseMovement ? .mouse : self.keyboardMovementStyle, from: source)
+            let keyboardMovementStyle = inputType == .mouseMovement ? .mouse : self.keyboardMovementStyle
+            self.handleAnalogStick(x: xValue, y: yValue, keyboardMovementStyle: keyboardMovementStyle, from: source, for: inputType)
         }
     }
     
-    private func handleAnalogStick(x: Float, y: Float, keyboardMovementStyle: KeyboardMovementMode, from source: MovementMode) {
+    private func handleAnalogStick(x: Float, y: Float, keyboardMovementStyle: KeyboardMovementMode, from source: MovementMode, for inputType: AxisInputType) {
         // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
@@ -432,9 +443,9 @@ final class ControllerInputManager: NSObject {
             // But we still may want to clear any discrete held direction state:
             if let last = lastAnalogDirection {
                 // release the previous discrete direction if any
-                setDirectionalInput(last, pressed: false)
+                setDirectionalInput(last, pressed: false, for: inputType)
                 lastAnalogDirection = nil
-                stopMoveRepeat(clearDirection: true)
+                stopMoveRepeat(clearDirection: true, for: inputType)
             }
 
         case .limited, .full:
@@ -442,10 +453,10 @@ final class ControllerInputManager: NSObject {
             if rawMagnitude <= joystickDeadzone {
                 // release any held discrete direction
                 if let last = lastAnalogDirection {
-                    setDirectionalInput(last, pressed: false)
+                    setDirectionalInput(last, pressed: false, for: inputType)
                     lastAnalogDirection = nil
                 }
-                stopMoveRepeat(clearDirection: true)
+                stopMoveRepeat(clearDirection: true, for: inputType)
                 filteredStick = CGVector(dx: 0, dy: 0)
                 return
             }
@@ -456,12 +467,12 @@ final class ControllerInputManager: NSObject {
                 if now.timeIntervalSince(lastDirectionChangeDate) >= directionDebounceInterval {
                     // Release previous, press new
                     if let last = lastAnalogDirection {
-                        setDirectionalInput(last, pressed: false)
+                        setDirectionalInput(last, pressed: false, for: inputType)
                     }
                     lastAnalogDirection = newDir
                     lastDirectionChangeDate = now
                     updateRepeatTuning(for: source)
-                    setDirectionalInput(newDir, pressed: true)
+                    setDirectionalInput(newDir, pressed: true, for: inputType)
                 }
             }
         }
@@ -638,81 +649,160 @@ final class ControllerInputManager: NSObject {
         isGuideHeld || Date().timeIntervalSince(lastGuidePressDate) < guideChordWindow
     }
 
-    private func setDirectionalInput(_ direction: OverlayMoveDirection, pressed: Bool) {
+    private func setDirectionalInput(_ direction: OverlayMoveDirection, pressed: Bool, for mode: AxisInputType) {
         if pressed {
-            let currentCount = directionPressCounts[direction, default: 0] + 1
-            directionPressCounts[direction] = currentCount
-
-            guard currentCount == 1 else { return }
-
-            heldDirectionOrder.removeAll { $0 == direction }
-            heldDirectionOrder.append(direction)
-
-            guard activeMoveDirection != direction else { return }
-            beginHeldMovement(in: direction)
+            if mode == .overlayMovement {
+                let currentCount = directionPressCounts[direction, default: 0] + 1
+                directionPressCounts[direction] = currentCount
+                
+                guard currentCount == 1 else { return }
+                
+                heldDirectionOrder.removeAll { $0 == direction }
+                heldDirectionOrder.append(direction)
+                
+                guard activeMoveDirection != direction else { return }
+            } else if mode == .arrowKeys {
+                let currentCount = arrowDirectionPressCounts[direction, default: 0] + 1
+                arrowDirectionPressCounts[direction] = currentCount
+                
+                guard currentCount == 1 else { return }
+                
+                heldArrowDirectionOrder.removeAll { $0 == direction }
+                heldArrowDirectionOrder.append(direction)
+                
+                guard activeArrowMoveDirection != direction else { return }
+            }
+            
+            beginHeldMovement(in: direction, for: mode)
             return
         }
 
-        guard let currentCount = directionPressCounts[direction], currentCount > 0 else { return }
-
-        if currentCount == 1 {
-            directionPressCounts[direction] = nil
-            heldDirectionOrder.removeAll { $0 == direction }
-
-            guard activeMoveDirection == direction else { return }
-            stopMoveRepeat(clearDirection: true)
-            if let fallback = heldDirectionOrder.last {
-                beginHeldMovement(in: fallback)
+        if mode == .overlayMovement {
+            guard let currentCount = directionPressCounts[direction], currentCount > 0 else { return }
+            
+            if currentCount == 1 {
+                directionPressCounts[direction] = nil
+                heldDirectionOrder.removeAll { $0 == direction }
+                
+                guard activeMoveDirection == direction else { return }
+                stopMoveRepeat(clearDirection: true, for: mode)
+                if let fallback = heldDirectionOrder.last {
+                    beginHeldMovement(in: fallback)
+                }
+            } else {
+                directionPressCounts[direction] = currentCount - 1
             }
-        } else {
-            directionPressCounts[direction] = currentCount - 1
+        } else if mode == .arrowKeys {
+            guard let currentCount = arrowDirectionPressCounts[direction], currentCount > 0 else { return }
+            
+            if currentCount == 1 {
+                arrowDirectionPressCounts[direction] = nil
+                heldArrowDirectionOrder.removeAll { $0 == direction }
+                
+                guard activeArrowMoveDirection == direction else { return }
+                stopMoveRepeat(clearDirection: true, for: mode)
+                if let fallback = heldDirectionOrder.last {
+                    beginHeldMovement(in: fallback, for: mode)
+                }
+            } else {
+                arrowDirectionPressCounts[direction] = currentCount - 1
+            }
         }
     }
 
     // MARK: - Input Handling
     // MARK: Movement Handling
-    private func beginHeldMovement(in direction: OverlayMoveDirection) {
-        stopMoveRepeat(clearDirection: false)
-        activeMoveDirection = direction
-        holdRepeatStep = 0
-
-        sendMove(direction, trigger: .press)
-        scheduleMoveRepeat(after: holdRepeatInitialDelay ?? padHoldRepeatInitialDelay)
-    }
-
-    private func scheduleMoveRepeat(after delay: TimeInterval) {
-        guard activeMoveDirection != nil else { return }
-
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.performMoveRepeat()
+    private func beginHeldMovement(in direction: OverlayMoveDirection, for mode: AxisInputType = .overlayMovement) {
+        stopMoveRepeat(clearDirection: false, for: mode)
+        
+        if mode == .overlayMovement {
+            activeMoveDirection = direction
+            holdRepeatStep = 0
+            sendMove(direction, trigger: .press)
+        } else if mode == .arrowKeys {
+            activeArrowMoveDirection = direction
+            arrowHoldRepeatStep = 0
+            sendArrowMove(direction)
         }
-        holdRepeatWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        
+        scheduleMoveRepeat(after: holdRepeatInitialDelay ?? padHoldRepeatInitialDelay, for: mode)
     }
 
-    private func performMoveRepeat() {
-        guard let direction = activeMoveDirection else { return }
-        guard directionPressCounts[direction, default: 0] > 0 else {
-            stopMoveRepeat(clearDirection: true)
-            return
+    private func scheduleMoveRepeat(after delay: TimeInterval, for mode: AxisInputType = .overlayMovement) {
+        if mode == .overlayMovement {
+            guard activeMoveDirection != nil else { return }
+            
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.performMoveRepeat(mode)
+            }
+            holdRepeatWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        } else if mode == .arrowKeys {
+            guard activeArrowMoveDirection != nil else { return }
+            
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.performMoveRepeat(mode)
+            }
+            arrowHoldRepeatWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
         }
-
-        sendMove(direction, trigger: .holdRepeat)
-        holdRepeatStep += 1
-        let acceleratedInterval = max(
-            holdRepeatMinimumInterval ?? padHoldRepeatMinimumInterval,
-            (holdRepeatInitialInterval ?? padHoldRepeatInitialInterval) * pow(holdRepeatAcceleration ?? padHoldRepeatAcceleration, Double(holdRepeatStep))
-        )
-        scheduleMoveRepeat(after: acceleratedInterval)
     }
 
-    private func stopMoveRepeat(clearDirection: Bool) {
-        holdRepeatWorkItem?.cancel()
-        holdRepeatWorkItem = nil
-        holdRepeatStep = 0
+    private func performMoveRepeat(_ mode: AxisInputType) {
+        var acceleratedInterval: TimeInterval = 0
+        
+        if mode == .overlayMovement {
+            guard let direction = activeMoveDirection else { return }
+            
+            guard directionPressCounts[direction, default: 0] > 0 else {
+                stopMoveRepeat(clearDirection: true, for: mode)
+                return
+            }
+            
+            sendMove(direction, trigger: .holdRepeat)
+            holdRepeatStep += 1
+            
+            acceleratedInterval = max(
+                holdRepeatMinimumInterval ?? padHoldRepeatMinimumInterval,
+                (holdRepeatInitialInterval ?? padHoldRepeatInitialInterval) * pow(holdRepeatAcceleration ?? padHoldRepeatAcceleration, Double(holdRepeatStep))
+            )
+        } else if mode == .arrowKeys {
+            guard let direction = activeArrowMoveDirection else { return }
+            
+            guard arrowDirectionPressCounts[direction, default: 0] > 0 else {
+                stopMoveRepeat(clearDirection: true, for: mode)
+                return
+            }
+            
+            sendArrowMove(direction)
+            arrowHoldRepeatStep += 1
+            
+            acceleratedInterval = max(
+                holdRepeatMinimumInterval ?? padHoldRepeatMinimumInterval,
+                (holdRepeatInitialInterval ?? padHoldRepeatInitialInterval) * pow(holdRepeatAcceleration ?? padHoldRepeatAcceleration, Double(arrowHoldRepeatStep))
+            )
+        }
+        
+        scheduleMoveRepeat(after: acceleratedInterval, for: mode)
+    }
 
-        if clearDirection {
-            activeMoveDirection = nil
+    private func stopMoveRepeat(clearDirection: Bool, for mode: AxisInputType) {
+        if mode == .overlayMovement {
+            holdRepeatWorkItem?.cancel()
+            holdRepeatWorkItem = nil
+            holdRepeatStep = 0
+            
+            if clearDirection {
+                activeMoveDirection = nil
+            }
+        } else if mode == .arrowKeys {
+            arrowHoldRepeatWorkItem?.cancel()
+            arrowHoldRepeatWorkItem = nil
+            arrowHoldRepeatStep = 0
+            
+            if clearDirection {
+                activeArrowMoveDirection = nil
+            }
         }
     }
 
@@ -724,6 +814,28 @@ final class ControllerInputManager: NSObject {
     private func sendMouseMove(_ delta: CGVector) {
         debugLog("Mouse Move: \(delta)")
         onMouseMove?(delta)
+    }
+    
+    private func sendArrowMove(_ direction: OverlayMoveDirection) {
+        debugLog("Arrow Move: \(direction)")
+        switch direction {
+        case .up: keyEmitter.emit(keyCode: 126)
+        case .down: keyEmitter.emit(keyCode: 125)
+        case .left: keyEmitter.emit(keyCode: 123)
+        case .right: keyEmitter.emit(keyCode: 124)
+        case .upLeft:
+            keyEmitter.emit(keyCode: 126)
+            keyEmitter.emit(keyCode: 123)
+        case .upRight:
+            keyEmitter.emit(keyCode: 126)
+            keyEmitter.emit(keyCode: 124)
+        case .downLeft:
+            keyEmitter.emit(keyCode: 125)
+            keyEmitter.emit(keyCode: 123)
+        case .downRight:
+            keyEmitter.emit(keyCode: 125)
+            keyEmitter.emit(keyCode: 124)
+        }
     }
 
     // MARK: Button Input Handling
@@ -802,6 +914,16 @@ final class ControllerInputManager: NSObject {
         if actionBindings.mouseRightClick == button {
             debugLog("Right Click shortcut triggered")
             onRightClickDown?()
+        }
+        
+        if actionBindings.moveCaretLeft == button {
+            debugLog("Move Caret Left shortcut triggered")
+            sendArrowMove(.left)
+        }
+        
+        if actionBindings.moveCaretRight == button {
+            debugLog("Move Caret Right shortcut triggered")
+            sendArrowMove(.right)
         }
         
         if actionBindings.enlargeWindow == button {

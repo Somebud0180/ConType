@@ -6,6 +6,7 @@ enum AxisInputType: String, CaseIterable, Identifiable {
     case none
     case overlayMovement
     case mouseMovement
+    case arrowKeys
     
     var id: String { rawValue }
     
@@ -14,6 +15,7 @@ enum AxisInputType: String, CaseIterable, Identifiable {
         case .none: return "None"
         case .overlayMovement: return "Control Keyboard"
         case .mouseMovement: return "Control Mouse"
+        case .arrowKeys: return "Arrow Keys"
         }
     }
 }
@@ -137,6 +139,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
     case rightTrigger
     case leftStickPress
     case rightStickPress
+    case none
 
     var id: String { rawValue }
 
@@ -152,6 +155,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .rightTrigger: return "Right Trigger"
         case .leftStickPress: return "Left Stick Press"
         case .rightStickPress: return "Right Stick Press"
+        case .none: return "Disabled"
         }
     }
 
@@ -177,6 +181,8 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
             return "Left Stick Press"
         case .rightStickPress:
             return "Right Stick Press"
+        case .none:
+            return "Disabled"
         }
     }
 
@@ -192,6 +198,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .rightTrigger: return "RT"
         case .leftStickPress: return "L3"
         case .rightStickPress: return "R3"
+        case .none: return ""
         }
     }
 
@@ -217,6 +224,8 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
             return "LStick_Press"
         case .rightStickPress:
             return "RStick_Press"
+        case .none:
+            return ""
         }
     }
 }
@@ -235,12 +244,14 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enter
     case shift
     case capsLock
+    case moveCaretLeft
+    case moveCaretRight
     case mouseLeftClick
     case mouseRightClick
     case enlargeWindow
     case shrinkWindow
 
-    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock]
+    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight, .enlargeWindow, .shrinkWindow]
     
     static let mouseActions: [ControllerActionBinding] = [.mouseLeftClick, .mouseRightClick]
     
@@ -254,6 +265,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
         case .enter: return "Enter"
         case .shift: return "Shift"
         case .capsLock: return "Caps Lock"
+        case .moveCaretLeft: return "Move Text Cursor Left"
+        case .moveCaretRight: return "Move Text Cursor Right"
         case .mouseLeftClick: return "Left Click"
         case .mouseRightClick: return "Right Click"
         case .enlargeWindow: return "Enlarge Keyboard"
@@ -269,6 +282,8 @@ struct ControllerActionBindings: Equatable {
     var enter: ControllerAssignableButton
     var shift: ControllerAssignableButton
     var capsLock: ControllerAssignableButton
+    var moveCaretLeft: ControllerAssignableButton
+    var moveCaretRight: ControllerAssignableButton
     var mouseLeftClick: ControllerAssignableButton
     var mouseRightClick: ControllerAssignableButton
     var enlargeWindow: ControllerAssignableButton
@@ -281,10 +296,12 @@ struct ControllerActionBindings: Equatable {
         enter: .west,
         shift: .leftStickPress,
         capsLock: .rightStickPress,
+        moveCaretLeft: .leftShoulder,
+        moveCaretRight: .rightShoulder,
         mouseLeftClick: .leftTrigger,
         mouseRightClick: .rightTrigger,
-        enlargeWindow: .rightShoulder,
-        shrinkWindow: .leftShoulder
+        enlargeWindow: .none,
+        shrinkWindow: .none
     )
 
     func button(for action: ControllerActionBinding) -> ControllerAssignableButton {
@@ -301,6 +318,10 @@ struct ControllerActionBindings: Equatable {
             return shift
         case .capsLock:
             return capsLock
+        case .moveCaretLeft:
+            return moveCaretLeft
+        case .moveCaretRight:
+            return moveCaretRight
         case .mouseLeftClick:
             return mouseLeftClick
         case .mouseRightClick:
@@ -326,6 +347,10 @@ struct ControllerActionBindings: Equatable {
             shift = button
         case .capsLock:
             capsLock = button
+        case .moveCaretLeft:
+            moveCaretLeft = button
+        case .moveCaretRight:
+            moveCaretRight = button
         case .mouseLeftClick:
             mouseLeftClick = button
         case .mouseRightClick:
