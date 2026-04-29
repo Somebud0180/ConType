@@ -9,6 +9,8 @@ import ApplicationServices
 import AppKit
 
 final class MouseEmitter {
+    private var isMouseDown = false
+    
     /// Moves the mouse cursor by a given delta (dx, dy) relative to its current position.
     /// Returns true if the event was posted, false if accessibility permissions are missing.
     @discardableResult
@@ -18,7 +20,8 @@ final class MouseEmitter {
         // Note: NSEvent.mouseLocation uses a flipped origin (bottom-left is (0,0)),
         // but CGEvent expects screen coordinates (origin at bottom-left)
         let newLocation = CGPoint(x: current.x + delta.dx, y: NSScreen.main!.frame.height - current.y + delta.dy)
-        guard let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: newLocation, mouseButton: .left) else {
+        let eventType: CGEventType = isMouseDown ? .leftMouseDragged : .mouseMoved
+        guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: newLocation, mouseButton: .left) else {
             return false
         }
         event.post(tap: .cghidEventTap)
@@ -30,7 +33,8 @@ final class MouseEmitter {
     @discardableResult
     func moveCursor(to location: CGPoint) -> Bool {
         guard InputMonitoringPermission.isAuthorized() else { return false }
-        guard let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: location, mouseButton: .left) else {
+        let eventType: CGEventType = isMouseDown ? .leftMouseDragged : .mouseMoved
+        guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: location, mouseButton: .left) else {
             return false
         }
         event.post(tap: .cghidEventTap)
@@ -45,6 +49,12 @@ final class MouseEmitter {
         
         guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: actualMousePosition, mouseButton: button) else {
             return false
+        }
+        
+        if eventType == .leftMouseDown {
+            isMouseDown = true
+        } else if eventType == .leftMouseUp {
+            isMouseDown = false
         }
         
         event.post(tap: .cghidEventTap)
