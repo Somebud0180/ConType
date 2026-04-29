@@ -1,12 +1,11 @@
 # ConType
-<p align="center">
+<div align="center">
   <img width="80%" alt="ConType Banner" src="https://github.com/user-attachments/assets/90312fb4-2ff2-420c-8e80-3290e25b1632" />
-  
   <h3 align="center">Make your controller control</h3>
-</p>
+  <a href="https://testflight.apple.com/join/cesGDw2f">Available on TestFlight</a>
+</div>
 
-Inspired by virtual keyboards in games and other operating systems, ConType brings a controller-based keyboard (+ mouse) to the desktop, specifically for Mac.
-Made with Swift and SwiftUI, designed to feel like a part of your Mac.
+<br>Inspired by virtual keyboards in games and other operating systems, ConType brings a controller-based keyboard (+ mouse) to the desktop, specifically for Mac. Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 
 ## AI Disclosure
 AI was heavily used in the very early stages of the app. Involving the base code and an early version of the interface. Further work like those relating to the keyboard emulation and the initial controller setup was done by AI. Some debugging sessions were also assisted by AI, either for inquiry or direct code generation. **No AI is/was/will be used for any work related to graphics/art both in app and in the repo**
