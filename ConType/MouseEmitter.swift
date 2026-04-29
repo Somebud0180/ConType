@@ -51,9 +51,9 @@ final class MouseEmitter {
             return false
         }
         
-        if eventType == .leftMouseDown {
+        if eventType == .leftMouseDown || eventType == .rightMouseDown {
             isMouseDown = true
-        } else if eventType == .leftMouseUp {
+        } else if eventType == .leftMouseUp || eventType == .rightMouseUp {
             isMouseDown = false
         }
         
