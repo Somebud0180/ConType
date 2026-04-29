@@ -148,7 +148,7 @@ final class OverlayWindowController {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.contentAspectRatio = NSSize(width: 5, height: 2)
-        window.contentMinSize = NSSize(width: 800, height: 320)
+        window.contentMinSize = NSSize(width: 800, height: 300)
 
         self.window = window
 
@@ -173,8 +173,8 @@ final class OverlayWindowController {
 
         // Limit window size to constraint
         let targetSize = NSSize(
-            width: min(1400, max(800, windowDimensions.width)),
-            height: min(500, max(320, windowDimensions.height))
+            width: min(1440, max(800, windowDimensions.width)),
+            height: min(540, max(300, windowDimensions.height))
         )
 
         // Limit window size to within screen bounds
