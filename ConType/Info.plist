@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>LSMultipleInstancesProhibited</key>
-	<true/>
 	<key>GCSupportedGameControllers</key>
 	<array>
 		<dict>
@@ -18,10 +16,8 @@
 			<key>ProfileName</key>
 			<string>DirectionalGamepad</string>
 		</dict>
-		<dict>
-			<key>ProfileName</key>
-			<string>SpatialGamepad</string>
-		</dict>
 	</array>
+	<key>LSMultipleInstancesProhibited</key>
+	<true/>
 </dict>
 </plist>
