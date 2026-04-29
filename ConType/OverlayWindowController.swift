@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SkyLightWindow
 import SwiftUI
 
@@ -9,18 +10,30 @@ private final class NonActivatingOverlayPanel: NSPanel {
 
 @MainActor
 final class OverlayWindowController {
+    private var cancellables = Set<AnyCancellable>()
     private var window: NSWindow?
+    private var mouseWindow: NSWindow?
     private let settings: AppSettings
     private let keyboardViewModel: KeyboardOverlayViewModel
     private let keyEmitter = KeyEmitter()
 
-    var isVisible: Bool {
+    var isKeyboardVisible: Bool {
         window?.isVisible == true
+    }
+    
+    var isMouseVisible: Bool {
+        mouseWindow?.isVisible == true
     }
 
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
+        
+        settings.$inMouseMode
+            .sink { [weak self] _ in
+                self?.swapWindows()
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -29,16 +42,23 @@ final class OverlayWindowController {
 
     @discardableResult
     func show() -> Bool {
-        let window = makeWindowIfNeeded()
-        resizeWindow(to: settings.windowSize)
+        let window = settings.inMouseMode
+            ? makeMouseWindowIfNeeded()
+            : makeWindowIfNeeded()
+        
         SkyLightOperator.shared.delegateWindow(window)
-
         window.orderFrontRegardless()
         return window.isVisible
     }
 
     func hide() {
+        mouseWindow?.orderOut(nil)
         window?.orderOut(nil)
+    }
+    
+    func swapWindows() {
+        hide()
+        show()
     }
 
     @discardableResult
@@ -76,6 +96,11 @@ final class OverlayWindowController {
     }
 
     func enlargeWindow() {
+        if settings.inMouseMode {
+            settings.inMouseMode = false
+            return
+        }
+        
         switch settings.windowSize {
         case .small:
             resizeWindow(to: .medium)
@@ -94,6 +119,7 @@ final class OverlayWindowController {
     func shrinkWindow() {
         switch settings.windowSize {
         case .small:
+            settings.inMouseMode = true
             break
         case .medium:
             resizeWindow(to: .small)
@@ -111,16 +137,16 @@ final class OverlayWindowController {
         if let window {
             return window
         }
-
+        
         let contentView = KeyboardOverlayView(
             settings: settings,
             viewModel: keyboardViewModel
         ) { [weak self] key, modifiers in
             self?.keyEmitter.emit(key, modifiers: modifiers)
         }
-
+        
         let windowDimensions = settings.windowSize.windowDimensions
-
+        
         let hostingController = NSHostingController(rootView: contentView)
         let baseMask: NSWindow.StyleMask = [
             .borderless, .resizable, .fullSizeContentView,
@@ -136,7 +162,7 @@ final class OverlayWindowController {
             backing: .buffered,
             defer: false
         )
-
+        
         window.contentViewController = hostingController
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -149,16 +175,16 @@ final class OverlayWindowController {
         window.titlebarAppearsTransparent = true
         window.contentAspectRatio = NSSize(width: 5, height: 2)
         window.contentMinSize = NSSize(width: 800, height: 300)
-
+        
         self.window = window
-
+        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(windowDidMove(_:)),
             name: NSWindow.didMoveNotification,
             object: window
         )
-
+        
         return window
     }
 
@@ -196,6 +222,55 @@ final class OverlayWindowController {
             display: true,
             animate: true
         )
+    }
+    
+    private func makeMouseWindowIfNeeded() -> NSWindow {
+        if let window {
+            return window
+        }
+        
+        let contentView = MouseOverlayView(settings: settings)
+        let windowDimensions = settings.windowSize.windowDimensions
+        
+        let hostingController = NSHostingController(rootView: contentView)
+        let baseMask: NSWindow.StyleMask = [
+            .borderless, .resizable, .fullSizeContentView,
+        ]
+        let window = NonActivatingOverlayPanel(
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: windowDimensions.width,
+                height: windowDimensions.height
+            ),
+            styleMask: baseMask.union(.nonactivatingPanel),
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.contentViewController = hostingController
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        window.level = .floating
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = true
+        window.isReleasedWhenClosed = false
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.contentAspectRatio = NSSize(width: 1, height: 1)
+        window.contentMinSize = NSSize(width: 64, height: 64)
+        
+        self.window = window
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidMove(_:)),
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
+        
+        return window
     }
 
     @objc private func windowDidMove(_ notification: Notification) {

@@ -419,6 +419,7 @@ final class AppSettings: ObservableObject {
     @Published var mouseSmoothing: CGFloat = 0.5
     
     // Overlay
+    @Published var inMouseMode: Bool = false
     @Published var windowSize: WindowSize = .small
     @Published var windowPosition: NSPoint = .zero
     
@@ -480,6 +481,9 @@ final class AppSettings: ObservableObject {
         $mouseSmoothing
             .sink { [weak self] _ in self?.save() }
             .store(in: &cancellables)
+        $inMouseMode
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
         $windowSize
             .sink { [weak self] _ in self?.save() }
             .store(in: &cancellables)
@@ -515,6 +519,7 @@ final class AppSettings: ObservableObject {
             rightStickDeadzone: rightStickDeadzone,
             mouseSensitivity: mouseSensitivity,
             mouseSmoothing: mouseSmoothing,
+            inMouseMode: inMouseMode,
             windowSize: windowSize,
             windowPosition: CodablePoint(windowPosition)
         )
@@ -552,6 +557,7 @@ final class AppSettings: ObservableObject {
             self.rightStickDeadzone = codable.rightStickDeadzone
             self.mouseSensitivity = codable.mouseSensitivity
             self.mouseSmoothing = codable.mouseSmoothing
+            self.inMouseMode = codable.inMouseMode
             self.windowSize = codable.windowSize
             self.windowPosition = codable.windowPosition.nsPoint
         } catch {
@@ -659,6 +665,7 @@ private struct AppSettingsCodable: Codable {
     var rightStickDeadzone: CGFloat
     var mouseSensitivity: CGFloat
     var mouseSmoothing: CGFloat
+    var inMouseMode: Bool
     var windowSize: WindowSize
     var windowPosition: CodablePoint
 }
