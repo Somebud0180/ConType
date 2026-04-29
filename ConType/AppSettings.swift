@@ -251,7 +251,7 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enlargeWindow
     case shrinkWindow
 
-    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight, .enlargeWindow, .shrinkWindow]
+    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight, .shrinkWindow, .enlargeWindow]
     
     static let mouseActions: [ControllerActionBinding] = [.mouseLeftClick, .mouseRightClick]
     
@@ -363,19 +363,33 @@ struct ControllerActionBindings: Equatable {
     }
 }
 
-enum WindowSize {
+enum WindowSize: String, CaseIterable, Identifiable {
     case small
     case medium
     case large
+    case xLarge
+    
+    var id: String { rawValue }
+    
+    var name: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        case .xLarge: return "Extra Large"
+        }
+    }
     
     var windowDimensions: (width: CGFloat, height: CGFloat) {
         switch self {
         case .small:
-            return (800, 320)
+            return (800, 300)
         case .medium:
-            return (1200, 440)
+            return (1000, 375)
         case .large:
-            return (1400, 500)
+            return (1200, 450)
+        case .xLarge:
+            return (1440, 540)
         }
     }
 }
@@ -581,6 +595,7 @@ extension WindowSize: Codable {
         case .small: try container.encode("small", forKey: .value)
         case .medium: try container.encode("medium", forKey: .value)
         case .large: try container.encode("large", forKey: .value)
+        case .xLarge: try container.encode("xLarge", forKey: .value)
         }
     }
     public init(from decoder: Decoder) throws {

@@ -61,9 +61,7 @@ struct SettingsView: View {
                                             Array(guideButtons.enumerated()),
                                             id: \.offset
                                         ) { _, guideButton in
-                                            viewModel.controllerGuideGlyphs(
-                                                guideButton
-                                            )
+                                            viewModel.controllerGuideGlyphs(guideButton)
                                         }
                                     }
                                 }
@@ -77,27 +75,32 @@ struct SettingsView: View {
                             LabeledContent("Keyboard Shortcut") {
                                 viewModel.keyboardShortcutButton
                             }
-
+                            
                             LabeledContent("Controller Shortcut") {
                                 viewModel.controllerToggleButton
                             }
-
+                            
                             if let keyboardValidationMessage = viewModel
                                 .keyboardValidationMessage
                             {
                                 Text(keyboardValidationMessage)
                                     .foregroundStyle(.red)
                             }
-
+                            
+                            Picker("Keyboard Size", selection: Binding(
+                                get: { viewModel.settings.windowSize },
+                                set: { viewModel.settings.windowSize = $0 }
+                            )) {
+                                ForEach(WindowSize.allCases) { size in
+                                    Text(size.name).tag(size)
+                                }
+                            }
+                            
                             Toggle(
                                 "Open app on startup",
                                 isOn: Binding(
-                                    get: {
-                                        viewModel.settings.openAppOnStartup
-                                    },
-                                    set: {
-                                        viewModel.settings.openAppOnStartup = $0
-                                    }
+                                    get: { viewModel.settings.openAppOnStartup },
+                                    set: { viewModel.settings.openAppOnStartup = $0 }
                                 )
                             )
                         }

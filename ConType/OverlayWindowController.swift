@@ -84,6 +84,9 @@ final class OverlayWindowController {
             resizeWindow(to: .large)
             break
         case .large:
+            resizeWindow(to: .xLarge)
+            break
+        case .xLarge:
             break
         }
     }
@@ -97,6 +100,9 @@ final class OverlayWindowController {
             break
         case .large:
             resizeWindow(to: .medium)
+            break
+        case .xLarge:
+            resizeWindow(to: .large)
             break
         }
     }
