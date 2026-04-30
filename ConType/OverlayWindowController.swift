@@ -28,6 +28,10 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
+        
+        settings.$inMouseMode
+            .sink { [weak self] _ in self?.settings.save() }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -36,27 +40,28 @@ final class OverlayWindowController {
 
     @discardableResult
     func show() -> Bool {
+        // Hide any existing windows if any
         hide()
         
         if settings.inMouseMode {
             let mouseWindow = makeMouseWindowIfNeeded()
             SkyLightOperator.shared.delegateWindow(mouseWindow)
+            
             mouseWindow.orderFrontRegardless()
             return mouseWindow.isVisible
         } else {
             let keyboardWindow = makeWindowIfNeeded()
+            resizeWindow(to: settings.windowSize)
             SkyLightOperator.shared.delegateWindow(keyboardWindow)
+            
             keyboardWindow.orderFrontRegardless()
             return keyboardWindow.isVisible
         }
     }
 
     func hide() {
-        if settings.inMouseMode {
-            keyboardWindow?.orderOut(nil)
-        } else {
-            mouseWindow?.orderOut(nil)
-        }
+        keyboardWindow?.orderOut(nil)
+        mouseWindow?.orderOut(nil)
     }
 
     @discardableResult
@@ -96,6 +101,7 @@ final class OverlayWindowController {
     func enlargeWindow() {
         if settings.inMouseMode {
             settings.inMouseMode = false
+            settings.save()
             show()
             return
         } else {
@@ -122,6 +128,7 @@ final class OverlayWindowController {
             switch settings.windowSize {
             case .small:
                 settings.inMouseMode = true
+                settings.save()
                 show()
                 break
             case .medium:
@@ -185,7 +192,7 @@ final class OverlayWindowController {
             self,
             selector: #selector(windowDidMove(_:)),
             name: NSWindow.didMoveNotification,
-            object: window
+            object: keyboardWindow
         )
         
         return window
@@ -232,12 +239,9 @@ final class OverlayWindowController {
             return mouseWindow
         }
         
-        var contentView = MouseOverlayView() { [weak self] in
+        let contentView = MouseOverlayView() { [weak self] in
             self?.settings.inMouseMode = false
-        }
-        
-        contentView.onPress = { [weak self] in
-            self?.settings.inMouseMode = false
+            self?.show()
         }
         
         let hostingController = NSHostingController(rootView: contentView)

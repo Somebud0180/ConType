@@ -525,6 +525,7 @@ final class AppSettings: ObservableObject {
         )
         do {
             debugPrint("[AppSettings] Saving app settings to file...")
+            debugPrint("[AppSettings] Value of inMouseMode: \(inMouseMode)]")
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
         } catch {
@@ -537,6 +538,7 @@ final class AppSettings: ObservableObject {
         guard let data = try? Data(contentsOf: url) else { return }
         do {
             debugPrint("[AppSettings] Restoring app settings from file...")
+            debugPrint("[AppSettings] Value of inMouseMode: \(inMouseMode)]")
             let codable = try JSONDecoder().decode(AppSettingsCodable.self, from: data)
             self.restartedFromPermissionScreen = codable.restartedFromPermissionScreen
             self.keyboardHotkey = codable.keyboardHotkey
