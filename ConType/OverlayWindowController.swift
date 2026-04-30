@@ -10,6 +10,7 @@ private final class NonActivatingOverlayPanel: NSPanel {
 
 @MainActor
 final class OverlayWindowController {
+    private var hasShownKeyboard = false
     private var cancellables = Set<AnyCancellable>()
     private var keyboardWindow: NSWindow?
     private var mouseWindow: NSWindow?
@@ -202,33 +203,48 @@ final class OverlayWindowController {
         guard let keyboardWindow else { return }
         let screen = NSScreen.main ?? keyboardWindow.screen ?? NSScreen.screens.first
         guard let frame = screen?.visibleFrame else { return }
-
+        
         settings.windowSize = size
         let keyboardWindowDimensions = settings.windowSize.windowDimensions
         let keyboardWindowPosition = settings.windowPosition
-
-        // Limit window size to constraint
+        
         let targetSize = NSSize(
             width: min(1440, max(800, keyboardWindowDimensions.width)),
             height: min(540, max(300, keyboardWindowDimensions.height))
         )
-
-        // Limit window size to within screen bounds
+        
         let normalizedSize = NSSize(
             width: min(frame.width - 80, targetSize.width),
             height: min(frame.height - 120, targetSize.height)
         )
-
-        let origin =
-            keyboardWindowPosition != .zero
-            ? keyboardWindowPosition
-            : NSPoint(
-                x: frame.midX - (normalizedSize.width / 2),
-                y: frame.midY - (normalizedSize.height / 2)
+        
+        let newOrigin: NSPoint
+        
+        if !hasShownKeyboard {
+            if keyboardWindowPosition != .zero {
+                newOrigin = keyboardWindowPosition
+            } else {
+                newOrigin = NSPoint(
+                    x: frame.midX - (normalizedSize.width / 2),
+                    y: frame.midY - (normalizedSize.height / 2)
+                )
+            }
+            
+            hasShownKeyboard = true
+        } else {
+            let currentCenter = NSPoint(
+                x: keyboardWindow.frame.origin.x + keyboardWindow.frame.size.width / 2,
+                y: keyboardWindow.frame.origin.y + keyboardWindow.frame.size.height / 2
             )
-
+            
+            newOrigin = NSPoint(
+                x: currentCenter.x - (normalizedSize.width / 2),
+                y: currentCenter.y - (normalizedSize.height / 2)
+            )
+        }
+        
         keyboardWindow.setFrame(
-            NSRect(origin: origin, size: normalizedSize),
+            NSRect(origin: newOrigin, size: normalizedSize),
             display: true,
             animate: true
         )
