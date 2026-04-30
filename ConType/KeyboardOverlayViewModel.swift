@@ -40,9 +40,7 @@ enum SelectionBias {
 
 @MainActor
 final class KeyboardOverlayViewModel: ObservableObject {
-    private let settings: AppSettings
-    private var cancellables = Set<AnyCancellable>()
-    
+    @Published var settings: AppSettings
     @Published var keyboardLayout: KeyboardLayout
     @Published var keyRefs: [KeyReference] = []
     @Published private(set) var selectedRow = 0
@@ -51,6 +49,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
 
     var rows: [[VirtualKey]] { keyboardLayout.rows }
     var lastKeys: [KeyReference] = []
+    private var cancellables = Set<AnyCancellable>()
 
     init(settings: AppSettings) {
         self.settings = settings

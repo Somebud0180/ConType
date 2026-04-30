@@ -8,15 +8,12 @@
 import SwiftUI
 
 struct MouseOverlayView: View {
-    @ObservedObject var settings: AppSettings
-    @State var isPressed = false
+    var onPress: () -> Void
     
     var body: some View {
         ZStack {
             Button(action: {
-                withAnimation {
-                    settings.inMouseMode = false
-                }
+                onPress()
             }) {
                 Image(systemName: "pointer.arrow.rays")
                     .resizable()
@@ -36,6 +33,8 @@ struct MouseOverlayView: View {
 }
 
 #Preview {
-    MouseOverlayView(settings: AppSettings())
+    MouseOverlayView() {
+        debugPrint("Mouse overlay pressed")
+    }
         .frame(width: 128, height: 128)
 }

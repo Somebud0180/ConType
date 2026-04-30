@@ -325,13 +325,12 @@ struct SettingsView: View {
                             }
 
                             KeyboardOverlayView(
-                                settings: settings,
                                 viewModel: KeyboardOverlayViewModel(
                                     settings: settings
                                 ),
                                 onKeyPressed: { _, _ in }
                             )
-                            .frame(width: 500, height: 220)
+                            .frame(width: 500, height: 210)
                             .disabled(true)
                         }
 

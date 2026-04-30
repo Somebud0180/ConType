@@ -11,14 +11,14 @@ private final class NonActivatingOverlayPanel: NSPanel {
 @MainActor
 final class OverlayWindowController {
     private var cancellables = Set<AnyCancellable>()
-    private var window: NSWindow?
+    private var keyboardWindow: NSWindow?
     private var mouseWindow: NSWindow?
     private let settings: AppSettings
     private let keyboardViewModel: KeyboardOverlayViewModel
     private let keyEmitter = KeyEmitter()
 
     var isKeyboardVisible: Bool {
-        window?.isVisible == true
+        keyboardWindow?.isVisible == true
     }
     
     var isMouseVisible: Bool {
@@ -28,12 +28,6 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
-        
-        settings.$inMouseMode
-            .sink { [weak self] _ in
-                self?.swapWindows()
-            }
-            .store(in: &cancellables)
     }
 
     deinit {
@@ -42,23 +36,27 @@ final class OverlayWindowController {
 
     @discardableResult
     func show() -> Bool {
-        let window = settings.inMouseMode
-            ? makeMouseWindowIfNeeded()
-            : makeWindowIfNeeded()
+        hide()
         
-        SkyLightOperator.shared.delegateWindow(window)
-        window.orderFrontRegardless()
-        return window.isVisible
+        if settings.inMouseMode {
+            let mouseWindow = makeMouseWindowIfNeeded()
+            SkyLightOperator.shared.delegateWindow(mouseWindow)
+            mouseWindow.orderFrontRegardless()
+            return mouseWindow.isVisible
+        } else {
+            let keyboardWindow = makeWindowIfNeeded()
+            SkyLightOperator.shared.delegateWindow(keyboardWindow)
+            keyboardWindow.orderFrontRegardless()
+            return keyboardWindow.isVisible
+        }
     }
 
     func hide() {
-        mouseWindow?.orderOut(nil)
-        window?.orderOut(nil)
-    }
-    
-    func swapWindows() {
-        hide()
-        show()
+        if settings.inMouseMode {
+            keyboardWindow?.orderOut(nil)
+        } else {
+            mouseWindow?.orderOut(nil)
+        }
     }
 
     @discardableResult
@@ -98,48 +96,53 @@ final class OverlayWindowController {
     func enlargeWindow() {
         if settings.inMouseMode {
             settings.inMouseMode = false
+            show()
             return
-        }
-        
-        switch settings.windowSize {
-        case .small:
-            resizeWindow(to: .medium)
-            break
-        case .medium:
-            resizeWindow(to: .large)
-            break
-        case .large:
-            resizeWindow(to: .xLarge)
-            break
-        case .xLarge:
-            break
+        } else {
+            switch settings.windowSize {
+            case .small:
+                resizeWindow(to: .medium)
+                break
+            case .medium:
+                resizeWindow(to: .large)
+                break
+            case .large:
+                resizeWindow(to: .xLarge)
+                break
+            case .xLarge:
+                break
+            }
         }
     }
 
     func shrinkWindow() {
-        switch settings.windowSize {
-        case .small:
-            settings.inMouseMode = true
-            break
-        case .medium:
-            resizeWindow(to: .small)
-            break
-        case .large:
-            resizeWindow(to: .medium)
-            break
-        case .xLarge:
-            resizeWindow(to: .large)
-            break
+        if settings.inMouseMode {
+            return
+        } else {
+            switch settings.windowSize {
+            case .small:
+                settings.inMouseMode = true
+                show()
+                break
+            case .medium:
+                resizeWindow(to: .small)
+                break
+            case .large:
+                resizeWindow(to: .medium)
+                break
+            case .xLarge:
+                resizeWindow(to: .large)
+                break
+            }
         }
     }
 
     private func makeWindowIfNeeded() -> NSWindow {
-        if let window {
-            return window
+        if let keyboardWindow {
+            return keyboardWindow
         }
         
         let contentView = KeyboardOverlayView(
-            settings: settings,
             viewModel: keyboardViewModel
         ) { [weak self] key, modifiers in
             self?.keyEmitter.emit(key, modifiers: modifiers)
@@ -176,7 +179,7 @@ final class OverlayWindowController {
         window.contentAspectRatio = NSSize(width: 5, height: 2)
         window.contentMinSize = NSSize(width: 800, height: 300)
         
-        self.window = window
+        self.keyboardWindow = window
         
         NotificationCenter.default.addObserver(
             self,
@@ -189,18 +192,18 @@ final class OverlayWindowController {
     }
 
     private func resizeWindow(to size: WindowSize) {
-        guard let window else { return }
-        let screen = NSScreen.main ?? window.screen ?? NSScreen.screens.first
+        guard let keyboardWindow else { return }
+        let screen = NSScreen.main ?? keyboardWindow.screen ?? NSScreen.screens.first
         guard let frame = screen?.visibleFrame else { return }
 
         settings.windowSize = size
-        let windowDimensions = settings.windowSize.windowDimensions
-        let windowPosition = settings.windowPosition
+        let keyboardWindowDimensions = settings.windowSize.windowDimensions
+        let keyboardWindowPosition = settings.windowPosition
 
         // Limit window size to constraint
         let targetSize = NSSize(
-            width: min(1440, max(800, windowDimensions.width)),
-            height: min(540, max(300, windowDimensions.height))
+            width: min(1440, max(800, keyboardWindowDimensions.width)),
+            height: min(540, max(300, keyboardWindowDimensions.height))
         )
 
         // Limit window size to within screen bounds
@@ -210,14 +213,14 @@ final class OverlayWindowController {
         )
 
         let origin =
-            windowPosition != .zero
-            ? windowPosition
+            keyboardWindowPosition != .zero
+            ? keyboardWindowPosition
             : NSPoint(
                 x: frame.midX - (normalizedSize.width / 2),
                 y: frame.midY - (normalizedSize.height / 2)
             )
 
-        window.setFrame(
+        keyboardWindow.setFrame(
             NSRect(origin: origin, size: normalizedSize),
             display: true,
             animate: true
@@ -225,23 +228,28 @@ final class OverlayWindowController {
     }
     
     private func makeMouseWindowIfNeeded() -> NSWindow {
-        if let window {
-            return window
+        if let mouseWindow {
+            return mouseWindow
         }
         
-        let contentView = MouseOverlayView(settings: settings)
-        let windowDimensions = settings.windowSize.windowDimensions
+        var contentView = MouseOverlayView() { [weak self] in
+            self?.settings.inMouseMode = false
+        }
+        
+        contentView.onPress = { [weak self] in
+            self?.settings.inMouseMode = false
+        }
         
         let hostingController = NSHostingController(rootView: contentView)
         let baseMask: NSWindow.StyleMask = [
-            .borderless, .resizable, .fullSizeContentView,
+            .borderless, .fullSizeContentView,
         ]
         let window = NonActivatingOverlayPanel(
             contentRect: NSRect(
-                x: 0,
-                y: 0,
-                width: windowDimensions.width,
-                height: windowDimensions.height
+                x: 16,
+                y: 16,
+                width: 64,
+                height: 64
             ),
             styleMask: baseMask.union(.nonactivatingPanel),
             backing: .buffered,
@@ -254,28 +262,20 @@ final class OverlayWindowController {
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.contentAspectRatio = NSSize(width: 1, height: 1)
         window.contentMinSize = NSSize(width: 64, height: 64)
         
-        self.window = window
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(windowDidMove(_:)),
-            name: NSWindow.didMoveNotification,
-            object: window
-        )
+        self.mouseWindow = window
         
         return window
     }
 
     @objc private func windowDidMove(_ notification: Notification) {
         guard let window = notification.object as? NSWindow,
-            window === self.window
+            window === self.keyboardWindow
         else { return }
         settings.windowPosition = window.frame.origin
     }

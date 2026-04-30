@@ -179,13 +179,16 @@ final class AppCoordinator: ObservableObject {
         
         controllerInputManager.onEnlarge = { [weak self] in
             Task { @MainActor in
-                self?.overlayController.enlargeWindow()
+                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
+                debugPrint("Keyboard Visibility: \(self.overlayController.isKeyboardVisible), Mouse Visibility: \(self.overlayController.isMouseVisible)")
+                self.overlayController.enlargeWindow()
             }
         }
         
         controllerInputManager.onShrink = { [weak self] in
             Task { @MainActor in
-                self?.overlayController.shrinkWindow()
+                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
+                self.overlayController.shrinkWindow()
             }
         }
 

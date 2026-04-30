@@ -13,8 +13,8 @@ import SwiftUI
 struct KeyboardOverlayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject var settings: AppSettings
     @ObservedObject var viewModel: KeyboardOverlayViewModel
+    private var settings: AppSettings { viewModel.settings }
     let onKeyPressed: (VirtualKey, CGEventFlags) -> Void
 
     var body: some View {
@@ -406,7 +406,7 @@ struct KeyboardOverlayView: View {
 }
 
 #Preview {
-    KeyboardOverlayView(settings: AppSettings(), viewModel: KeyboardOverlayViewModel(settings: AppSettings())) { key, _ in
+    KeyboardOverlayView(viewModel: KeyboardOverlayViewModel(settings: AppSettings())) { key, _ in
     }
     .frame(width: 840, height: 280)
 }
