@@ -62,7 +62,6 @@ final class OnboardingViewModel: ObservableObject {
             // From HoldToTalk Repository, by @jxucoder
             // Restart app
             settings.restartedFromPermissionScreen = true
-            settings.save()
             
             let url = Bundle.main.bundleURL
             let config = NSWorkspace.OpenConfiguration()

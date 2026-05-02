@@ -29,10 +29,6 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
-        
-        settings.$inMouseMode
-            .sink { [weak self] _ in self?.settings.save() }
-            .store(in: &cancellables)
     }
 
     deinit {
@@ -102,7 +98,6 @@ final class OverlayWindowController {
     func enlargeWindow() {
         if settings.inMouseMode {
             settings.inMouseMode = false
-            settings.save()
             show()
             return
         } else {
@@ -129,7 +124,6 @@ final class OverlayWindowController {
             switch settings.windowSize {
             case .small:
                 settings.inMouseMode = true
-                settings.save()
                 show()
                 break
             case .medium:

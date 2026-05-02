@@ -457,70 +457,38 @@ final class AppSettings: ObservableObject {
     init() {
         load()
         
-        $restartedFromPermissionScreen
-            .sink { [weak self] _ in self?.save() }
+        let saveTriggers: [AnyPublisher<Void, Never>] = [
+            $restartedFromPermissionScreen.map { _ in () }.eraseToAnyPublisher(),
+            $keyboardHotkey.map { _ in () }.eraseToAnyPublisher(),
+            $controllerToggleBinding.map { _ in () }.eraseToAnyPublisher(),
+            $controllerActionBindings.map { _ in () }.eraseToAnyPublisher(),
+            $enableMouseInKeyboard.map { _ in () }.eraseToAnyPublisher(),
+            $prioritizeMouseOverKeyboard.map { _ in () }.eraseToAnyPublisher(),
+            $keyboardLayout.map { _ in () }.eraseToAnyPublisher(),
+            $leftStickInputType.map { _ in () }.eraseToAnyPublisher(),
+            $rightStickInputType.map { _ in () }.eraseToAnyPublisher(),
+            $padInputType.map { _ in () }.eraseToAnyPublisher(),
+            $shiftShortcutCyclesToCapsLock.map { _ in () }.eraseToAnyPublisher(),
+            $dismissWithGuideButton.map { _ in () }.eraseToAnyPublisher(),
+            $openAppOnStartup.map { _ in () }.eraseToAnyPublisher(),
+            $keyboardMovementStyle.map { _ in () }.eraseToAnyPublisher(),
+            $leftStickDeadzone.map { _ in () }.eraseToAnyPublisher(),
+            $rightStickDeadzone.map { _ in () }.eraseToAnyPublisher(),
+            $mouseSensitivity.map { _ in () }.eraseToAnyPublisher(),
+            $mouseSmoothing.map { _ in () }.eraseToAnyPublisher(),
+            $inMouseMode.map { _ in () }.eraseToAnyPublisher(),
+            $windowSize.map { _ in () }.eraseToAnyPublisher(),
+            $windowPosition.map { _ in () }.eraseToAnyPublisher()
+        ]
+        
+        Publishers.MergeMany(saveTriggers)
+            .receive(on: RunLoop.main)
+            .debounce(for: .milliseconds(75), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.save()
+            }
             .store(in: &cancellables)
-        $keyboardHotkey
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $controllerToggleBinding
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $controllerActionBindings
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $enableMouseInKeyboard
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $prioritizeMouseOverKeyboard
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $keyboardLayout
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $leftStickInputType
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $rightStickInputType
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $padInputType
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $shiftShortcutCyclesToCapsLock
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $dismissWithGuideButton
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $openAppOnStartup
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $keyboardMovementStyle
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $leftStickDeadzone
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $rightStickDeadzone
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $mouseSensitivity
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $mouseSmoothing
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $inMouseMode
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $windowSize
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        $windowPosition
-            .sink { [weak self] _ in self?.save() }
-            .store(in: &cancellables)
-        // The remaining variables doesn't persist/need to be saved
     }
     
     // MARK: - Save Code
@@ -557,6 +525,7 @@ final class AppSettings: ObservableObject {
         )
         do {
             debugPrint("[AppSettings] Saving app settings to file...")
+            debugPrint("[AppSettings] \(codable)")
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
         } catch {
