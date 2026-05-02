@@ -938,6 +938,10 @@ final class ControllerInputManager: NSObject {
     
     private func sendArrowMove(_ direction: OverlayMoveDirection) {
         debugLog("Arrow Move: \(direction)")
+        if !isOverlayVisible || isMouseOverlayVisible {
+            return
+        }
+        
         switch direction {
         case .up: keyEmitter.emit(keyCode: 126)
         case .down: keyEmitter.emit(keyCode: 125)

@@ -525,7 +525,6 @@ final class AppSettings: ObservableObject {
         )
         do {
             debugPrint("[AppSettings] Saving app settings to file...")
-            debugPrint("[AppSettings] \(codable)")
             let data = try JSONEncoder().encode(codable)
             try data.write(to: Self.settingsURL, options: [.atomic])
         } catch {
