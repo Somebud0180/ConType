@@ -25,6 +25,9 @@ final class SettingsViewModel: ObservableObject {
     // Published UI state
     @Published var isAccessibilityTrusted: Bool
     
+    @Published var isAxisInputPopoverOpen: Bool = false
+    @Published var activeAxisInputPicker: AxisInput?
+    
     @Published var isRecordingKeyboardHotkey = false
     @Published var keyboardValidationMessage: String?
     @Published var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
@@ -138,7 +141,7 @@ final class SettingsViewModel: ObservableObject {
     
     var movementDescription: String {
         if settings.keyboardMovementStyle == KeyboardMovementMode.limited {
-            return "In this style, the keyboard navigates like a d-pad."
+            return "In this style, the keyboard navigates like a D-pad."
         } else if settings.keyboardMovementStyle == KeyboardMovementMode.full {
             return "In this style, the keyboard nvaigates more freely, with diagonal movements."
         }
@@ -355,6 +358,129 @@ final class SettingsViewModel: ObservableObject {
             return [.menu]
         }
         return detectedController.guideButtons
+    }
+    
+    func axisInputPickerButton(for input: AxisInput, forKeyboard: Bool) -> some View {
+        let selected = selectedAxisInputType(for: input, forKeyboard: forKeyboard)
+        
+        return Button { [self] in
+            if activeAxisInputPicker == input {
+                endAxisInputPicker()
+            } else {
+                beginAxisInputPicker(for: input)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text(selected.title)
+                    .font(.system(.body, design: .monospaced))
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8)
+            .frame(width: 244, alignment: .leading)
+            .frame(minHeight: 24)
+        }
+        .buttonStyle(.bordered)
+        .popover(isPresented: axisInputPickerPopoverBinding(for: input), arrowEdge: .bottom) { [self] in
+            axisInputPickerPopOver(for: input, selected: selected, forKeyboard: forKeyboard)
+        }
+    }
+    
+    // Helpers for axis input picker
+    private func selectedAxisInputType(for input: AxisInput, forKeyboard: Bool) -> AxisInputType {
+        let current: [AxisInputType]
+        switch input {
+        case .leftStick: current = settings.leftStickInputType
+        case .rightStick: current = settings.rightStickInputType
+        case .pad: current = settings.padInputType
+        }
+        
+        if forKeyboard {
+            if current.contains(.overlayMovement) { return .overlayMovement }
+            if current.contains(.arrowKeys) { return .arrowKeys }
+            return .none
+        } else {
+            return current.contains(.mouseMovement) ? .mouseMovement : .none
+        }
+    }
+    
+    private func beginAxisInputPicker(for input: AxisInput) {
+        endControllerToggleRecording()
+        endKeyboardHotkeyRecording()
+        endControllerActionPicker()
+        activeAxisInputPicker = input
+    }
+    
+    private func endAxisInputPicker() {
+        let wasActive = activeAxisInputPicker != nil
+        activeAxisInputPicker = nil
+        if wasActive {
+            onCancelControllerCapture()
+        }
+    }
+    
+    private func axisInputPickerPopoverBinding(for input: AxisInput) -> Binding<Bool> {
+        Binding(
+            get: { self.activeAxisInputPicker == input },
+            set: { [self] isPresented in
+                if isPresented {
+                    beginAxisInputPicker(for: input)
+                } else if activeAxisInputPicker == input {
+                    endAxisInputPicker()
+                }
+            }
+        )
+    }
+    
+    @ViewBuilder
+    private func axisInputPickerPopOver(for input: AxisInput, selected: AxisInputType, forKeyboard: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Choose Input")
+                .font(.headline)
+            
+            Text(forKeyboard ? "Select a keyboard input type." : "Select a mouse input type.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            
+            let options = forKeyboard ? AxisInputType.keyboardOptions : AxisInputType.mouseOptions
+            
+            ForEach(options) { [self] type in
+                let isSelected = type == selected
+                
+                Button {
+                    self.setAxisInputType(type, fromKeyboard: forKeyboard, for: input)
+                } label: {
+                    HStack {
+                        Text(type.title)
+                        Spacer(minLength: 8)
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.05))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Divider()
+            
+            HStack {
+                Spacer()
+                Button("Done") { [self] in
+                    endAxisInputPicker()
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: 320)
     }
     
     func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {

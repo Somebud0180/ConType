@@ -239,29 +239,9 @@ struct SettingsView: View {
                                     fallbackText: "LS",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "Left Stick",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the active keyboard type from the array
-                                            if viewModel.settings.leftStickInputType.contains(.overlayMovement) {
-                                                return .overlayMovement
-                                            } else if viewModel.settings.leftStickInputType.contains(.arrowKeys) {
-                                                return .arrowKeys
-                                            } else {
-                                                return .none
-                                            }
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .leftStick)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.keyboardOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("Left Stick")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .leftStick, forKeyboard: true)
                             }
                             
                             HStack {
@@ -270,29 +250,9 @@ struct SettingsView: View {
                                     fallbackText: "RS",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "Right Stick",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the active keyboard type from the array
-                                            if viewModel.settings.rightStickInputType.contains(.overlayMovement) {
-                                                return .overlayMovement
-                                            } else if viewModel.settings.rightStickInputType.contains(.arrowKeys) {
-                                                return .arrowKeys
-                                            } else {
-                                                return .none
-                                            }
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .rightStick)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.keyboardOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("Right Stick")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .rightStick, forKeyboard: true)
                             }
                             
                             HStack {
@@ -301,29 +261,9 @@ struct SettingsView: View {
                                     fallbackText: "DPad",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "D-pad",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the active keyboard type from the array
-                                            if viewModel.settings.padInputType.contains(.overlayMovement) {
-                                                return .overlayMovement
-                                            } else if viewModel.settings.padInputType.contains(.arrowKeys) {
-                                                return .arrowKeys
-                                            } else {
-                                                return .none
-                                            }
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .pad)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.keyboardOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("D-pad")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .pad, forKeyboard: true)
                             }
                             
                             Toggle(
@@ -394,23 +334,9 @@ struct SettingsView: View {
                                     fallbackText: "LS",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "Left Stick",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the currently enabled mouse type
-                                            viewModel.settings.leftStickInputType.contains(.mouseMovement) ? .mouseMovement : .none
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .leftStick)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.mouseOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("Left Stick")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .leftStick, forKeyboard: false)
                             }
                             
                             HStack {
@@ -419,23 +345,9 @@ struct SettingsView: View {
                                     fallbackText: "RS",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "Right Stick",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the currently enabled mouse type
-                                            viewModel.settings.rightStickInputType.contains(.mouseMovement) ? .mouseMovement : .none
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .rightStick)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.mouseOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("Right Stick")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .rightStick, forKeyboard: false)
                             }
                             
                             HStack {
@@ -444,23 +356,9 @@ struct SettingsView: View {
                                     fallbackText: "DPad",
                                     size: 24
                                 )
-                                
-                                Picker(
-                                    "D-pad",
-                                    selection: Binding(
-                                        get: {
-                                            // Get the currently enabled mouse type
-                                            viewModel.settings.padInputType.contains(.mouseMovement) ? .mouseMovement : .none
-                                        },
-                                        set: {
-                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .pad)
-                                        }
-                                    )
-                                ) {
-                                    ForEach(AxisInputType.mouseOptions) { type in
-                                        Text(type.title).tag(type)
-                                    }
-                                }
+                                Text("D-pad")
+                                Spacer()
+                                viewModel.axisInputPickerButton(for: .pad, forKeyboard: false)
                             }
                         }
                         
