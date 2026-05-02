@@ -9,6 +9,27 @@ import AppKit
 import SwiftUI
 import Combine
 
+enum ConflictStatus {
+    case normal
+    case warn
+    case explicit
+    
+    var isConflicting: Bool {
+        switch self {
+        case .normal: return false
+        case .warn, .explicit: return true
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .normal: return .clear
+        case .warn: return Color.yellow
+        case .explicit: return Color.red
+        }
+    }
+}
+
 @MainActor
 final class SettingsViewModel: ObservableObject {
     // Dependencies
@@ -339,9 +360,9 @@ final class SettingsViewModel: ObservableObject {
         self.objectWillChange.send()
     }
     
-    func warnAxisInputConflict(for axis: AxisInput) -> Bool {
+    func warnAxisInputConflict(for axis: AxisInput) -> ConflictStatus {
         if !settings.enableMouseInKeyboard {
-            return false
+            return .normal
         }
         
         let axisInputType =
@@ -353,10 +374,41 @@ final class SettingsViewModel: ObservableObject {
         
         
         if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && axisInputType.contains(.mouseMovement) {
-            return true
-        } else {
-            return false
+            return .warn
         }
+        
+        return .normal
+    }
+    
+    func warnControllerButtonConflict(for controllerButton: ControllerActionBinding) -> ConflictStatus {
+        for action in ControllerActionBinding.allCases {
+            let controllerActionBindings = settings.controllerActionBindings.button(for: controllerButton)
+            let forActionBindings = settings.controllerActionBindings.button(for: action)
+            
+            if action == controllerButton || controllerActionBindings == .none {
+                continue
+            }
+            
+            if forActionBindings == controllerActionBindings {
+                if (ControllerActionBinding.keyboardActions.contains(controllerButton)
+                    && ControllerActionBinding.mouseActions.contains(action)
+                    )
+                    || (ControllerActionBinding.mouseActions.contains(controllerButton)
+                        && ControllerActionBinding.keyboardActions.contains(action)
+                    )
+                {
+                    if !settings.enableMouseInKeyboard {
+                        return .normal
+                    }
+                    
+                    return .warn
+                }
+
+                return .explicit
+            }
+        }
+        
+        return .normal
     }
     
     func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
@@ -381,7 +433,7 @@ final class SettingsViewModel: ObservableObject {
     
     func axisInputPickerButton(for input: AxisInput, forKeyboard: Bool) -> some View {
         let selected = selectedAxisInputType(for: input, forKeyboard: forKeyboard)
-        let isConflicting = warnAxisInputConflict(for: input)
+        let conflictStatus = warnAxisInputConflict(for: input)
         
         return Button { [self] in
             if activeAxisInputPicker == input {
@@ -405,9 +457,9 @@ final class SettingsViewModel: ObservableObject {
         .buttonStyle(.bordered)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(Color.yellow, lineWidth: isConflicting ? 1.5 : 0)
-                .animation(.easeInOut, value: isConflicting)
-            )
+                .stroke(conflictStatus.color, lineWidth: conflictStatus.isConflicting ? 1.5 : 0)
+                .animation(.easeInOut, value: conflictStatus.isConflicting)
+        )
         .popover(isPresented: axisInputPickerPopoverBinding(for: input), arrowEdge: .bottom) { [self] in
             axisInputPickerPopOver(for: input, selected: selected, forKeyboard: forKeyboard)
         }
@@ -510,6 +562,7 @@ final class SettingsViewModel: ObservableObject {
     
     func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {
         let selectedButton = settings.controllerActionBindings.button(for: action)
+        let conflictStatus = warnControllerButtonConflict(for: action)
         
         return Button { [self] in
             if activeControllerActionPicker == action {
@@ -531,6 +584,11 @@ final class SettingsViewModel: ObservableObject {
             .frame(minHeight: 24)
         }
         .buttonStyle(.bordered)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(conflictStatus.color, lineWidth: conflictStatus.isConflicting ? 1.5 : 0)
+                .animation(.easeInOut, value: conflictStatus.isConflicting)
+        )
         .popover(isPresented: controllerActionPickerPresentedBinding(for: action), arrowEdge: .bottom) { [self] in
             controllerActionPickerPopover(for: action, selected: selectedButton)
         }
