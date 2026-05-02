@@ -11,63 +11,63 @@ import Combine
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
-	// Dependencies
-	let settings: AppSettings
-	let joystick: JoystickInputModel
+    // Dependencies
+    let settings: AppSettings
+    let joystick: JoystickInputModel
     private var cancellables = Set<AnyCancellable>()
-
-	// Callbacks
-	private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
-	private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
-	private let onCancelControllerCapture: () -> Void
-	private let onRestartOnboarding: () -> Void
-
-	// Published UI state
-	@Published var isAccessibilityTrusted: Bool
-
-	@Published var isRecordingKeyboardHotkey = false
-	@Published var keyboardValidationMessage: String?
-	@Published var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
-	@Published var keyboardPressedModifiers: NSEvent.ModifierFlags = []
-
-	@Published var isRecordingControllerHotkey = false
-	@Published var activeControllerActionPicker: ControllerActionBinding?
-	@Published var keyboardMovementStyle = KeyboardMovementMode.limited
-	@Published var leftStickDeadzone: CGFloat
-	@Published var rightStickDeadzone: CGFloat
+    
+    // Callbacks
+    private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
+    private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
+    private let onCancelControllerCapture: () -> Void
+    private let onRestartOnboarding: () -> Void
+    
+    // Published UI state
+    @Published var isAccessibilityTrusted: Bool
+    
+    @Published var isRecordingKeyboardHotkey = false
+    @Published var keyboardValidationMessage: String?
+    @Published var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
+    @Published var keyboardPressedModifiers: NSEvent.ModifierFlags = []
+    
+    @Published var isRecordingControllerHotkey = false
+    @Published var activeControllerActionPicker: ControllerActionBinding?
+    @Published var keyboardMovementStyle = KeyboardMovementMode.limited
+    @Published var leftStickDeadzone: CGFloat
+    @Published var rightStickDeadzone: CGFloat
     @Published var mouseSensitivity: CGFloat = 500
     @Published var mouseSmoothing: CGFloat = 0.5
-
-	// Event monitors (not @Published)
-	private var keyboardKeyDownMonitor: Any?
-	private var keyboardFlagsMonitor: Any?
-
-	// Constants
-	let waitingKeyboardText = "Waiting for keyboard input..."
-	let waitingControllerText = "Waiting for controller input..."
-	let defaultKeyboardShortcut = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
-	let twoDecimalFormatter = Decimal.FormatStyle().precision(.fractionLength(2))
-
-	init(
-		settings: AppSettings,
-		joystick: JoystickInputModel,
-		onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
-		onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
-		onCancelControllerCapture: @escaping () -> Void,
-		onRestartOnboarding: @escaping () -> Void
-	) {
-		self.settings = settings
-		self.joystick = joystick
-		self.onRequestControllerBindingCapture = onRequestControllerBindingCapture
-		self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
-		self.onCancelControllerCapture = onCancelControllerCapture
-		self.onRestartOnboarding = onRestartOnboarding
-		self.isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
-		self.leftStickDeadzone = settings.leftStickDeadzone
-		self.rightStickDeadzone = settings.rightStickDeadzone
+    
+    // Event monitors (not @Published)
+    private var keyboardKeyDownMonitor: Any?
+    private var keyboardFlagsMonitor: Any?
+    
+    // Constants
+    let waitingKeyboardText = "Waiting for keyboard input..."
+    let waitingControllerText = "Waiting for controller input..."
+    let defaultKeyboardShortcut = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
+    let twoDecimalFormatter = Decimal.FormatStyle().precision(.fractionLength(2))
+    
+    init(
+        settings: AppSettings,
+        joystick: JoystickInputModel,
+        onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
+        onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
+        onCancelControllerCapture: @escaping () -> Void,
+        onRestartOnboarding: @escaping () -> Void
+    ) {
+        self.settings = settings
+        self.joystick = joystick
+        self.onRequestControllerBindingCapture = onRequestControllerBindingCapture
+        self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
+        self.onCancelControllerCapture = onCancelControllerCapture
+        self.onRestartOnboarding = onRestartOnboarding
+        self.isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
+        self.leftStickDeadzone = settings.leftStickDeadzone
+        self.rightStickDeadzone = settings.rightStickDeadzone
         self.mouseSensitivity = settings.mouseSensitivity
         self.mouseSmoothing = settings.mouseSmoothing
-		self.keyboardMovementStyle = settings.keyboardMovementStyle
+        self.keyboardMovementStyle = settings.keyboardMovementStyle
         
         settings.objectWillChange
             .sink { [weak self] _ in
@@ -80,11 +80,11 @@ final class SettingsViewModel: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
-	}
-
-	func restartOnboarding() {
-		onRestartOnboarding()
-	}
+    }
+    
+    func restartOnboarding() {
+        onRestartOnboarding()
+    }
     
     func resetDefaults() {
         // Reset all settings except open on startup
@@ -92,9 +92,9 @@ final class SettingsViewModel: ObservableObject {
         settings.controllerToggleBinding = .default
         settings.controllerActionBindings = .default
         settings.keyboardLayout = .QWERTY
-        settings.leftStickInputType = .overlayMovement
-        settings.rightStickInputType = .mouseMovement
-        settings.padInputType = .overlayMovement
+        settings.leftStickInputType = [.overlayMovement]
+        settings.rightStickInputType = [.mouseMovement]
+        settings.padInputType = [.overlayMovement]
         settings.shiftShortcutCyclesToCapsLock = true
         settings.dismissWithGuideButton = true
         settings.keyboardMovementStyle = .limited
@@ -112,42 +112,42 @@ final class SettingsViewModel: ObservableObject {
         mouseSensitivity = settings.mouseSensitivity
         mouseSmoothing = settings.mouseSmoothing
     }
-
-	deinit {
-		if let keyboardKeyDownMonitor {
-			NSEvent.removeMonitor(keyboardKeyDownMonitor)
-		}
-		if let keyboardFlagsMonitor {
-			NSEvent.removeMonitor(keyboardFlagsMonitor)
-		}
-	}
-
-	// Computed helpers
-	var keyboardLiveRecordingText: String {
-		if let keyboardPreviewShortcut {
-			return keyboardPreviewShortcut.displayText
-		}
-
-		let activeModifiers = keyboardPressedModifiers.intersection([.control, .option, .command, .shift])
-		if !activeModifiers.isEmpty {
-			return modifierDisplayText(from: activeModifiers)
-		}
-
-		return waitingKeyboardText
-	}
-
-	var movementDescription: String {
-		if settings.keyboardMovementStyle == KeyboardMovementMode.limited {
-			return "In this style, the keyboard navigates like a d-pad."
-		} else if settings.keyboardMovementStyle == KeyboardMovementMode.full {
-			return "In this style, the keyboard nvaigates more freely, with diagonal movements."
-		}
-
-		return "This style doesn't exist"
-	}
-
-	// MARK: - Keyboard hotkey recording
-
+    
+    deinit {
+        if let keyboardKeyDownMonitor {
+            NSEvent.removeMonitor(keyboardKeyDownMonitor)
+        }
+        if let keyboardFlagsMonitor {
+            NSEvent.removeMonitor(keyboardFlagsMonitor)
+        }
+    }
+    
+    // Computed helpers
+    var keyboardLiveRecordingText: String {
+        if let keyboardPreviewShortcut {
+            return keyboardPreviewShortcut.displayText
+        }
+        
+        let activeModifiers = keyboardPressedModifiers.intersection([.control, .option, .command, .shift])
+        if !activeModifiers.isEmpty {
+            return modifierDisplayText(from: activeModifiers)
+        }
+        
+        return waitingKeyboardText
+    }
+    
+    var movementDescription: String {
+        if settings.keyboardMovementStyle == KeyboardMovementMode.limited {
+            return "In this style, the keyboard navigates like a d-pad."
+        } else if settings.keyboardMovementStyle == KeyboardMovementMode.full {
+            return "In this style, the keyboard nvaigates more freely, with diagonal movements."
+        }
+        
+        return "This style doesn't exist"
+    }
+    
+    // MARK: - Keyboard hotkey recording
+    
     func beginKeyboardHotkeyRecording() {
         if !isRecordingKeyboardHotkey {
             if isRecordingControllerHotkey { endControllerToggleRecording() }
@@ -156,7 +156,7 @@ final class SettingsViewModel: ObservableObject {
             keyboardValidationMessage = nil
             keyboardPreviewShortcut = nil
             keyboardPressedModifiers = []
-
+            
             keyboardFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
                 guard let self = self, self.isRecordingKeyboardHotkey else { return event }
                 self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -164,7 +164,7 @@ final class SettingsViewModel: ObservableObject {
                 self.keyboardValidationMessage = nil
                 return nil
             }
-
+            
             keyboardKeyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self, self.isRecordingKeyboardHotkey else { return event }
                 if event.keyCode == 53 {
@@ -187,27 +187,27 @@ final class SettingsViewModel: ObservableObject {
             }
         }
     }
-
-	func endKeyboardHotkeyRecording() {
+    
+    func endKeyboardHotkeyRecording() {
         DispatchQueue.main.async {
             self.isRecordingKeyboardHotkey = false
             self.keyboardPreviewShortcut = nil
             self.keyboardPressedModifiers = []
         }
-
-		if let keyboardKeyDownMonitor {
-			NSEvent.removeMonitor(keyboardKeyDownMonitor)
+        
+        if let keyboardKeyDownMonitor {
+            NSEvent.removeMonitor(keyboardKeyDownMonitor)
             self.keyboardKeyDownMonitor = nil
-		}
-
-		if let keyboardFlagsMonitor {
-			NSEvent.removeMonitor(keyboardFlagsMonitor)
+        }
+        
+        if let keyboardFlagsMonitor {
+            NSEvent.removeMonitor(keyboardFlagsMonitor)
             self.keyboardFlagsMonitor = nil
-		}
-	}
-
-	// MARK: - Controller toggle recording
-
+        }
+    }
+    
+    // MARK: - Controller toggle recording
+    
     func beginControllerToggleRecording() {
         if !isRecordingControllerHotkey {
             if isRecordingKeyboardHotkey { endKeyboardHotkeyRecording() }
@@ -222,7 +222,7 @@ final class SettingsViewModel: ObservableObject {
             }
         }
     }
-
+    
     func endControllerToggleRecording(cancelCapture: Bool = true) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -233,39 +233,39 @@ final class SettingsViewModel: ObservableObject {
             }
         }
     }
-
-	// MARK: - Controller action picker
-
-	func beginControllerActionPicker(for action: ControllerActionBinding) {
-		endControllerToggleRecording()
-		endKeyboardHotkeyRecording()
-
-		activeControllerActionPicker = action
-		armControllerActionButtonCapture(for: action)
-	}
-
-	private func armControllerActionButtonCapture(for action: ControllerActionBinding) {
-		guard activeControllerActionPicker == action else { return }
-
-		onRequestControllerActionButtonCapture { [weak self] button in
-			DispatchQueue.main.async {
-				guard let self = self else { return }
-				guard self.activeControllerActionPicker == action else { return }
-				self.setControllerActionButton(button, for: action)
-				self.armControllerActionButtonCapture(for: action)
-			}
-		}
-	}
-
-	func endControllerActionPicker() {
-		let wasActive = activeControllerActionPicker != nil
-		activeControllerActionPicker = nil
-
-		if wasActive {
-			onCancelControllerCapture()
-		}
-	}
-
+    
+    // MARK: - Controller action picker
+    
+    func beginControllerActionPicker(for action: ControllerActionBinding) {
+        endControllerToggleRecording()
+        endKeyboardHotkeyRecording()
+        
+        activeControllerActionPicker = action
+        armControllerActionButtonCapture(for: action)
+    }
+    
+    private func armControllerActionButtonCapture(for action: ControllerActionBinding) {
+        guard activeControllerActionPicker == action else { return }
+        
+        onRequestControllerActionButtonCapture { [weak self] button in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard self.activeControllerActionPicker == action else { return }
+                self.setControllerActionButton(button, for: action)
+                self.armControllerActionButtonCapture(for: action)
+            }
+        }
+    }
+    
+    func endControllerActionPicker() {
+        let wasActive = activeControllerActionPicker != nil
+        activeControllerActionPicker = nil
+        
+        if wasActive {
+            onCancelControllerCapture()
+        }
+    }
+    
     func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
         DispatchQueue.main.async {
             var updated = self.settings.controllerActionBindings
@@ -275,28 +275,87 @@ final class SettingsViewModel: ObservableObject {
             self.objectWillChange.send()
         }
     }
-
-	// MARK: - Utilities
-
-	func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
-		var parts: [String] = []
-		if modifiers.contains(.control) { parts.append("Control") }
-		if modifiers.contains(.option) { parts.append("Option") }
-		if modifiers.contains(.command) { parts.append("Command") }
-		if modifiers.contains(.shift) { parts.append("Shift") }
-		return parts.joined(separator: " + ")
-	}
-
-	func orderedButtons(from pressedButtons: Set<ControllerAssignableButton>) -> [ControllerAssignableButton] {
-		ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
-	}
-
-	func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
-		if detectedController.guideButtons.isEmpty {
-			return [.menu]
-		}
-		return detectedController.guideButtons
-	}
+    
+    // MARK: - Utilities
+    func setAxisInputType(_ inputType: AxisInputType, fromKeyboard: Bool, for axisInput: AxisInput) {
+        // Get current input types for the axis
+        let currentInputTypes: [AxisInputType]
+        switch axisInput {
+        case .leftStick:
+            currentInputTypes = settings.leftStickInputType
+        case .rightStick:
+            currentInputTypes = settings.rightStickInputType
+        case .pad:
+            currentInputTypes = settings.padInputType
+        }
+        
+        var updated = currentInputTypes
+        
+        if inputType == .none {
+            // Removal case
+            if fromKeyboard {
+                // Remove both overlayMovement and arrowKeys (keyboard input types)
+                updated.removeAll { $0 == .overlayMovement || $0 == .arrowKeys }
+            } else {
+                // Remove only mouseMovement
+                updated.removeAll { $0 == .mouseMovement }
+            }
+        } else {
+            // Addition case - enforce mutual exclusivity for keyboard types
+            if inputType == .overlayMovement {
+                // Remove arrowKeys if adding overlayMovement
+                updated.removeAll { $0 == .arrowKeys }
+                // Add overlayMovement if not already present
+                if !updated.contains(.overlayMovement) {
+                    updated.append(.overlayMovement)
+                }
+            } else if inputType == .arrowKeys {
+                // Remove overlayMovement if adding arrowKeys
+                updated.removeAll { $0 == .overlayMovement }
+                // Add arrowKeys if not already present
+                if !updated.contains(.arrowKeys) {
+                    updated.append(.arrowKeys)
+                }
+            } else if inputType == .mouseMovement {
+                // mouseMovement can be added independently
+                if !updated.contains(.mouseMovement) {
+                    updated.append(.mouseMovement)
+                }
+            }
+        }
+        
+        // Update the appropriate settings property
+        switch axisInput {
+        case .leftStick:
+            settings.leftStickInputType = updated
+        case .rightStick:
+            settings.rightStickInputType = updated
+        case .pad:
+            settings.padInputType = updated
+        }
+        
+        self.objectWillChange.send()
+    }
+    
+    func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
+        var parts: [String] = []
+        if modifiers.contains(.control) { parts.append("Control") }
+        if modifiers.contains(.option) { parts.append("Option") }
+        if modifiers.contains(.command) { parts.append("Command") }
+        if modifiers.contains(.shift) { parts.append("Shift") }
+        return parts.joined(separator: " + ")
+    }
+    
+    func orderedButtons(from pressedButtons: Set<ControllerAssignableButton>) -> [ControllerAssignableButton] {
+        ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
+    }
+    
+    func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
+        if detectedController.guideButtons.isEmpty {
+            return [.menu]
+        }
+        return detectedController.guideButtons
+    }
     
     func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {
         let selectedButton = settings.controllerActionBindings.button(for: action)
@@ -713,13 +772,13 @@ final class SettingsViewModel: ObservableObject {
                         genericGuideGlyph(size: 20)
                         Text("Guide")
                     }
-
+                    
                     if !buttons.isEmpty {
                         Text("+")
                             .foregroundStyle(.secondary)
                     }
                 }
-
+                
                 ForEach(Array(buttons.enumerated()), id: \.element) {
                     index,
                     button in
@@ -727,7 +786,7 @@ final class SettingsViewModel: ObservableObject {
                         Text("+")
                             .foregroundStyle(.secondary)
                     }
-
+                    
                     HStack(spacing: 6) {
                         ControllerGlyphBadge(
                             assetName: button.glyphAssetName(

@@ -242,6 +242,8 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.rightStickDeadzone = settings.rightStickDeadzone
         controllerInputManager.mouseSensitivity = settings.mouseSensitivity
         controllerInputManager.mouseSmoothingAlpha = settings.mouseSmoothing
+        controllerInputManager.enableMouseInKeyboard = settings.enableMouseInKeyboard
+        refreshControllerOverlayVisibility()
 
         settings.$keyboardHotkey
             .sink { [weak self] value in
@@ -314,6 +316,20 @@ final class AppCoordinator: ObservableObject {
                 self?.controllerInputManager.mouseSmoothingAlpha = value
             }
             .store(in: &cancellables)
+
+        settings.$enableMouseInKeyboard
+            .sink { [weak self] value in
+                self?.controllerInputManager.enableMouseInKeyboard = value
+            }
+            .store(in: &cancellables)
+
+        settings.$inMouseMode
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    self?.refreshControllerOverlayVisibility()
+                }
+            }
+            .store(in: &cancellables)
         
         configureOpenAppOnStartup()
 
@@ -360,6 +376,7 @@ final class AppCoordinator: ObservableObject {
             overlayController.hide()
             isOverlayVisible = false
             controllerInputManager.isOverlayVisible = false
+            refreshControllerOverlayVisibility()
             updateActivationPolicyForCurrentUIState()
             return
         }
@@ -370,6 +387,7 @@ final class AppCoordinator: ObservableObject {
             guard let self else { return }
             self.isOverlayVisible = self.overlayController.show()
             self.controllerInputManager.isOverlayVisible = self.isOverlayVisible
+            self.refreshControllerOverlayVisibility()
             // Ensure our app doesn't steal focus from the target app
             NSApp.deactivate()
         }
@@ -380,7 +398,13 @@ final class AppCoordinator: ObservableObject {
         overlayController.hide()
         isOverlayVisible = false
         controllerInputManager.isOverlayVisible = false
+        refreshControllerOverlayVisibility()
         updateActivationPolicyForCurrentUIState()
+    }
+
+    private func refreshControllerOverlayVisibility() {
+        controllerInputManager.isKeyboardOverlayVisible = overlayController.isKeyboardVisible
+        controllerInputManager.isMouseOverlayVisible = overlayController.isMouseVisible
     }
 
     private func presentOnboardingIfNeededOnLaunch() {

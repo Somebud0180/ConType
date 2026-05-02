@@ -7,22 +7,22 @@ struct SettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
     private var settings: AppSettings { viewModel.settings }
     private var joystick: JoystickInputModel { viewModel.joystick }
-
+    
     let version: String =
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-        as? String ?? "1.0"
+    Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+    as? String ?? "1.0"
     let build: String =
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        ?? "1"
-
+    Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+    ?? "1"
+    
     // New state for confirmation dialogs
     @State private var showResetHotkeysDialog = false
     @State private var showResetDefaultsDialog = false
-
+    
     // Intermediate state for keyboard movement style picker
     @State private var keyboardMovementStyleSelection: KeyboardMovementMode =
         .limited
-
+    
     var body: some View {
         NavigationStack {
             TabView {
@@ -33,17 +33,17 @@ struct SettingsView: View {
                                 .detectedController
                             {
                                 let guideButtons =
-                                    viewModel.displayedGuideButtons(
-                                        for: detectedController
-                                    )
-
+                                viewModel.displayedGuideButtons(
+                                    for: detectedController
+                                )
+                                
                                 HStack {
                                     Text("Detected Controller:")
                                     Spacer()
                                     Text(detectedController.name)
                                         .multilineTextAlignment(.trailing)
                                 }
-
+                                
                                 HStack {
                                     Text("Your controller's guide ")
                                     Image(
@@ -53,9 +53,9 @@ struct SettingsView: View {
                                     Text(
                                         " \(guideButtons.count == 1 ? "button" : "buttons"):"
                                     )
-
+                                    
                                     Spacer()
-
+                                    
                                     HStack(spacing: 6) {
                                         ForEach(
                                             Array(guideButtons.enumerated()),
@@ -70,7 +70,7 @@ struct SettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-
+                        
                         Section("General") {
                             LabeledContent("Keyboard Shortcut") {
                                 viewModel.keyboardShortcutButton
@@ -87,6 +87,16 @@ struct SettingsView: View {
                                     .foregroundStyle(.red)
                             }
                             
+                            Toggle(
+                                "Open app on startup",
+                                isOn: Binding(
+                                    get: { viewModel.settings.openAppOnStartup },
+                                    set: { viewModel.settings.openAppOnStartup = $0 }
+                                )
+                            )
+                        }
+                        
+                        Section("Overlay") {
                             Picker("Keyboard Size", selection: Binding(
                                 get: { viewModel.settings.windowSize },
                                 set: { viewModel.settings.windowSize = $0 }
@@ -97,14 +107,37 @@ struct SettingsView: View {
                             }
                             
                             Toggle(
-                                "Open app on startup",
+                                "Dismiss overlay with guide button",
                                 isOn: Binding(
-                                    get: { viewModel.settings.openAppOnStartup },
-                                    set: { viewModel.settings.openAppOnStartup = $0 }
+                                    get: {
+                                        viewModel.settings
+                                            .dismissWithGuideButton
+                                    },
+                                    set: {
+                                        viewModel.settings
+                                            .dismissWithGuideButton = $0
+                                    }
                                 )
                             )
+                            
+                            Toggle(
+                                "Enables mouse controls in keyboard overlay",
+                                isOn: Binding(
+                                    get: { viewModel.settings.enableMouseInKeyboard },
+                                    set: { viewModel.settings.enableMouseInKeyboard = $0 }
+                                )
+                            )
+                            
+                            Toggle(
+                                "Prioritize mouse shortcuts while in keyboard overlay",
+                                isOn: Binding(
+                                    get: { viewModel.settings.prioritizeMouseOverKeyboard },
+                                    set: { viewModel.settings.prioritizeMouseOverKeyboard = $0 }
+                                )
+                            )
+                            .disabled(!viewModel.settings.enableMouseInKeyboard)
                         }
-
+                        
                         Section(
                             header: Text("Others"),
                             footer:
@@ -140,11 +173,11 @@ struct SettingsView: View {
                                 Spacer()
                                 Text(
                                     viewModel.isAccessibilityTrusted
-                                        ? "Granted" : "Not Granted"
+                                    ? "Granted" : "Not Granted"
                                 )
                                 .foregroundStyle(
                                     viewModel.isAccessibilityTrusted
-                                        ? .green : .red
+                                    ? .green : .red
                                 )
                             }
                             HStack {
@@ -162,9 +195,43 @@ struct SettingsView: View {
                     }
                     .formStyle(.grouped)
                 }
-
+                
                 Tab("Input", systemImage: "gamecontroller") {
                     Form {
+                        Section("Joystick Deadzone") {
+                            viewModel.stickDeadzoneConfig
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
+                
+                Tab("Keyboard", systemImage: "keyboard") {
+                    Form {
+                        Section("Keyboard Layout") {
+                            Picker(
+                                "Keyboard Layout",
+                                selection: Binding(
+                                    get: { viewModel.settings.keyboardLayout },
+                                    set: {
+                                        viewModel.settings.keyboardLayout = $0
+                                    }
+                                )
+                            ) {
+                                ForEach(KeyboardLayout.all) { layout in
+                                    Text(layout.name).tag(layout)
+                                }
+                            }
+                            
+                            KeyboardOverlayView(
+                                viewModel: KeyboardOverlayViewModel(
+                                    settings: settings
+                                ),
+                                onKeyPressed: { _, _ in }
+                            )
+                            .frame(width: 500, height: 210)
+                            .disabled(true)
+                        }
+                        
                         Section("Controller Configuration") {
                             HStack {
                                 SettingsViewModel.ControllerGlyphBadge(
@@ -172,76 +239,93 @@ struct SettingsView: View {
                                     fallbackText: "LS",
                                     size: 24
                                 )
-
+                                
                                 Picker(
                                     "Left Stick",
                                     selection: Binding(
                                         get: {
-                                            viewModel.settings
-                                                .leftStickInputType
+                                            // Get the active keyboard type from the array
+                                            if viewModel.settings.leftStickInputType.contains(.overlayMovement) {
+                                                return .overlayMovement
+                                            } else if viewModel.settings.leftStickInputType.contains(.arrowKeys) {
+                                                return .arrowKeys
+                                            } else {
+                                                return .none
+                                            }
                                         },
                                         set: {
-                                            viewModel.settings
-                                                .leftStickInputType = $0
+                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .leftStick)
                                         }
                                     )
                                 ) {
-                                    ForEach(AxisInputType.allCases) { type in
+                                    ForEach(AxisInputType.keyboardOptions) { type in
                                         Text(type.title).tag(type)
                                     }
                                 }
                             }
-
+                            
                             HStack {
                                 SettingsViewModel.ControllerGlyphBadge(
                                     assetName: "RS",
                                     fallbackText: "RS",
                                     size: 24
                                 )
-
+                                
                                 Picker(
                                     "Right Stick",
                                     selection: Binding(
                                         get: {
-                                            viewModel.settings
-                                                .rightStickInputType
+                                            // Get the active keyboard type from the array
+                                            if viewModel.settings.rightStickInputType.contains(.overlayMovement) {
+                                                return .overlayMovement
+                                            } else if viewModel.settings.rightStickInputType.contains(.arrowKeys) {
+                                                return .arrowKeys
+                                            } else {
+                                                return .none
+                                            }
                                         },
                                         set: {
-                                            viewModel.settings
-                                                .rightStickInputType = $0
+                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .rightStick)
                                         }
                                     )
                                 ) {
-                                    ForEach(AxisInputType.allCases) { type in
+                                    ForEach(AxisInputType.keyboardOptions) { type in
                                         Text(type.title).tag(type)
                                     }
                                 }
                             }
-
+                            
                             HStack {
                                 SettingsViewModel.ControllerGlyphBadge(
                                     assetName: "DPad",
                                     fallbackText: "DPad",
                                     size: 24
                                 )
-
+                                
                                 Picker(
                                     "D-pad",
                                     selection: Binding(
                                         get: {
-                                            viewModel.settings.padInputType
+                                            // Get the active keyboard type from the array
+                                            if viewModel.settings.padInputType.contains(.overlayMovement) {
+                                                return .overlayMovement
+                                            } else if viewModel.settings.padInputType.contains(.arrowKeys) {
+                                                return .arrowKeys
+                                            } else {
+                                                return .none
+                                            }
                                         },
                                         set: {
-                                            viewModel.settings.padInputType = $0
+                                            viewModel.setAxisInputType($0, fromKeyboard: true, for: .pad)
                                         }
                                     )
                                 ) {
-                                    ForEach(AxisInputType.allCases) { type in
+                                    ForEach(AxisInputType.keyboardOptions) { type in
                                         Text(type.title).tag(type)
                                     }
                                 }
                             }
-
+                            
                             Toggle(
                                 "Shift hotkey cycles to Caps Lock",
                                 isOn: Binding(
@@ -255,20 +339,7 @@ struct SettingsView: View {
                                     }
                                 )
                             )
-                            Toggle(
-                                "Dismiss with guide button",
-                                isOn: Binding(
-                                    get: {
-                                        viewModel.settings
-                                            .dismissWithGuideButton
-                                    },
-                                    set: {
-                                        viewModel.settings
-                                            .dismissWithGuideButton = $0
-                                    }
-                                )
-                            )
-
+                            
                             VStack(alignment: .leading) {
                                 Picker(
                                     "Keyboard movement style",
@@ -292,48 +363,14 @@ struct SettingsView: View {
                                 }
                                 .pickerStyle(.segmented)
                                 .listRowSeparator(.hidden)
-
+                                
                                 Text(viewModel.movementDescription)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .animation(.easeInOut)
                             }
                         }
-
-                        Section("Joystick Deadzone") {
-                            viewModel.stickDeadzoneConfig
-                        }
-                    }
-                    .formStyle(.grouped)
-                }
-
-                Tab("Keyboard", systemImage: "keyboard") {
-                    Form {
-                        Section("Keyboard Layout") {
-                            Picker(
-                                "Keyboard Layout",
-                                selection: Binding(
-                                    get: { viewModel.settings.keyboardLayout },
-                                    set: {
-                                        viewModel.settings.keyboardLayout = $0
-                                    }
-                                )
-                            ) {
-                                ForEach(KeyboardLayout.all) { layout in
-                                    Text(layout.name).tag(layout)
-                                }
-                            }
-
-                            KeyboardOverlayView(
-                                viewModel: KeyboardOverlayViewModel(
-                                    settings: settings
-                                ),
-                                onKeyPressed: { _, _ in }
-                            )
-                            .frame(width: 500, height: 210)
-                            .disabled(true)
-                        }
-
+                        
                         Section("Keyboard Actions") {
                             ForEach(ControllerActionBinding.keyboardActions) {
                                 action in
@@ -347,13 +384,90 @@ struct SettingsView: View {
                     }
                     .formStyle(.grouped)
                 }
-
+                
                 Tab("Mouse", systemImage: "computermouse") {
                     Form {
+                        Section("Controller Configuration") {
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "LS",
+                                    fallbackText: "LS",
+                                    size: 24
+                                )
+                                
+                                Picker(
+                                    "Left Stick",
+                                    selection: Binding(
+                                        get: {
+                                            // Get the currently enabled mouse type
+                                            viewModel.settings.leftStickInputType.contains(.mouseMovement) ? .mouseMovement : .none
+                                        },
+                                        set: {
+                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .leftStick)
+                                        }
+                                    )
+                                ) {
+                                    ForEach(AxisInputType.mouseOptions) { type in
+                                        Text(type.title).tag(type)
+                                    }
+                                }
+                            }
+                            
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "RS",
+                                    fallbackText: "RS",
+                                    size: 24
+                                )
+                                
+                                Picker(
+                                    "Right Stick",
+                                    selection: Binding(
+                                        get: {
+                                            // Get the currently enabled mouse type
+                                            viewModel.settings.rightStickInputType.contains(.mouseMovement) ? .mouseMovement : .none
+                                        },
+                                        set: {
+                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .rightStick)
+                                        }
+                                    )
+                                ) {
+                                    ForEach(AxisInputType.mouseOptions) { type in
+                                        Text(type.title).tag(type)
+                                    }
+                                }
+                            }
+                            
+                            HStack {
+                                SettingsViewModel.ControllerGlyphBadge(
+                                    assetName: "DPad",
+                                    fallbackText: "DPad",
+                                    size: 24
+                                )
+                                
+                                Picker(
+                                    "D-pad",
+                                    selection: Binding(
+                                        get: {
+                                            // Get the currently enabled mouse type
+                                            viewModel.settings.padInputType.contains(.mouseMovement) ? .mouseMovement : .none
+                                        },
+                                        set: {
+                                            viewModel.setAxisInputType($0, fromKeyboard: false, for: .pad)
+                                        }
+                                    )
+                                ) {
+                                    ForEach(AxisInputType.mouseOptions) { type in
+                                        Text(type.title).tag(type)
+                                    }
+                                }
+                            }
+                        }
+                        
                         Section("Mouse Configuration") {
                             viewModel.mouseConfig
                         }
-
+                        
                         Section("Mouse Actions") {
                             ForEach(ControllerActionBinding.mouseActions) {
                                 action in
@@ -423,6 +537,6 @@ struct SettingsView: View {
         onCancelControllerCapture: {},
         onRestartOnboarding: {}
     )
-
+    
     SettingsView(viewModel: vm)
 }

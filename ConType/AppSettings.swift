@@ -2,11 +2,31 @@ import AppKit
 import Combine
 import Foundation
 
-enum AxisInputType: String, CaseIterable, Identifiable {
+enum AxisInput: String, Identifiable {
+    case leftStick
+    case rightStick
+    case pad
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .leftStick: return "Left Stick"
+        case .rightStick: return "Right Stick"
+        case .pad: return "D-pad"
+        }
+    }
+}
+
+enum AxisInputType: String, CaseIterable, Identifiable, Hashable {
     case none
     case overlayMovement
     case mouseMovement
     case arrowKeys
+    
+    static let keyboardOptions: [AxisInputType] = [.none, .overlayMovement, .arrowKeys]
+    
+    static let mouseOptions: [AxisInputType] = [.none, .mouseMovement]
     
     var id: String { rawValue }
     
@@ -405,10 +425,12 @@ final class AppSettings: ObservableObject {
     @Published var controllerActionBindings: ControllerActionBindings = .default
     
     // Preferences
+    @Published var enableMouseInKeyboard: Bool = true
+    @Published var prioritizeMouseOverKeyboard: Bool = true
     @Published var keyboardLayout: KeyboardLayout = .QWERTY
-    @Published var leftStickInputType: AxisInputType = .overlayMovement
-    @Published var rightStickInputType: AxisInputType = .mouseMovement
-    @Published var padInputType: AxisInputType = .overlayMovement
+    @Published var leftStickInputType: [AxisInputType] = [.overlayMovement]
+    @Published var rightStickInputType: [AxisInputType] = [.mouseMovement]
+    @Published var padInputType: [AxisInputType] = [.overlayMovement]
     @Published var shiftShortcutCyclesToCapsLock = true
     @Published var dismissWithGuideButton = true
     @Published var openAppOnStartup = false
@@ -443,6 +465,12 @@ final class AppSettings: ObservableObject {
             .sink { [weak self] _ in self?.save() }
             .store(in: &cancellables)
         $controllerActionBindings
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $enableMouseInKeyboard
+            .sink { [weak self] _ in self?.save() }
+            .store(in: &cancellables)
+        $prioritizeMouseOverKeyboard
             .sink { [weak self] _ in self?.save() }
             .store(in: &cancellables)
         $keyboardLayout
@@ -507,6 +535,8 @@ final class AppSettings: ObservableObject {
             keyboardHotkey: keyboardHotkey,
             controllerToggleBinding: controllerToggleBinding,
             controllerActionBindings: controllerActionBindings,
+            enableMouseInKeyboard: enableMouseInKeyboard,
+            prioritizeMouseOverKeyboard: prioritizeMouseOverKeyboard,
             keyboardLayoutName: keyboardLayout.name,
             leftStickInputType: leftStickInputType,
             rightStickInputType: rightStickInputType,
@@ -542,10 +572,14 @@ final class AppSettings: ObservableObject {
             self.keyboardHotkey = codable.keyboardHotkey
             self.controllerToggleBinding = codable.controllerToggleBinding
             self.controllerActionBindings = codable.controllerActionBindings
+            self.enableMouseInKeyboard = codable.enableMouseInKeyboard
+            self.prioritizeMouseOverKeyboard = codable.prioritizeMouseOverKeyboard
+            
             // Restore layout by name
             if let layout = KeyboardLayout.all.first(where: { $0.name == codable.keyboardLayoutName }) {
                 self.keyboardLayout = layout
             }
+            
             self.leftStickInputType = codable.leftStickInputType
             self.rightStickInputType = codable.rightStickInputType
             self.padInputType = codable.padInputType
@@ -653,10 +687,12 @@ private struct AppSettingsCodable: Codable {
     var keyboardHotkey: KeyboardHotkeyManager.Shortcut
     var controllerToggleBinding: ControllerToggleBinding
     var controllerActionBindings: ControllerActionBindings
+    var enableMouseInKeyboard: Bool
+    var prioritizeMouseOverKeyboard: Bool
     var keyboardLayoutName: String
-    var leftStickInputType: AxisInputType
-    var rightStickInputType: AxisInputType
-    var padInputType: AxisInputType
+    var leftStickInputType: [AxisInputType]
+    var rightStickInputType: [AxisInputType]
+    var padInputType: [AxisInputType]
     var shiftShortcutCyclesToCapsLock: Bool
     var dismissWithGuideButton: Bool
     var openAppOnStartup: Bool

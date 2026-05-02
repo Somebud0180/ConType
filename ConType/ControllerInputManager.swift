@@ -68,17 +68,45 @@ final class ControllerInputManager: NSObject {
     var isToggleEnabled = true
     var toggleBinding: ControllerToggleBinding = .default
     var actionBindings: ControllerActionBindings = .default
-    
-    var leftStickInputType: AxisInputType = .overlayMovement {
-        didSet { rebindSticksIfNeeded() }
+
+    var enableMouseInKeyboard = true {
+        didSet {
+            guard enableMouseInKeyboard != oldValue else { return }
+            resetAnalogStateForContextChange()
+        }
+    }
+    var isKeyboardOverlayVisible = false {
+        didSet {
+            guard isKeyboardOverlayVisible != oldValue else { return }
+            resetAnalogStateForContextChange()
+        }
+    }
+    var isMouseOverlayVisible = false {
+        didSet {
+            guard isMouseOverlayVisible != oldValue else { return }
+            resetAnalogStateForContextChange()
+        }
     }
     
-    var rightStickInputType: AxisInputType = .mouseMovement {
-        didSet { rebindSticksIfNeeded() }
+    var leftStickInputType: [AxisInputType] = [.overlayMovement] {
+        didSet {
+            rebindSticksIfNeeded()
+            resetAnalogStateForContextChange()
+        }
     }
     
-    var padInputType: AxisInputType = .overlayMovement {
-        didSet { rebindSticksIfNeeded() }
+    var rightStickInputType: [AxisInputType] = [.mouseMovement] {
+        didSet {
+            rebindSticksIfNeeded()
+            resetAnalogStateForContextChange()
+        }
+    }
+    
+    var padInputType: [AxisInputType] = [.overlayMovement] {
+        didSet {
+            rebindSticksIfNeeded()
+            resetAnalogStateForContextChange()
+        }
     }
     
     var dismissWithGuideButton = true
@@ -119,6 +147,7 @@ final class ControllerInputManager: NSObject {
     // Internal state for analog handling
     private var filteredStick = CGVector(dx: 0, dy: 0)
     private var lastAnalogDirection: OverlayMoveDirection? = nil
+    private var lastAnalogInputType: AxisInputType? = nil
     private var analogTimer: Timer? = nil
     private var lastAnalogUpdate = Date()
     
@@ -388,21 +417,21 @@ final class ControllerInputManager: NSObject {
 //    }
     
     // MARK: - Analog Stick Handling
-    private func bindAnalogStick(_ stick: GCControllerDirectionPad, from source: MovementMode, inputType: AxisInputType) {
+    private func bindAnalogStick(_ stick: GCControllerDirectionPad, from source: MovementMode, inputType: [AxisInputType]) {
         stick.valueChangedHandler = nil // Clear any existing handler to avoid conflicts when re-binding
-        
-        if inputType == .none {
+
+        let normalizedInputTypes = normalizedAxisInputTypes(from: inputType)
+        if normalizedInputTypes.isEmpty {
             return
         }
-        
+
         stick.valueChangedHandler = { [weak self] _, xValue, yValue in
             guard let self = self else { return }
-            let keyboardMovementStyle = inputType == .mouseMovement ? .mouse : self.keyboardMovementStyle
-            self.handleAnalogStick(x: xValue, y: yValue, keyboardMovementStyle: keyboardMovementStyle, from: source, for: inputType)
+            self.handleAnalogStick(x: xValue, y: yValue, from: source, inputTypes: normalizedInputTypes)
         }
     }
-    
-    private func handleAnalogStick(x: Float, y: Float, keyboardMovementStyle: KeyboardMovementMode, from source: MovementMode, for inputType: AxisInputType) {
+
+    private func handleAnalogStick(x: Float, y: Float, from source: MovementMode, inputTypes: [AxisInputType]) {
         // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
@@ -429,6 +458,21 @@ final class ControllerInputManager: NSObject {
 
         // let filteredMagnitude = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
 
+        guard let activeInputType = resolvedAxisInputType(from: inputTypes) else {
+            resetAnalogStateForContextChange()
+            return
+        }
+
+        if activeInputType != lastAnalogInputType {
+            clearAnalogState(for: lastAnalogInputType)
+            lastAnalogInputType = activeInputType
+        }
+
+        let keyboardMovementStyle: KeyboardMovementMode = activeInputType == .mouseMovement ? .mouse : self.keyboardMovementStyle
+        if keyboardMovementStyle != .mouse {
+            stopAnalogTimerIfNeeded()
+        }
+
         switch keyboardMovementStyle {
         case .mouse:
             // Start or stop analog timer depending on magnitude vs deadZone
@@ -443,9 +487,9 @@ final class ControllerInputManager: NSObject {
             // But we still may want to clear any discrete held direction state:
             if let last = lastAnalogDirection {
                 // release the previous discrete direction if any
-                setDirectionalInput(last, pressed: false, for: inputType)
+                setDirectionalInput(last, pressed: false, for: activeInputType)
                 lastAnalogDirection = nil
-                stopMoveRepeat(clearDirection: true, for: inputType)
+                stopMoveRepeat(clearDirection: true, for: activeInputType)
             }
 
         case .limited, .full:
@@ -453,10 +497,10 @@ final class ControllerInputManager: NSObject {
             if rawMagnitude <= joystickDeadzone {
                 // release any held discrete direction
                 if let last = lastAnalogDirection {
-                    setDirectionalInput(last, pressed: false, for: inputType)
+                    setDirectionalInput(last, pressed: false, for: activeInputType)
                     lastAnalogDirection = nil
                 }
-                stopMoveRepeat(clearDirection: true, for: inputType)
+                stopMoveRepeat(clearDirection: true, for: activeInputType)
                 filteredStick = CGVector(dx: 0, dy: 0)
                 return
             }
@@ -467,12 +511,12 @@ final class ControllerInputManager: NSObject {
                 if now.timeIntervalSince(lastDirectionChangeDate) >= directionDebounceInterval {
                     // Release previous, press new
                     if let last = lastAnalogDirection {
-                        setDirectionalInput(last, pressed: false, for: inputType)
+                        setDirectionalInput(last, pressed: false, for: activeInputType)
                     }
                     lastAnalogDirection = newDir
                     lastDirectionChangeDate = now
                     updateRepeatTuning(for: source)
-                    setDirectionalInput(newDir, pressed: true, for: inputType)
+                    setDirectionalInput(newDir, pressed: true, for: activeInputType)
                 }
             }
         }
@@ -527,6 +571,11 @@ final class ControllerInputManager: NSObject {
     }
     
     private func analogTimerFired(from source: MovementMode) {
+        guard resolvedAxisInputType(from: inputTypes(for: source)) == .mouseMovement else {
+            stopAnalogTimerIfNeeded()
+            return
+        }
+
         // Get active deadzone
         let joystickDeadzone = switch source {
         case .dpad: CGFloat(0)
@@ -708,6 +757,77 @@ final class ControllerInputManager: NSObject {
                 arrowDirectionPressCounts[direction] = currentCount - 1
             }
         }
+    }
+
+    private func normalizedAxisInputTypes(from inputTypes: [AxisInputType]) -> [AxisInputType] {
+        var seen = Set<AxisInputType>()
+        return inputTypes
+            .filter { $0 != .none }
+            .filter { seen.insert($0).inserted }
+    }
+
+    private func resolvedAxisInputType(from inputTypes: [AxisInputType]) -> AxisInputType? {
+        let normalized = normalizedAxisInputTypes(from: inputTypes)
+        guard !normalized.isEmpty else { return nil }
+
+        let hasMouse = normalized.contains(.mouseMovement)
+        let keyboardType = preferredKeyboardAxisInputType(from: normalized)
+
+        if isMouseOverlayVisible {
+            return hasMouse ? .mouseMovement : keyboardType
+        }
+
+        if isKeyboardOverlayVisible {
+            if enableMouseInKeyboard, hasMouse {
+                return .mouseMovement
+            }
+            return keyboardType
+        }
+
+        return keyboardType
+    }
+
+    private func preferredKeyboardAxisInputType(from inputTypes: [AxisInputType]) -> AxisInputType? {
+        if inputTypes.contains(.overlayMovement) {
+            return .overlayMovement
+        }
+        if inputTypes.contains(.arrowKeys) {
+            return .arrowKeys
+        }
+        return nil
+    }
+
+    private func inputTypes(for source: MovementMode) -> [AxisInputType] {
+        switch source {
+        case .leftStick:
+            return leftStickInputType
+        case .rightStick:
+            return rightStickInputType
+        case .dpad:
+            return padInputType
+        }
+    }
+
+    private func clearAnalogState(for inputType: AxisInputType?) {
+        guard let inputType else { return }
+
+        if inputType == .mouseMovement {
+            stopAnalogTimerIfNeeded()
+            lastAnalogDirection = nil
+            return
+        }
+
+        if let last = lastAnalogDirection {
+            setDirectionalInput(last, pressed: false, for: inputType)
+            lastAnalogDirection = nil
+        }
+        stopMoveRepeat(clearDirection: true, for: inputType)
+    }
+
+    private func resetAnalogStateForContextChange() {
+        clearAnalogState(for: lastAnalogInputType)
+        lastAnalogDirection = nil
+        lastAnalogInputType = nil
     }
 
     // MARK: - Input Handling
