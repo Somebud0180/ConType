@@ -80,13 +80,6 @@ struct SettingsView: View {
                                 viewModel.controllerToggleButton
                             }
                             
-                            if let keyboardValidationMessage = viewModel
-                                .keyboardValidationMessage
-                            {
-                                Text(keyboardValidationMessage)
-                                    .foregroundStyle(.red)
-                            }
-                            
                             Toggle(
                                 "Open app on startup",
                                 isOn: Binding(
@@ -97,45 +90,68 @@ struct SettingsView: View {
                         }
                         
                         Section("Overlay") {
-                            Picker("Keyboard Size", selection: Binding(
-                                get: { viewModel.settings.windowSize },
-                                set: { viewModel.settings.windowSize = $0 }
-                            )) {
-                                ForEach(WindowSize.allCases) { size in
-                                    Text(size.name).tag(size)
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Overlay Sizing")
+                                    .font(.headline)
+                                
+                                Picker("Keyboard Size", selection: Binding(
+                                    get: { viewModel.settings.windowSize },
+                                    set: { viewModel.settings.windowSize = $0 }
+                                )) {
+                                    ForEach(WindowSize.allCases) { size in
+                                        Text(size.name).tag(size)
+                                    }
+                                }
+                                
+                                ForEach(ControllerActionBinding.overlayActions) { action in
+                                    Divider()
+                                    LabeledContent(action.title) {
+                                        viewModel.controllerActionPickerButton(
+                                            for: action
+                                        )
+                                    }
                                 }
                             }
                             
-                            Toggle(
-                                "Dismiss overlay with guide button",
-                                isOn: Binding(
-                                    get: {
-                                        viewModel.settings
-                                            .dismissWithGuideButton
-                                    },
-                                    set: {
-                                        viewModel.settings
-                                            .dismissWithGuideButton = $0
-                                    }
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Overlay Controls")
+                                    .font(.headline)
+                                
+                                Toggle(
+                                    "Dismiss overlay with guide button",
+                                    isOn: Binding(
+                                        get: {
+                                            viewModel.settings
+                                                .dismissWithGuideButton
+                                        },
+                                        set: {
+                                            viewModel.settings
+                                                .dismissWithGuideButton = $0
+                                        }
+                                    )
                                 )
-                            )
-                            
-                            Toggle(
-                                "Enables mouse controls in keyboard overlay",
-                                isOn: Binding(
-                                    get: { viewModel.settings.enableMouseInKeyboard },
-                                    set: { viewModel.settings.enableMouseInKeyboard = $0 }
+                                
+                                Divider()
+                                
+                                Toggle(
+                                    "Enables mouse controls in keyboard overlay",
+                                    isOn: Binding(
+                                        get: { viewModel.settings.enableMouseInKeyboard },
+                                        set: { viewModel.settings.enableMouseInKeyboard = $0 }
+                                    )
                                 )
-                            )
-                            
-                            Toggle(
-                                "Prioritize mouse shortcuts while in keyboard overlay",
-                                isOn: Binding(
-                                    get: { viewModel.settings.prioritizeMouseOverKeyboard },
-                                    set: { viewModel.settings.prioritizeMouseOverKeyboard = $0 }
+                                
+                                Divider()
+                                
+                                Toggle(
+                                    "Prioritize mouse shortcuts while in keyboard overlay",
+                                    isOn: Binding(
+                                        get: { viewModel.settings.prioritizeMouseOverKeyboard },
+                                        set: { viewModel.settings.prioritizeMouseOverKeyboard = $0 }
+                                    )
                                 )
-                            )
-                            .disabled(!viewModel.settings.enableMouseInKeyboard)
+                                .disabled(!viewModel.settings.enableMouseInKeyboard)
+                            }
                         }
                         
                         Section(
@@ -191,15 +207,6 @@ struct SettingsView: View {
                                     showResetDefaultsDialog = true
                                 }
                             }
-                        }
-                    }
-                    .formStyle(.grouped)
-                }
-                
-                Tab("Input", systemImage: "gamecontroller") {
-                    Form {
-                        Section("Joystick Deadzone") {
-                            viewModel.stickDeadzoneConfig
                         }
                     }
                     .formStyle(.grouped)
@@ -375,6 +382,15 @@ struct SettingsView: View {
                                     )
                                 }
                             }
+                        }
+                    }
+                    .formStyle(.grouped)
+                }
+                
+                Tab("Input", systemImage: "gamecontroller") {
+                    Form {
+                        Section("Joystick Deadzone") {
+                            viewModel.stickDeadzoneConfig
                         }
                     }
                     .formStyle(.grouped)

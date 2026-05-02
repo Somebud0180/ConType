@@ -79,11 +79,6 @@ final class KeyboardHotkeyManager {
         return Shortcut(key: mappedKey, modifiers: flags)
     }
 
-    static func isValidShortcut(_ shortcut: Shortcut) -> Bool {
-        // Require at least one modifier to avoid accidental triggers.
-        !shortcut.modifiers.intersection([.command, .option, .control, .shift]).isEmpty
-    }
-
     private func installEventTap() -> Bool {
         // Requires Accessibility to modify/swallow events; otherwise tap creation fails.
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)

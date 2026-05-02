@@ -271,7 +271,9 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case enlargeWindow
     case shrinkWindow
 
-    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight, .shrinkWindow, .enlargeWindow]
+    static let overlayActions: [ControllerActionBinding] = [.shrinkWindow, .enlargeWindow]
+    
+    static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight]
     
     static let mouseActions: [ControllerActionBinding] = [.mouseLeftClick, .mouseRightClick]
     
@@ -289,8 +291,8 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
         case .moveCaretRight: return "Move Text Cursor Right"
         case .mouseLeftClick: return "Left Click"
         case .mouseRightClick: return "Right Click"
-        case .enlargeWindow: return "Enlarge Keyboard"
-        case.shrinkWindow: return "Shrink Keyboard"
+        case .enlargeWindow: return "Enlarge Overlay"
+        case .shrinkWindow: return "Shrink Overlay"
         }
     }
 }

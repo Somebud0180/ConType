@@ -50,7 +50,6 @@ final class SettingsViewModel: ObservableObject {
     @Published var activeAxisInputPicker: AxisInput?
     
     @Published var isRecordingKeyboardHotkey = false
-    @Published var keyboardValidationMessage: String?
     @Published var keyboardPreviewShortcut: KeyboardHotkeyManager.Shortcut?
     @Published var keyboardPressedModifiers: NSEvent.ModifierFlags = []
     
@@ -177,7 +176,6 @@ final class SettingsViewModel: ObservableObject {
             if isRecordingControllerHotkey { endControllerToggleRecording() }
             if activeControllerActionPicker != nil { endControllerActionPicker() }
             isRecordingKeyboardHotkey = true
-            keyboardValidationMessage = nil
             keyboardPreviewShortcut = nil
             keyboardPressedModifiers = []
             
@@ -185,7 +183,6 @@ final class SettingsViewModel: ObservableObject {
                 guard let self = self, self.isRecordingKeyboardHotkey else { return event }
                 self.keyboardPressedModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
                 self.keyboardPreviewShortcut = nil
-                self.keyboardValidationMessage = nil
                 return nil
             }
             
@@ -200,11 +197,6 @@ final class SettingsViewModel: ObservableObject {
                     return nil
                 }
                 self.keyboardPreviewShortcut = shortcut
-                guard KeyboardHotkeyManager.isValidShortcut(shortcut) else {
-                    self.keyboardValidationMessage = "Use at least one modifier key (Command/Option/Control/Shift)."
-                    return nil
-                }
-                self.keyboardValidationMessage = nil
                 self.settings.keyboardHotkey = shortcut
                 self.endKeyboardHotkeyRecording()
                 return nil
