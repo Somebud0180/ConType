@@ -210,7 +210,6 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - Controller toggle recording
-    
     func beginControllerToggleRecording() {
         if !isRecordingControllerHotkey {
             if isRecordingKeyboardHotkey { endKeyboardHotkeyRecording() }
@@ -340,6 +339,26 @@ final class SettingsViewModel: ObservableObject {
         self.objectWillChange.send()
     }
     
+    func warnAxisInputConflict(for axis: AxisInput) -> Bool {
+        if !settings.enableMouseInKeyboard {
+            return false
+        }
+        
+        let axisInputType =
+        switch axis {
+        case .leftStick: settings.leftStickInputType
+        case .rightStick: settings.rightStickInputType
+        case .pad: settings.padInputType
+        }
+        
+        
+        if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && axisInputType.contains(.mouseMovement) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
         var parts: [String] = []
         if modifiers.contains(.control) { parts.append("Control") }
@@ -362,6 +381,7 @@ final class SettingsViewModel: ObservableObject {
     
     func axisInputPickerButton(for input: AxisInput, forKeyboard: Bool) -> some View {
         let selected = selectedAxisInputType(for: input, forKeyboard: forKeyboard)
+        let isConflicting = warnAxisInputConflict(for: input)
         
         return Button { [self] in
             if activeAxisInputPicker == input {
@@ -383,6 +403,11 @@ final class SettingsViewModel: ObservableObject {
             .frame(minHeight: 24)
         }
         .buttonStyle(.bordered)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(Color.yellow, lineWidth: isConflicting ? 1.5 : 0)
+                .animation(.easeInOut, value: isConflicting)
+            )
         .popover(isPresented: axisInputPickerPopoverBinding(for: input), arrowEdge: .bottom) { [self] in
             axisInputPickerPopOver(for: input, selected: selected, forKeyboard: forKeyboard)
         }
