@@ -11,8 +11,8 @@ import Combine
 
 enum ConflictStatus {
     case normal
-    case warn
-    case explicit
+    case warn(message: String)
+    case explicit(message: String)
     
     var isConflicting: Bool {
         switch self {
@@ -26,6 +26,13 @@ enum ConflictStatus {
         case .normal: return .clear
         case .warn: return Color.yellow
         case .explicit: return Color.red
+        }
+    }
+    
+    var message: String? {
+        switch self {
+        case .normal: return nil
+        case .warn(let message), .explicit(let message): return message
         }
     }
 }
@@ -352,7 +359,7 @@ final class SettingsViewModel: ObservableObject {
         self.objectWillChange.send()
     }
     
-    func warnAxisInputConflict(for axis: AxisInput) -> ConflictStatus {
+    func warnAxisInputConflict(for axis: AxisInput, fromKeyboard: Bool) -> ConflictStatus {
         if !settings.enableMouseInKeyboard {
             return .normal
         }
@@ -366,7 +373,11 @@ final class SettingsViewModel: ObservableObject {
         
         
         if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && axisInputType.contains(.mouseMovement) {
-            return .warn
+            if fromKeyboard {
+                return .warn(message: "This input is also assigned to the mouse and is being overriden. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
+            } else {
+                return .warn(message: "This input is overriding a keyboard control. Disable mouse controls in the keyboard or change the input of either mouse or keyboard controls.")
+            }
         }
         
         return .normal
@@ -376,6 +387,7 @@ final class SettingsViewModel: ObservableObject {
         for action in ControllerActionBinding.allCases {
             let controllerActionBindings = settings.controllerActionBindings.button(for: controllerButton)
             let forActionBindings = settings.controllerActionBindings.button(for: action)
+            let actionName = action.title
             
             if action == controllerButton || controllerActionBindings == .none {
                 continue
@@ -383,20 +395,22 @@ final class SettingsViewModel: ObservableObject {
             
             if forActionBindings == controllerActionBindings {
                 if (ControllerActionBinding.keyboardActions.contains(controllerButton)
-                    && ControllerActionBinding.mouseActions.contains(action)
-                    )
-                    || (ControllerActionBinding.mouseActions.contains(controllerButton)
-                        && ControllerActionBinding.keyboardActions.contains(action)
-                    )
-                {
+                    && ControllerActionBinding.mouseActions.contains(action)) {
                     if !settings.enableMouseInKeyboard {
                         return .normal
                     }
                     
-                    return .warn
+                    return .warn(message:"This button is also assigned to \(actionName) and is being overriden. Disable mouse controls in the keyboard or change the button of either controls.")
+                } else if (ControllerActionBinding.mouseActions.contains(controllerButton)
+                        && ControllerActionBinding.keyboardActions.contains(action)) {
+                    if !settings.enableMouseInKeyboard {
+                        return .normal
+                    }
+                    
+                    return .warn(message:"This button is also assigned to \(actionName) and is overriding it. Disable mouse controls in the keyboard or change the button of either controls.")
                 }
 
-                return .explicit
+                return .explicit(message: "This button is also assigned to \(actionName). Change the button for one of these actions.")
             }
         }
         
@@ -425,7 +439,7 @@ final class SettingsViewModel: ObservableObject {
     
     func axisInputPickerButton(for input: AxisInput, forKeyboard: Bool) -> some View {
         let selected = selectedAxisInputType(for: input, forKeyboard: forKeyboard)
-        let conflictStatus = warnAxisInputConflict(for: input)
+        let conflictStatus = warnAxisInputConflict(for: input, fromKeyboard: forKeyboard)
         
         return Button { [self] in
             if activeAxisInputPicker == input {
@@ -447,6 +461,7 @@ final class SettingsViewModel: ObservableObject {
             .frame(minHeight: 24)
         }
         .buttonStyle(.bordered)
+        .help(conflictStatus.message ?? "")
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .stroke(conflictStatus.color, lineWidth: conflictStatus.isConflicting ? 1.5 : 0)
@@ -576,6 +591,7 @@ final class SettingsViewModel: ObservableObject {
             .frame(minHeight: 24)
         }
         .buttonStyle(.bordered)
+        .help(conflictStatus.message ?? "")
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .stroke(conflictStatus.color, lineWidth: conflictStatus.isConflicting ? 1.5 : 0)
