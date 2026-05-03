@@ -374,9 +374,17 @@ final class SettingsViewModel: ObservableObject {
         
         if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && axisInputType.contains(.mouseMovement) {
             if fromKeyboard {
-                return .warn(message: "This input is also assigned to the mouse and is being overriden. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
+                if settings.prioritizeMouseOverKeyboard {
+                    return .warn(message: "This input is also assigned to the mouse and is being overriden. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
+                } else {
+                    return .warn(message: "This input is overriding mouse control. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
+                }
             } else {
-                return .warn(message: "This input is overriding a keyboard control. Disable mouse controls in the keyboard or change the input of either mouse or keyboard controls.")
+                if settings.prioritizeMouseOverKeyboard {
+                    return .warn(message: "This input is overriding a keyboard control. Disable mouse controls in the keyboard or change the input of either mouse or keyboard controls.")
+                } else {
+                    return .warn(message: "This input is also assigned to the keyboard and is being overriden. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
+                }
             }
         }
         
@@ -400,14 +408,22 @@ final class SettingsViewModel: ObservableObject {
                         return .normal
                     }
                     
-                    return .warn(message:"This button is also assigned to \(actionName) and is being overriden. Disable mouse controls in the keyboard or change the button of either controls.")
+                    if settings.prioritizeMouseOverKeyboard {
+                        return .warn(message:"This button is also assigned to \(actionName) and is being overriden. Disable mouse controls in the keyboard or change the button of either controls.")
+                    } else {
+                        return .warn(message:"This button is also assigned to \(actionName) and is overriding it. Disable mouse controls in the keyboard or change the button of either controls.")
+                    }
                 } else if (ControllerActionBinding.mouseActions.contains(controllerButton)
                         && ControllerActionBinding.keyboardActions.contains(action)) {
                     if !settings.enableMouseInKeyboard {
                         return .normal
                     }
                     
-                    return .warn(message:"This button is also assigned to \(actionName) and is overriding it. Disable mouse controls in the keyboard or change the button of either controls.")
+                    if settings.prioritizeMouseOverKeyboard {
+                        return .warn(message:"This button is also assigned to \(actionName) and is overriding it. Disable mouse controls in the keyboard or change the button of either controls.")
+                    } else {
+                        return .warn(message:"This button is also assigned to \(actionName) and is being overriden. Disable mouse controls in the keyboard or change the button of either controls.")
+                    }
                 }
 
                 return .explicit(message: "This button is also assigned to \(actionName). Change the button for one of these actions.")
