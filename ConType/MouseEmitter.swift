@@ -17,10 +17,8 @@ final class MouseEmitter {
     func moveCursor(by delta: CGVector) -> Bool {
         guard InputMonitoringPermission.isAuthorized() else { return false }
         let current = NSEvent.mouseLocation
-        // Note: NSEvent.mouseLocation uses a flipped origin (bottom-left is (0,0)),
-        // but CGEvent expects screen coordinates (origin at bottom-left)
-        let newLocation = CGPoint(x: current.x + delta.dx, y: NSScreen.main!.frame.height - current.y + delta.dy)
         let eventType: CGEventType = isMouseDown ? .leftMouseDragged : .mouseMoved
+        let newLocation = CGPoint(x: current.x + delta.dx, y: NSScreen.main!.frame.height - current.y + delta.dy)
         guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: newLocation, mouseButton: .left) else {
             return false
         }
@@ -35,6 +33,16 @@ final class MouseEmitter {
         guard InputMonitoringPermission.isAuthorized() else { return false }
         let eventType: CGEventType = isMouseDown ? .leftMouseDragged : .mouseMoved
         guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType, mouseCursorPosition: location, mouseButton: .left) else {
+            return false
+        }
+        event.post(tap: .cghidEventTap)
+        return true
+    }
+    
+    @discardableResult
+    func scroll(px: CGFloat = 0, py: CGFloat = 0) -> Bool {
+        guard InputMonitoringPermission.isAuthorized() else { return false }
+        guard let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: Int32(py), wheel2: Int32(px), wheel3: 0) else {
             return false
         }
         event.post(tap: .cghidEventTap)
