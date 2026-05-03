@@ -8,7 +8,8 @@
 <br>Inspired by virtual keyboards in games and other operating systems, ConType brings a controller-based keyboard (+ mouse) to the desktop, specifically for Mac. Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 
 ## AI Disclosure
-AI was heavily used in the very early stages of the app. Involving the base code and an early version of the interface. Further work like those relating to the keyboard emulation and the initial controller setup was done by AI. Some debugging sessions were also assisted by AI, either for inquiry or direct code generation. **No AI is/was/will be used for any work related to graphics/art both in app and in the repo**
+AI was used to generate the base code and initial interface of the app. Additional featues (such as but not limited to, keyboard emulation, controller setup) was also done by AI (some partially, some almost completely). AI was also used in spontaneous bursts such as in some debugging and general inquiries.
+<br>**No AI is/was/will be used for any work related to graphics/art both in app and in the repo**
 
 ## Features
 - **Virtual keyboard**
@@ -31,7 +32,7 @@ AI was heavily used in the very early stages of the app. Involving the base code
 
 
 **The Overlay**
-<br>The star of the show, the virtual keyboard. Bringing up the overlay allows you to type into the active text field and also allows you to control your mouse with your controller.
+<br>The star of the show, the virtual keyboard. Bringing up the overlay allows you to type into the active text field and can also allow you to control your mouse with your controller.
 <img width="80%" alt="Keyboard Overlay" src="https://github.com/user-attachments/assets/1a76bf68-b6a0-4307-8aba-b26fa8877a45" />
 
 **Settings**
@@ -41,8 +42,9 @@ AI was heavily used in the very early stages of the app. Involving the base code
 
 ## Credits
 - [**Kenney Input Prompts**](https://kenney.nl/assets/input-prompts), plain well made controller glyphs.
-- [**AXorcist**](https://github.com/steipete/AXorcist/), they had a really useful documentation regarding the Mac's accessibility permission. I was referencing their code and a [DeepWiki](https://deepwiki.com/steipete/AXorcist/13.4-permission-helpers) of their repo.
+- [**Hold To Talk**](https://github.com/jxucoder/hold-to-talk/tree/main), referenced their docs regarding permissions, specifically the kTCCServicePostEvent stuff. (Previously referenced AXorcist but has been since changed due to app-sandboxing)
 
 ---
 Made with ❤️, made with [Hack Club](https://hackclub.com/).
 <br>Created for [FlavorTown](https://flavortown.hackclub.com/), a Hack Club event.
+<br>Also part of [Macondo](https://macondo.hackclub.com/), a Hack Club event.
