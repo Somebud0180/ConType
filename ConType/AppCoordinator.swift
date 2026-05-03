@@ -222,6 +222,12 @@ final class AppCoordinator: ObservableObject {
                 self?.updateActivationPolicyForCurrentUIState()
             }
         }
+        
+        onboardingController.openSettings = { [weak self] in
+            Task { @MainActor in
+                self?.settingsController.show()
+            }
+        }
 
         onboardingController.onAccessibilityTrustChanged = { [weak self] _ in
             Task { @MainActor in

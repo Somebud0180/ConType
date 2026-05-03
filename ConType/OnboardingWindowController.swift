@@ -5,6 +5,7 @@ import SwiftUI
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
     var onCompletion: (() -> Void)?
+    var openSettings: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)? {
         didSet {
             viewModel.onAccessibilityTrustChanged = onAccessibilityTrustChanged
@@ -22,6 +23,12 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
         viewModel.onComplete = { [weak self] in
             self?.onCompletion?()
+            self?.close()
+        }
+        
+        viewModel.openSettings = { [weak self] in
+            self?.onCompletion?()
+            self?.openSettings?()
             self?.close()
         }
     }

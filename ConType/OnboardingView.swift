@@ -11,6 +11,7 @@ final class OnboardingViewModel: ObservableObject {
     @Published var isAwaitingPermissionGrant: Bool = false
 
     var onComplete: (() -> Void)?
+    var openSettings: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)?
     
     var isAwaitingActivation: Bool {
@@ -222,6 +223,11 @@ struct OnboardingView: View {
             Text("to get started")
                 .foregroundStyle(.secondary)
 
+            Text("You can also check out the settings to see more of what you can do with the app.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+            
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -248,6 +254,10 @@ struct OnboardingView: View {
                 }
                 .keyboardShortcut(.defaultAction)
             default:
+                Button("Open Settings") {
+                    viewModel.openSettings?()
+                }
+                
                 Button("Finish") {
                     viewModel.complete()
                 }
