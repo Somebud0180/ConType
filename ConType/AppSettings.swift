@@ -314,6 +314,7 @@ struct ControllerActionBindings: Equatable {
     var shrinkWindow: ControllerAssignableButton
 
     static let `default` = ControllerActionBindings(
+        // Keyboard Controls
         acceptType: .south,
         backspace: .east,
         space: .north,
@@ -322,10 +323,14 @@ struct ControllerActionBindings: Equatable {
         capsLock: .rightStickPress,
         moveCaretLeft: .leftShoulder,
         moveCaretRight: .rightShoulder,
+        
+        // Mouse Controls
         mouseLeftClick: .leftTrigger,
         mouseRightClick: .rightTrigger,
-        enlargeWindow: .none,
-        shrinkWindow: .none
+        
+        // Overlay Controls
+        enlargeWindow: .leftTrigger,
+        shrinkWindow: .rightTrigger
     )
 
     func button(for action: ControllerActionBinding) -> ControllerAssignableButton {
@@ -430,9 +435,9 @@ final class AppSettings: ObservableObject {
     
     // Preferences
     @Published var enableMouseInKeyboard: Bool = true
-    @Published var prioritizeMouseOverKeyboard: Bool = true
+    @Published var prioritizeMouseOverKeyboard: Bool = false
     @Published var keyboardLayout: KeyboardLayout = .QWERTY
-    @Published var leftStickInputType: [AxisInputType] = [.overlayMovement]
+    @Published var leftStickInputType: [AxisInputType] = [.overlayMovement, .scrollWheel]
     @Published var rightStickInputType: [AxisInputType] = [.mouseMovement]
     @Published var padInputType: [AxisInputType] = [.overlayMovement]
     @Published var shiftShortcutCyclesToCapsLock = true

@@ -67,6 +67,10 @@ final class SettingsViewModel: ObservableObject {
     @Published var rightStickDeadzone: CGFloat
     @Published var mouseSensitivity: CGFloat = 500
     @Published var mouseSmoothing: CGFloat = 0.5
+    @Published var invertMouseX: Bool = false
+    @Published var invertMouseY: Bool = false
+    @Published var invertScrollX: Bool = false
+    @Published var invertScrollY: Bool = false
     
     // Event monitors (not @Published)
     private var keyboardKeyDownMonitor: Any?
@@ -97,6 +101,10 @@ final class SettingsViewModel: ObservableObject {
         self.rightStickDeadzone = settings.rightStickDeadzone
         self.mouseSensitivity = settings.mouseSensitivity
         self.mouseSmoothing = settings.mouseSmoothing
+        self.invertMouseX = settings.invertMouseX
+        self.invertMouseY = settings.invertMouseY
+        self.invertScrollX = settings.invertScrollX
+        self.invertScrollY = settings.invertScrollY
         self.keyboardMovementStyle = settings.keyboardMovementStyle
         
         settings.objectWillChange
@@ -122,9 +130,12 @@ final class SettingsViewModel: ObservableObject {
         settings.controllerToggleBinding = .default
         settings.controllerActionBindings = .default
         settings.keyboardLayout = .QWERTY
-        settings.leftStickInputType = [.overlayMovement]
+        settings.leftStickInputType = [.overlayMovement, .scrollWheel]
         settings.rightStickInputType = [.mouseMovement]
         settings.padInputType = [.overlayMovement]
+        
+        settings.enableMouseInKeyboard = true
+        settings.prioritizeMouseOverKeyboard = false
         settings.shiftShortcutCyclesToCapsLock = true
         settings.dismissWithGuideButton = true
         settings.keyboardMovementStyle = .limited
@@ -132,6 +143,12 @@ final class SettingsViewModel: ObservableObject {
         settings.rightStickDeadzone = 0.2
         settings.mouseSensitivity = 300
         settings.mouseSmoothing = 0.5
+        settings.invertMouseX = false
+        settings.invertMouseY = false
+        settings.invertScrollX = false
+        settings.invertScrollY = false
+        
+        settings.inMouseMode = false
         settings.windowSize = .small
         settings.windowPosition = .zero
         
@@ -141,6 +158,10 @@ final class SettingsViewModel: ObservableObject {
         rightStickDeadzone = settings.rightStickDeadzone
         mouseSensitivity = settings.mouseSensitivity
         mouseSmoothing = settings.mouseSmoothing
+        invertMouseX = settings.invertMouseX
+        invertMouseY = settings.invertMouseY
+        invertScrollX = settings.invertScrollX
+        invertScrollY = settings.invertScrollY
     }
     
     deinit {
@@ -946,6 +967,42 @@ final class SettingsViewModel: ObservableObject {
                 
                 Text(Decimal.FormatStyle.FormatInput(mouseSmoothing), format: twoDecimalFormatter)
                     .frame(width: 40, alignment: .trailing)
+            }
+            
+            Toggle("Invert mouse X-axis", isOn: Binding(
+                get: { self.invertMouseX },
+                set: { self.invertMouseX = $0 }
+            ))
+            .onChange(of: self.invertMouseX) { [self] in
+                settings.invertMouseX = invertMouseX
+            }
+            
+            Toggle("Invert mouse Y-axis", isOn: Binding(
+                get: { self.invertMouseY },
+                set: { self.invertMouseY = $0 }
+            ))
+            .onChange(of: self.invertMouseY) { [self] in
+                settings.invertMouseY = invertMouseY
+            }
+        }
+    }
+    
+    var scrollConfig: some View {
+        Group {            
+            Toggle("Invert scroll X-axis", isOn: Binding(
+                get: { self.invertScrollX },
+                set: { self.invertScrollX = $0 }
+            ))
+            .onChange(of: self.invertScrollX) { [self] in
+                settings.invertScrollX = invertScrollX
+            }
+            
+            Toggle("Invert scroll Y-axis", isOn: Binding(
+                get: { self.invertScrollY },
+                set: { self.invertScrollY = $0 }
+            ))
+            .onChange(of: self.invertScrollY) { [self] in
+                settings.invertScrollY = invertScrollY
             }
         }
     }
