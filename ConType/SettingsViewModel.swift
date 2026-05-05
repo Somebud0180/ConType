@@ -69,6 +69,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var mouseSmoothing: CGFloat = 0.4
     @Published var invertMouseX: Bool = false
     @Published var invertMouseY: Bool = false
+    @Published var scrollSpeed: CGFloat = 600
     @Published var invertScrollX: Bool = false
     @Published var invertScrollY: Bool = false
     
@@ -145,6 +146,7 @@ final class SettingsViewModel: ObservableObject {
         settings.mouseSmoothing = 0.4
         settings.invertMouseX = false
         settings.invertMouseY = false
+        settings.scrollSpeed = 600
         settings.invertScrollX = false
         settings.invertScrollY = false
         
@@ -160,6 +162,7 @@ final class SettingsViewModel: ObservableObject {
         mouseSmoothing = settings.mouseSmoothing
         invertMouseX = settings.invertMouseX
         invertMouseY = settings.invertMouseY
+        scrollSpeed = settings.scrollSpeed
         invertScrollX = settings.invertScrollX
         invertScrollY = settings.invertScrollY
     }
@@ -988,7 +991,22 @@ final class SettingsViewModel: ObservableObject {
     }
     
     var scrollConfig: some View {
-        Group {            
+        Group {
+            HStack {
+                Slider(value: Binding<Double>(
+                    get: { Double(self.scrollSpeed) },
+                    set: { self.scrollSpeed = $0.rounded() }
+                ), in: 100...2000, step: 100) {
+                    Text("Sensitivity")
+                }
+                .onChange(of: self.scrollSpeed) { [self] in
+                    settings.scrollSpeed = scrollSpeed
+                }
+                
+                Text(scrollSpeed, format: .number)
+                    .frame(width: 40, alignment: .trailing)
+            }
+            
             Toggle("Invert scroll X-axis", isOn: Binding(
                 get: { self.invertScrollX },
                 set: { self.invertScrollX = $0 }

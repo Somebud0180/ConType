@@ -126,6 +126,7 @@ final class ControllerInputManager: NSObject {
     var mouseSmoothingAlpha: CGFloat = 0.65
     var invertMouseX: Bool = false
     var invertMouseY: Bool = false
+    var scrollSpeed: CGFloat = 600.0
     var invertScrollX: Bool = false
     var invertScrollY: Bool = false
     
@@ -457,7 +458,6 @@ final class ControllerInputManager: NSObject {
     }
     
     private func handleAnalogStick(x: Float, y: Float, from source: MovementMode, inputTypes: [AxisInputType]) {
-        // Flip Y if needed to match your overlay coordinate system (usually up is positive on the stick y)
         let raw = CGVector(dx: CGFloat(x), dy: CGFloat(y))
         let rawMagnitude = sqrt(raw.dx * raw.dx + raw.dy * raw.dy)
         let joystickDeadzone = switch source {
@@ -479,11 +479,6 @@ final class ControllerInputManager: NSObject {
         // Get per-source state
         guard var state = analogStates[source] else { return }
         
-        // Low-pass filter to reduce jitter
-        let alpha = mouseSmoothingAlpha
-        state.filteredStick.dx = state.filteredStick.dx * alpha + raw.dx * (1.0 - alpha)
-        state.filteredStick.dy = state.filteredStick.dy * alpha + raw.dy * (1.0 - alpha)
-        
         guard let activeInputType = resolvedAxisInputType(from: inputTypes) else {
             resetAnalogStateForContextChange()
             return
@@ -495,7 +490,6 @@ final class ControllerInputManager: NSObject {
         }
         
         let isMouseMovementType = activeInputType == .mouseMovement || activeInputType == .scrollWheel
-        
         let keyboardMovementStyle: KeyboardMovementMode = isMouseMovementType ? .mouse : self.keyboardMovementStyle
         if keyboardMovementStyle != .mouse {
             stopAnalogTimerIfNeeded(for: source)
@@ -503,6 +497,11 @@ final class ControllerInputManager: NSObject {
         
         switch keyboardMovementStyle {
         case .mouse:
+            // Low-pass filter to reduce jitter
+            let alpha = activeInputType == .scrollWheel ? 0.0 : mouseSmoothingAlpha
+            state.filteredStick.dx = state.filteredStick.dx * alpha + raw.dx * (1.0 - alpha)
+            state.filteredStick.dy = state.filteredStick.dy * alpha + raw.dy * (1.0 - alpha)
+            
             // Start or stop analog timer depending on magnitude vs deadZone
             if rawMagnitude > joystickDeadzone {
                 startAnalogTimerIfNeeded(from: source)
@@ -636,8 +635,9 @@ final class ControllerInputManager: NSObject {
         let ny = state.filteredStick.dy / mag
         
         // velocity = sensitivity * normalizedMag (units/sec)
-        let velocityX = nx * mouseSensitivity * CGFloat(normalizedMag)
-        let velocityY = ny * mouseSensitivity * CGFloat(normalizedMag)
+        let sensitivity = isMouseMovement ? mouseSensitivity : scrollSpeed
+        let velocityX = nx * sensitivity * CGFloat(normalizedMag)
+        let velocityY = ny * sensitivity * CGFloat(normalizedMag)
         
         // final variables
         var finalVelocityX: CGFloat

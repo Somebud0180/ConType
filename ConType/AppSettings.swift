@@ -450,6 +450,7 @@ final class AppSettings: ObservableObject {
     @Published var mouseSmoothing: CGFloat = 0.4
     @Published var invertMouseX: Bool = false
     @Published var invertMouseY: Bool = false
+    @Published var scrollSpeed: CGFloat = 300.0
     @Published var invertScrollX: Bool = false
     @Published var invertScrollY: Bool = false
     
@@ -489,6 +490,7 @@ final class AppSettings: ObservableObject {
             $mouseSmoothing.map { _ in () }.eraseToAnyPublisher(),
             $invertMouseX.map { _ in () }.eraseToAnyPublisher(),
             $invertMouseY.map { _ in () }.eraseToAnyPublisher(),
+            $scrollSpeed.map { _ in () }.eraseToAnyPublisher(),
             $invertScrollX.map { _ in () }.eraseToAnyPublisher(),
             $invertScrollY.map { _ in () }.eraseToAnyPublisher(),
             $inMouseMode.map { _ in () }.eraseToAnyPublisher(),
@@ -536,6 +538,7 @@ final class AppSettings: ObservableObject {
             mouseSmoothing: mouseSmoothing,
             invertMouseX: invertMouseX,
             invertMouseY: invertMouseY,
+            scrollSpeed: scrollSpeed,
             invertScrollX: invertScrollX,
             invertScrollY: invertScrollY,
             inMouseMode: inMouseMode,
@@ -582,6 +585,7 @@ final class AppSettings: ObservableObject {
             self.mouseSmoothing = codable.mouseSmoothing
             self.invertMouseX = codable.invertMouseX
             self.invertMouseY = codable.invertMouseY
+            self.scrollSpeed = codable.scrollSpeed
             self.invertScrollX = codable.invertScrollX
             self.invertScrollY = codable.invertScrollY
             self.inMouseMode = codable.inMouseMode
@@ -696,6 +700,7 @@ private struct AppSettingsCodable: Codable {
     var mouseSmoothing: CGFloat
     var invertMouseX: Bool
     var invertMouseY: Bool
+    var scrollSpeed: CGFloat
     var invertScrollX: Bool
     var invertScrollY: Bool
     var inMouseMode: Bool

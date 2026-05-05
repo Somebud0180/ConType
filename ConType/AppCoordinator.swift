@@ -258,6 +258,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.mouseSmoothingAlpha = settings.mouseSmoothing
         controllerInputManager.invertMouseX = settings.invertMouseX
         controllerInputManager.invertMouseY = settings.invertMouseY
+        controllerInputManager.scrollSpeed = settings.scrollSpeed
         controllerInputManager.invertScrollX = settings.invertScrollX
         controllerInputManager.invertScrollY = settings.invertScrollY
         controllerInputManager.enableMouseInKeyboard = settings.enableMouseInKeyboard
@@ -344,6 +345,12 @@ final class AppCoordinator: ObservableObject {
         settings.$invertMouseY
             .sink { [weak self] value in
                 self?.controllerInputManager.invertMouseY = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$scrollSpeed
+            .sink { [weak self] value in
+                self?.controllerInputManager.scrollSpeed = value
             }
             .store(in: &cancellables)
         
