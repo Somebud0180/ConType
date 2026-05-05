@@ -373,6 +373,10 @@ struct SettingsView: View {
                             viewModel.mouseConfig
                         }
                         
+                        Section("Scroll Configuration") {
+                            viewModel.scrollConfig
+                        }
+                        
                         Section("Mouse Actions") {
                             ForEach(ControllerActionBinding.mouseActions) {
                                 action in
