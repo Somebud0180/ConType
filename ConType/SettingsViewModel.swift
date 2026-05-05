@@ -139,8 +139,8 @@ final class SettingsViewModel: ObservableObject {
         settings.shiftShortcutCyclesToCapsLock = true
         settings.dismissWithGuideButton = true
         settings.keyboardMovementStyle = .limited
-        settings.leftStickDeadzone = 0.2
-        settings.rightStickDeadzone = 0.2
+        settings.leftStickDeadzone = 0.4
+        settings.rightStickDeadzone = 0.4
         settings.mouseSensitivity = 300
         settings.mouseSmoothing = 0.5
         settings.invertMouseX = false

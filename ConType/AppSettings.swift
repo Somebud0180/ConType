@@ -310,8 +310,8 @@ struct ControllerActionBindings: Equatable {
     var moveCaretRight: ControllerAssignableButton
     var mouseLeftClick: ControllerAssignableButton
     var mouseRightClick: ControllerAssignableButton
-    var enlargeWindow: ControllerAssignableButton
     var shrinkWindow: ControllerAssignableButton
+    var enlargeWindow: ControllerAssignableButton
 
     static let `default` = ControllerActionBindings(
         // Keyboard Controls
@@ -325,12 +325,12 @@ struct ControllerActionBindings: Equatable {
         moveCaretRight: .rightShoulder,
         
         // Mouse Controls
-        mouseLeftClick: .leftTrigger,
-        mouseRightClick: .rightTrigger,
+        mouseLeftClick: .leftShoulder,
+        mouseRightClick: .rightShoulder,
         
         // Overlay Controls
-        enlargeWindow: .leftTrigger,
-        shrinkWindow: .rightTrigger
+        shrinkWindow: .leftTrigger,
+        enlargeWindow: .rightTrigger
     )
 
     func button(for action: ControllerActionBinding) -> ControllerAssignableButton {
@@ -355,10 +355,10 @@ struct ControllerActionBindings: Equatable {
             return mouseLeftClick
         case .mouseRightClick:
             return mouseRightClick
-        case .enlargeWindow:
-            return enlargeWindow
         case .shrinkWindow:
             return shrinkWindow
+        case .enlargeWindow:
+            return enlargeWindow
         }
     }
 
