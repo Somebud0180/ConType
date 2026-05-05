@@ -124,6 +124,10 @@ final class ControllerInputManager: NSObject {
     var rightStickDeadzone: CGFloat = 0.20
     var mouseSensitivity: CGFloat = 400.0
     var mouseSmoothingAlpha: CGFloat = 0.65
+    var invertMouseX: Bool = false
+    var invertMouseY: Bool = false
+    var invertScrollX: Bool = false
+    var invertScrollY: Bool = false
     
     private var isGuideHeld = false {
         didSet { publishCaptureState() }
@@ -633,10 +637,27 @@ final class ControllerInputManager: NSObject {
         
         // velocity = sensitivity * normalizedMag (units/sec)
         let velocityX = nx * mouseSensitivity * CGFloat(normalizedMag)
-        let velocityY = ny * mouseSensitivity * CGFloat(normalizedMag) * -1
+        let velocityY = ny * mouseSensitivity * CGFloat(normalizedMag)
         
-        // delta = velocity * elapsed
-        let delta = CGVector(dx: velocityX * CGFloat(elapsed), dy: velocityY * CGFloat(elapsed))
+        // final variables
+        var finalVelocityX: CGFloat
+        var finalVelocityY: CGFloat
+        var xMult: CGFloat
+        var yMult: CGFloat
+        
+        if isMouseMovement {
+            finalVelocityX = velocityX * CGFloat(elapsed)
+            finalVelocityY = velocityY * CGFloat(elapsed)
+            xMult = invertMouseX ? -1 : 1
+            yMult = invertMouseY ? 1 : -1 // Invert mouse Y by default
+        } else {
+            finalVelocityX = velocityX * CGFloat(elapsed)
+            finalVelocityY = velocityY * CGFloat(elapsed)
+            xMult = invertScrollX ? 1 : -1  // Invert scroll X by default
+            yMult = invertScrollY ? -1 : 1
+        }
+        
+        let delta = CGVector(dx: finalVelocityX * xMult, dy: finalVelocityY * yMult)
         
         // send delta as mouse move on main thread
         DispatchQueue.main.async {

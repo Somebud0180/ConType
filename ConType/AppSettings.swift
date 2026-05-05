@@ -443,6 +443,10 @@ final class AppSettings: ObservableObject {
     @Published var rightStickDeadzone: CGFloat = 0.4
     @Published var mouseSensitivity: CGFloat = 300.0
     @Published var mouseSmoothing: CGFloat = 0.5
+    @Published var invertMouseX: Bool = false
+    @Published var invertMouseY: Bool = false
+    @Published var invertScrollX: Bool = false
+    @Published var invertScrollY: Bool = false
     
     // Overlay
     @Published var inMouseMode: Bool = false
@@ -478,6 +482,10 @@ final class AppSettings: ObservableObject {
             $rightStickDeadzone.map { _ in () }.eraseToAnyPublisher(),
             $mouseSensitivity.map { _ in () }.eraseToAnyPublisher(),
             $mouseSmoothing.map { _ in () }.eraseToAnyPublisher(),
+            $invertMouseX.map { _ in () }.eraseToAnyPublisher(),
+            $invertMouseY.map { _ in () }.eraseToAnyPublisher(),
+            $invertScrollX.map { _ in () }.eraseToAnyPublisher(),
+            $invertScrollY.map { _ in () }.eraseToAnyPublisher(),
             $inMouseMode.map { _ in () }.eraseToAnyPublisher(),
             $windowSize.map { _ in () }.eraseToAnyPublisher(),
             $windowPosition.map { _ in () }.eraseToAnyPublisher()
@@ -521,6 +529,10 @@ final class AppSettings: ObservableObject {
             rightStickDeadzone: rightStickDeadzone,
             mouseSensitivity: mouseSensitivity,
             mouseSmoothing: mouseSmoothing,
+            invertMouseX: invertMouseX,
+            invertMouseY: invertMouseY,
+            invertScrollX: invertScrollX,
+            invertScrollY: invertScrollY,
             inMouseMode: inMouseMode,
             windowSize: windowSize,
             windowPosition: CodablePoint(windowPosition)
@@ -563,6 +575,10 @@ final class AppSettings: ObservableObject {
             self.rightStickDeadzone = codable.rightStickDeadzone
             self.mouseSensitivity = codable.mouseSensitivity
             self.mouseSmoothing = codable.mouseSmoothing
+            self.invertMouseX = codable.invertMouseX
+            self.invertMouseY = codable.invertMouseY
+            self.invertScrollX = codable.invertScrollX
+            self.invertScrollY = codable.invertScrollY
             self.inMouseMode = codable.inMouseMode
             self.windowSize = codable.windowSize
             self.windowPosition = codable.windowPosition.nsPoint
@@ -673,6 +689,10 @@ private struct AppSettingsCodable: Codable {
     var rightStickDeadzone: CGFloat
     var mouseSensitivity: CGFloat
     var mouseSmoothing: CGFloat
+    var invertMouseX: Bool
+    var invertMouseY: Bool
+    var invertScrollX: Bool
+    var invertScrollY: Bool
     var inMouseMode: Bool
     var windowSize: WindowSize
     var windowPosition: CodablePoint

@@ -256,6 +256,10 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.rightStickDeadzone = settings.rightStickDeadzone
         controllerInputManager.mouseSensitivity = settings.mouseSensitivity
         controllerInputManager.mouseSmoothingAlpha = settings.mouseSmoothing
+        controllerInputManager.invertMouseX = settings.invertMouseX
+        controllerInputManager.invertMouseY = settings.invertMouseY
+        controllerInputManager.invertScrollX = settings.invertScrollX
+        controllerInputManager.invertScrollY = settings.invertScrollY
         controllerInputManager.enableMouseInKeyboard = settings.enableMouseInKeyboard
         refreshControllerOverlayVisibility()
 
@@ -328,6 +332,30 @@ final class AppCoordinator: ObservableObject {
         settings.$mouseSmoothing
             .sink { [weak self] value in
                 self?.controllerInputManager.mouseSmoothingAlpha = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$invertMouseX
+            .sink { [weak self] value in
+                self?.controllerInputManager.invertMouseX = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$invertMouseY
+            .sink { [weak self] value in
+                self?.controllerInputManager.invertMouseY = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$invertScrollX
+            .sink { [weak self] value in
+                self?.controllerInputManager.invertScrollX = value
+            }
+            .store(in: &cancellables)
+        
+        settings.$invertScrollY
+            .sink { [weak self] value in
+                self?.controllerInputManager.invertScrollY = value
             }
             .store(in: &cancellables)
 
