@@ -316,11 +316,11 @@ final class SettingsViewModel: ObservableObject {
         if inputType == .none {
             // Removal case
             if fromKeyboard {
-                // Remove both overlayMovement and arrowKeys (keyboard input types)
+                // Remove both keyboard input types
                 updated.removeAll { $0 == .overlayMovement || $0 == .arrowKeys }
             } else {
-                // Remove only mouseMovement
-                updated.removeAll { $0 == .mouseMovement }
+                // Remove both mouse input types
+                updated.removeAll { $0 == .mouseMovement || $0 == .scrollWheel }
             }
         } else {
             // Addition case - enforce mutual exclusivity for keyboard types
@@ -339,9 +339,18 @@ final class SettingsViewModel: ObservableObject {
                     updated.append(.arrowKeys)
                 }
             } else if inputType == .mouseMovement {
-                // mouseMovement can be added independently
+                // Remove scrollWheel if adding mouseMovement
+                updated.removeAll { $0 == .scrollWheel }
+                // Add mouseMovement if not already present
                 if !updated.contains(.mouseMovement) {
                     updated.append(.mouseMovement)
+                }
+            } else if inputType == .scrollWheel {
+                // Remove scrollWheel if adding mouseMovement
+                updated.removeAll { $0 == .mouseMovement }
+                // Add mouseMovement if not already present
+                if !updated.contains(.scrollWheel) {
+                    updated.append(.scrollWheel)
                 }
             }
         }
@@ -372,7 +381,7 @@ final class SettingsViewModel: ObservableObject {
         }
         
         
-        if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && axisInputType.contains(.mouseMovement) {
+        if (axisInputType.contains(.overlayMovement) || axisInputType.contains(.arrowKeys)) && (axisInputType.contains(.mouseMovement) || axisInputType.contains(.scrollWheel)) {
             if fromKeyboard {
                 if settings.prioritizeMouseOverKeyboard {
                     return .warn(message: "This input is also assigned to the mouse and is being overriden. Disable mouse controls in the keyboard or change the input of either keyboard or mouse controls.")
@@ -502,7 +511,9 @@ final class SettingsViewModel: ObservableObject {
             if current.contains(.arrowKeys) { return .arrowKeys }
             return .none
         } else {
-            return current.contains(.mouseMovement) ? .mouseMovement : .none
+            if current.contains(.mouseMovement) { return .mouseMovement }
+            if current.contains(.scrollWheel) { return .scrollWheel }
+            return .none
         }
     }
     

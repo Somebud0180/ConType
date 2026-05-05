@@ -96,6 +96,14 @@ final class AppCoordinator: ObservableObject {
                 self.mouseEmitter.moveCursor(by: delta)
             }
         }
+        
+        controllerInputManager.onScroll = { [weak self] delta in
+            Task { @MainActor in
+                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
+                NSApp.deactivate()
+                self.mouseEmitter.scroll(delta)
+            }
+        }
 
         controllerInputManager.onSelect = { [weak self] in
             Task { @MainActor in

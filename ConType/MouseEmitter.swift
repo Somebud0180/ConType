@@ -40,11 +40,15 @@ final class MouseEmitter {
     }
     
     @discardableResult
-    func scroll(px: CGFloat = 0, py: CGFloat = 0) -> Bool {
+    func scroll(_ delta: CGVector) -> Bool {
+        let px = Int(delta.dx)
+        let py = Int(delta.dy)
+        
         guard InputMonitoringPermission.isAuthorized() else { return false }
         guard let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: Int32(py), wheel2: Int32(px), wheel3: 0) else {
             return false
         }
+        debugPrint(event)
         event.post(tap: .cghidEventTap)
         return true
     }

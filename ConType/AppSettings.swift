@@ -23,10 +23,11 @@ enum AxisInputType: String, CaseIterable, Identifiable, Hashable {
     case overlayMovement
     case mouseMovement
     case arrowKeys
+    case scrollWheel
     
     static let keyboardOptions: [AxisInputType] = [.none, .overlayMovement, .arrowKeys]
     
-    static let mouseOptions: [AxisInputType] = [.none, .mouseMovement]
+    static let mouseOptions: [AxisInputType] = [.none, .mouseMovement, .scrollWheel]
     
     var id: String { rawValue }
     
@@ -36,6 +37,7 @@ enum AxisInputType: String, CaseIterable, Identifiable, Hashable {
         case .overlayMovement: return "Control Keyboard"
         case .mouseMovement: return "Control Mouse"
         case .arrowKeys: return "Arrow Keys"
+        case .scrollWheel: return "Scroll Wheel"
         }
     }
 }

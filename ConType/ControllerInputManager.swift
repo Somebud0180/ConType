@@ -48,6 +48,7 @@ final class ControllerInputManager: NSObject {
     var onToggle: (() -> Void)?
     var onMove: ((OverlayMoveDirection, OverlayMoveTrigger) -> Void)?
     var onMouseMove: ((CGVector) -> Void)?
+    var onScroll: ((CGVector) -> Void)?
     var onSelect: (() -> Void)?
     var onBackspace: (() -> Void)?
     var onSpace: (() -> Void)?
@@ -148,8 +149,10 @@ final class ControllerInputManager: NSObject {
     private var filteredStick = CGVector(dx: 0, dy: 0)
     private var lastAnalogDirection: OverlayMoveDirection? = nil
     private var lastAnalogInputType: AxisInputType? = nil
-    private var analogTimer: Timer? = nil
-    private var lastAnalogUpdate = Date()
+    private var mouseTimer: Timer? = nil
+    private var lastMouseUpdate = Date()
+    private var scrollTimer: Timer? = nil
+    private var lastScrollUpdate = Date()
     
     // Variables for handling input debounce
     private var lastDirectionChangeDate: Date = .distantPast
@@ -252,7 +255,8 @@ final class ControllerInputManager: NSObject {
         stopMoveRepeat(clearDirection: true, for: .overlayMovement)
         stopMoveRepeat(clearDirection: true, for: .arrowKeys)
         lastAnalogDirection = nil
-        stopAnalogTimerIfNeeded()
+        stopAnalogTimerIfNeeded(for: .mouseMovement)
+        stopAnalogTimerIfNeeded(for: .scrollWheel)
         filteredStick = CGVector(dx: 0, dy: 0)
         refreshConnectedControllerGlyphStyle()
     }
@@ -467,23 +471,25 @@ final class ControllerInputManager: NSObject {
             clearAnalogState(for: lastAnalogInputType)
             lastAnalogInputType = activeInputType
         }
+        
+        let isMouseMovementType = activeInputType == .mouseMovement || activeInputType == .scrollWheel
 
-        let keyboardMovementStyle: KeyboardMovementMode = activeInputType == .mouseMovement ? .mouse : self.keyboardMovementStyle
+        let keyboardMovementStyle: KeyboardMovementMode = isMouseMovementType ? .mouse : self.keyboardMovementStyle
         if keyboardMovementStyle != .mouse {
-            stopAnalogTimerIfNeeded()
+                stopAnalogTimerIfNeeded(for: resolvedAxisInputType(from: inputTypes))
         }
 
         switch keyboardMovementStyle {
         case .mouse:
             // Start or stop analog timer depending on magnitude vs deadZone
             if rawMagnitude > joystickDeadzone {
-                startAnalogTimerIfNeeded(from: source)
-                lastAnalogUpdate = Date()
+                startAnalogTimerIfNeeded(from: source, for: resolvedAxisInputType(from: inputTypes))
+                lastMouseUpdate = Date()
             } else {
-                stopAnalogTimerIfNeeded()
+                stopAnalogTimerIfNeeded(for: resolvedAxisInputType(from: inputTypes))
             }
 
-            // When in analog mode we do not synthesize discrete presses; analogTimer will generate deltas
+            // When in analog mode we do not synthesize discrete presses; mouseTimer will generate deltas
             // But we still may want to clear any discrete held direction state:
             if let last = lastAnalogDirection {
                 // release the previous discrete direction if any
@@ -555,27 +561,46 @@ final class ControllerInputManager: NSObject {
         }
     }
 
-    private func startAnalogTimerIfNeeded(from source: MovementMode) {
-        guard analogTimer == nil else { return }
-        
-        analogTimer = Timer.scheduledTimer(withTimeInterval: joystickTickInterval, repeats: true, block: { [weak self] _ in
-            self?.analogTimerFired(from: source)
-        })
-        // Ensure timer runs on main runloop in common modes
-        RunLoop.main.add(analogTimer!, forMode: .common)
+    private func startAnalogTimerIfNeeded(from source: MovementMode, for inputType: AxisInputType?) {
+        if inputType == .mouseMovement {
+            guard mouseTimer == nil else { return }
+            
+            mouseTimer = Timer.scheduledTimer(withTimeInterval: joystickTickInterval, repeats: true, block: { [weak self] _ in
+                self?.analogTimerFired(from: source)
+            })
+            // Ensure timer runs on main runloop in common modes
+            RunLoop.main.add(mouseTimer!, forMode: .common)
+        } else if inputType == .scrollWheel {
+            guard scrollTimer == nil else { return }
+            
+            scrollTimer = Timer.scheduledTimer(withTimeInterval: joystickTickInterval, repeats: true, block: { [weak self] _ in
+                self?.analogTimerFired(from: source)
+            })
+            // Ensure timer runs on main runloop in common modes
+            RunLoop.main.add(scrollTimer!, forMode: .common)
+        }
     }
     
-    private func stopAnalogTimerIfNeeded() {
-        analogTimer?.invalidate()
-        analogTimer = nil
+    private func stopAnalogTimerIfNeeded(for inputType: AxisInputType?) {
+        if inputType == .mouseMovement {
+            mouseTimer?.invalidate()
+            mouseTimer = nil
+        } else if inputType == .scrollWheel {
+            scrollTimer?.invalidate()
+            scrollTimer = nil
+        }
     }
     
     private func analogTimerFired(from source: MovementMode) {
-        guard resolvedAxisInputType(from: inputTypes(for: source)) == .mouseMovement else {
-            stopAnalogTimerIfNeeded()
+        let inputType = resolvedAxisInputType(from: inputTypes(for: source))
+        guard (inputType == .mouseMovement) || (inputType == .scrollWheel) else {
+            stopAnalogTimerIfNeeded(for: inputType)
             return
         }
 
+        // Get analog input type
+        let isMouseMovement = inputType == .mouseMovement
+        
         // Get active deadzone
         let joystickDeadzone = switch source {
         case .dpad: CGFloat(0)
@@ -585,8 +610,12 @@ final class ControllerInputManager: NSObject {
         
         // Compute delta using filteredStick and sensitivity
         let tNow = Date()
-        let elapsed = tNow.timeIntervalSince(lastAnalogUpdate)
-        lastAnalogUpdate = tNow
+        let elapsed = tNow.timeIntervalSince(isMouseMovement ? lastMouseUpdate : lastScrollUpdate)
+        if isMouseMovement {
+            lastMouseUpdate = tNow
+        } else {
+            lastScrollUpdate = tNow
+        }
         
         let mag = sqrt(filteredStick.dx * filteredStick.dx + filteredStick.dy * filteredStick.dy)
         guard mag > joystickDeadzone else { return }
@@ -605,7 +634,11 @@ final class ControllerInputManager: NSObject {
         
         // send delta as mouse move on main thread
         DispatchQueue.main.async {
-            self.sendMouseMove(delta)
+            if isMouseMovement {
+                self.sendMouseMove(delta)
+            } else {
+                self.sendScroll(delta)
+            }
         }
     }
     
@@ -770,16 +803,16 @@ final class ControllerInputManager: NSObject {
         let normalized = normalizedAxisInputTypes(from: inputTypes)
         guard !normalized.isEmpty else { return nil }
 
-        let hasMouse = normalized.contains(.mouseMovement)
+        let mouseType = preferredMouseAxisInputType(from: normalized)
         let keyboardType = preferredKeyboardAxisInputType(from: normalized)
 
         if isMouseOverlayVisible {
-            return hasMouse ? .mouseMovement : keyboardType
+            return mouseType != nil ? mouseType : keyboardType
         }
 
         if isKeyboardOverlayVisible {
-            if enableMouseInKeyboard, hasMouse {
-                return .mouseMovement
+            if enableMouseInKeyboard, mouseType != nil {
+                return mouseType
             }
             return keyboardType
         }
@@ -787,6 +820,16 @@ final class ControllerInputManager: NSObject {
         return keyboardType
     }
 
+    private func preferredMouseAxisInputType(from inputTypes: [AxisInputType]) -> AxisInputType? {
+        if inputTypes.contains(.mouseMovement) {
+            return .mouseMovement
+        }
+        if inputTypes.contains(.scrollWheel) {
+            return .scrollWheel
+        }
+        return nil
+    }
+        
     private func preferredKeyboardAxisInputType(from inputTypes: [AxisInputType]) -> AxisInputType? {
         if inputTypes.contains(.overlayMovement) {
             return .overlayMovement
@@ -811,8 +854,8 @@ final class ControllerInputManager: NSObject {
     private func clearAnalogState(for inputType: AxisInputType?) {
         guard let inputType else { return }
 
-        if inputType == .mouseMovement {
-            stopAnalogTimerIfNeeded()
+        if inputType == .mouseMovement || inputType == .scrollWheel {
+            stopAnalogTimerIfNeeded(for: inputType)
             lastAnalogDirection = nil
             return
         }
@@ -934,6 +977,11 @@ final class ControllerInputManager: NSObject {
     private func sendMouseMove(_ delta: CGVector) {
         debugLog("Mouse Move: \(delta)")
         onMouseMove?(delta)
+    }
+    
+    private func sendScroll(_ delta: CGVector) {
+        debugLog("Scroll: \(delta)")
+        onScroll?(delta)
     }
     
     private func sendArrowMove(_ direction: OverlayMoveDirection) {
