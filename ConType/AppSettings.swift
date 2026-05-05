@@ -447,7 +447,7 @@ final class AppSettings: ObservableObject {
     @Published var leftStickDeadzone: CGFloat = 0.4
     @Published var rightStickDeadzone: CGFloat = 0.4
     @Published var mouseSensitivity: CGFloat = 300.0
-    @Published var mouseSmoothing: CGFloat = 0.5
+    @Published var mouseSmoothing: CGFloat = 0.4
     @Published var invertMouseX: Bool = false
     @Published var invertMouseY: Bool = false
     @Published var invertScrollX: Bool = false

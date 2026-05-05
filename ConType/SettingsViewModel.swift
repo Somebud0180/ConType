@@ -66,7 +66,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var leftStickDeadzone: CGFloat
     @Published var rightStickDeadzone: CGFloat
     @Published var mouseSensitivity: CGFloat = 500
-    @Published var mouseSmoothing: CGFloat = 0.5
+    @Published var mouseSmoothing: CGFloat = 0.4
     @Published var invertMouseX: Bool = false
     @Published var invertMouseY: Bool = false
     @Published var invertScrollX: Bool = false
@@ -142,7 +142,7 @@ final class SettingsViewModel: ObservableObject {
         settings.leftStickDeadzone = 0.4
         settings.rightStickDeadzone = 0.4
         settings.mouseSensitivity = 300
-        settings.mouseSmoothing = 0.5
+        settings.mouseSmoothing = 0.4
         settings.invertMouseX = false
         settings.invertMouseY = false
         settings.invertScrollX = false
