@@ -23,7 +23,7 @@ struct MouseOverlayView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(
-                .clear
+                .regular
                 .interactive(),
                 in: Circle()
             )
