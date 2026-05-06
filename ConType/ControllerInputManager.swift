@@ -372,11 +372,6 @@ final class ControllerInputManager: NSObject {
         bindAnalogStick(gamepad.dpad, from: .dpad, inputType: padInputType)
     }
     
-    private func configureAxisInput() {
-        // Handle binding axis inputs dynamically
-        // Left Stick, Right Stick, D-pad as overlay movement or mouse movement
-    }
-    
     private func bindGuideButton(_ button: GCControllerButtonInput?, source: String) {
         button?.pressedChangedHandler = { [weak self] _, _, pressed in
             self?.setGuidePressed(pressed, source: source)
@@ -533,6 +528,8 @@ final class ControllerInputManager: NSObject {
                 return
             }
             
+            // Update filtered stick with raw input for discrete direction calculation
+            state.filteredStick = raw
             let newDir = discreteDirection(for: state.filteredStick, mode: keyboardMovementStyle)
             let now = Date()
             if newDir != state.lastDirection {
