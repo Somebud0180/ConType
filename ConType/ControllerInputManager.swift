@@ -515,6 +515,9 @@ final class ControllerInputManager: NSObject {
             }
             
         case .limited, .full:
+            state.filteredStick.dx = state.filteredStick.dx + raw.dx
+            state.filteredStick.dy = state.filteredStick.dy + raw.dy
+            
             // Map to discrete direction based on filteredStick and magnitude vs deadZone
             if rawMagnitude <= joystickDeadzone {
                 // release any held discrete direction
@@ -528,8 +531,6 @@ final class ControllerInputManager: NSObject {
                 return
             }
             
-            // Update filtered stick with raw input for discrete direction calculation
-            state.filteredStick = raw
             let newDir = discreteDirection(for: state.filteredStick, mode: keyboardMovementStyle)
             let now = Date()
             if newDir != state.lastDirection {
