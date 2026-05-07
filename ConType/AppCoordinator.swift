@@ -268,6 +268,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.invertScrollX = settings.invertScrollX
         controllerInputManager.invertScrollY = settings.invertScrollY
         controllerInputManager.enableMouseInKeyboard = settings.enableMouseInKeyboard
+        controllerInputManager.prioritizeMouseOverKeyboard = settings.prioritizeMouseOverKeyboard
         refreshControllerOverlayVisibility()
         
         settings.$keyboardHotkey
@@ -378,6 +379,12 @@ final class AppCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
         
+        settings.$prioritizeMouseOverKeyboard
+            .sink { [weak self] value in
+                self?.controllerInputManager.prioritizeMouseOverKeyboard = value
+            }
+            .store(in: &cancellables)
+        
         settings.$inMouseMode
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
@@ -434,12 +441,14 @@ final class AppCoordinator: ObservableObject {
                 overlayController.hide()
                 settings.inMouseMode = true
                 overlayController.show()
+                refreshControllerOverlayVisibility()
                 return
             } else if !forMouse && settings.inMouseMode {
                 debugPrint("Switching to keyboard overlay")
                 overlayController.hide()
                 settings.inMouseMode = false
                 overlayController.show()
+                refreshControllerOverlayVisibility()
                 return
             }
             

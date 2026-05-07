@@ -154,7 +154,7 @@ struct SettingsView: View {
                                 Divider()
                                 
                                 Toggle(
-                                    "Prioritize mouse shortcuts while in keyboard overlay",
+                                    "Prioritize mouse controls while in keyboard overlay",
                                     isOn: Binding(
                                         get: { viewModel.settings.prioritizeMouseOverKeyboard },
                                         set: { viewModel.settings.prioritizeMouseOverKeyboard = $0 }

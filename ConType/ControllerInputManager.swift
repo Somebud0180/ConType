@@ -84,12 +84,21 @@ final class ControllerInputManager: NSObject {
             resetAnalogStateForContextChange()
         }
     }
+    
+    var prioritizeMouseOverKeyboard = false {
+        didSet {
+            guard prioritizeMouseOverKeyboard != oldValue else { return }
+            resetAnalogStateForContextChange()
+        }
+    }
+    
     var isKeyboardOverlayVisible = false {
         didSet {
             guard isKeyboardOverlayVisible != oldValue else { return }
             resetAnalogStateForContextChange()
         }
     }
+    
     var isMouseOverlayVisible = false {
         didSet {
             guard isMouseOverlayVisible != oldValue else { return }
@@ -174,8 +183,12 @@ final class ControllerInputManager: NSObject {
         .dpad: Date.distantPast
     ]
     
-    // Variables for handling input debounce
-    private var lastDirectionChangeDate: Date = .distantPast
+    // Variables for handling input debounce (per-source)
+    private var lastDirectionChangeDates: [MovementMode: Date] = [
+        .leftStick: Date.distantPast,
+        .rightStick: Date.distantPast,
+        .dpad: Date.distantPast
+    ]
     private let directionDebounceInterval: TimeInterval = 0.1
     
     // Variables for dpad hold repeat behavior
@@ -505,8 +518,12 @@ final class ControllerInputManager: NSObject {
             }
             
         case .limited, .full:
-            state.filteredStick.dx = state.filteredStick.dx + raw.dx
-            state.filteredStick.dy = state.filteredStick.dy + raw.dy
+            // Use the instantaneous raw vector for discrete direction mapping.
+            // Previously we accumulated inputs which could cause drift and
+            // spurious vertical/horizontal components. Assigning the raw
+            // vector prevents those artifacts while still honoring deadzone.
+            state.filteredStick.dx = raw.dx
+            state.filteredStick.dy = raw.dy
             
             // Map to discrete direction based on filteredStick and magnitude vs deadZone
             if rawMagnitude <= joystickDeadzone {
@@ -523,14 +540,15 @@ final class ControllerInputManager: NSObject {
             
             let newDir = discreteDirection(for: state.filteredStick, mode: keyboardMovementStyle)
             let now = Date()
+            let lastChange = lastDirectionChangeDates[source] ?? Date.distantPast
             if newDir != state.lastDirection {
-                if now.timeIntervalSince(lastDirectionChangeDate) >= directionDebounceInterval {
+                if now.timeIntervalSince(lastChange) >= directionDebounceInterval {
                     // Release previous, press new
                     if let last = state.lastDirection {
                         setDirectionalInput(last, pressed: false, for: activeInputType)
                     }
                     state.lastDirection = newDir
-                    lastDirectionChangeDate = now
+                    lastDirectionChangeDates[source] = now
                     updateRepeatTuning(for: source)
                     setDirectionalInput(newDir, pressed: true, for: activeInputType)
                 }
@@ -826,8 +844,12 @@ final class ControllerInputManager: NSObject {
         }
         
         if isKeyboardOverlayVisible {
-            if enableMouseInKeyboard, mouseType != nil {
-                return mouseType
+            if enableMouseInKeyboard {
+                if prioritizeMouseOverKeyboard {
+                    return mouseType ?? keyboardType
+                }
+                // Prefer keyboard when present, otherwise allow mouse.
+                return keyboardType ?? mouseType
             }
             return keyboardType
         }
