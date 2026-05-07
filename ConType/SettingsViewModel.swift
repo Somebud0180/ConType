@@ -128,7 +128,7 @@ final class SettingsViewModel: ObservableObject {
     func resetDefaults() {
         // Reset all settings except open on startup
         settings.keyboardHotkey = defaultKeyboardShortcut
-        settings.controllerToggleBinding = .default
+        settings.controllerKbToggleBinding = .default
         settings.controllerActionBindings = .default
         settings.keyboardLayout = .QWERTY
         settings.leftStickInputType = [.overlayMovement, .scrollWheel]
@@ -262,7 +262,7 @@ final class SettingsViewModel: ObservableObject {
             onRequestControllerBindingCapture { [weak self] binding in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
-                    self.settings.controllerToggleBinding = binding
+                    self.settings.controllerKbToggleBinding = binding
                     self.endControllerToggleRecording(cancelCapture: false)
                 }
             }
@@ -819,7 +819,7 @@ final class SettingsViewModel: ObservableObject {
                 genericGuideGlyph(size: 26)
                 Text("+")
                     .foregroundStyle(.secondary)
-                buttonGlyph(settings.controllerToggleBinding.button, size: 26)
+                buttonGlyph(settings.controllerKbToggleBinding.button, size: 26)
             }
             .frame(width: 230, alignment: .leading)
             .frame(minHeight: 32)

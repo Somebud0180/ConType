@@ -430,7 +430,7 @@ final class AppSettings: ObservableObject {
     
     // Bindings
     @Published var keyboardHotkey = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
-    @Published var controllerToggleBinding: ControllerToggleBinding = .default
+    @Published var controllerKbToggleBinding: ControllerToggleBinding = .default
     @Published var controllerActionBindings: ControllerActionBindings = .default
     
     // Preferences
@@ -472,7 +472,7 @@ final class AppSettings: ObservableObject {
         let saveTriggers: [AnyPublisher<Void, Never>] = [
             $restartedFromPermissionScreen.map { _ in () }.eraseToAnyPublisher(),
             $keyboardHotkey.map { _ in () }.eraseToAnyPublisher(),
-            $controllerToggleBinding.map { _ in () }.eraseToAnyPublisher(),
+            $controllerKbToggleBinding.map { _ in () }.eraseToAnyPublisher(),
             $controllerActionBindings.map { _ in () }.eraseToAnyPublisher(),
             $enableMouseInKeyboard.map { _ in () }.eraseToAnyPublisher(),
             $prioritizeMouseOverKeyboard.map { _ in () }.eraseToAnyPublisher(),
@@ -520,7 +520,7 @@ final class AppSettings: ObservableObject {
         let codable = AppSettingsCodable(
             restartedFromPermissionScreen: restartedFromPermissionScreen,
             keyboardHotkey: keyboardHotkey,
-            controllerToggleBinding: controllerToggleBinding,
+            controllerKbToggleBinding: controllerKbToggleBinding,
             controllerActionBindings: controllerActionBindings,
             enableMouseInKeyboard: enableMouseInKeyboard,
             prioritizeMouseOverKeyboard: prioritizeMouseOverKeyboard,
@@ -562,7 +562,7 @@ final class AppSettings: ObservableObject {
             let codable = try JSONDecoder().decode(AppSettingsCodable.self, from: data)
             self.restartedFromPermissionScreen = codable.restartedFromPermissionScreen
             self.keyboardHotkey = codable.keyboardHotkey
-            self.controllerToggleBinding = codable.controllerToggleBinding
+            self.controllerKbToggleBinding = codable.controllerKbToggleBinding
             self.controllerActionBindings = codable.controllerActionBindings
             self.enableMouseInKeyboard = codable.enableMouseInKeyboard
             self.prioritizeMouseOverKeyboard = codable.prioritizeMouseOverKeyboard
@@ -682,7 +682,7 @@ struct CodablePoint: Codable {
 private struct AppSettingsCodable: Codable {
     var restartedFromPermissionScreen: Bool
     var keyboardHotkey: KeyboardHotkeyManager.Shortcut
-    var controllerToggleBinding: ControllerToggleBinding
+    var controllerKbToggleBinding: ControllerToggleBinding
     var controllerActionBindings: ControllerActionBindings
     var enableMouseInKeyboard: Bool
     var prioritizeMouseOverKeyboard: Bool

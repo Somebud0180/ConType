@@ -419,7 +419,7 @@ struct SettingsView: View {
                 Button("Reset Hotkeys", role: .destructive) {
                     // Reset hotkeys to default
                     settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
-                    settings.controllerToggleBinding = .default
+                    settings.controllerKbToggleBinding = .default
                     settings.controllerActionBindings = .default
                 }
                 Button("Cancel", role: .cancel) {}

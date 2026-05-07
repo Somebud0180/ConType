@@ -244,7 +244,7 @@ final class AppCoordinator: ObservableObject {
         }
 
         hotkeyManager.shortcut = settings.keyboardHotkey
-        controllerInputManager.toggleBinding = settings.controllerToggleBinding
+        controllerInputManager.toggleBinding = settings.controllerKbToggleBinding
         controllerInputManager.actionBindings = settings.controllerActionBindings
         controllerInputManager.leftStickInputType = settings.leftStickInputType
         controllerInputManager.rightStickInputType = settings.rightStickInputType
@@ -270,7 +270,7 @@ final class AppCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        settings.$controllerToggleBinding
+        settings.$controllerKbToggleBinding
             .sink { [weak self] value in
                 self?.controllerInputManager.toggleBinding = value
             }
