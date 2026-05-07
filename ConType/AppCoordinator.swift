@@ -69,9 +69,15 @@ final class AppCoordinator: ObservableObject {
             }
         }
         
-        controllerInputManager.onToggle = { [weak self] in
+        controllerInputManager.onToggleKeyboard = { [weak self] in
             Task { @MainActor in
-                self?.toggleOverlay(source: .controllerShortcut)
+                self?.toggleOverlay(source: .controllerShortcut, forMouse: false)
+            }
+        }
+        
+        controllerInputManager.onToggleMouse = { [weak self] in
+            Task { @MainActor in
+                self?.toggleOverlay(source: .controllerShortcut, forMouse: true)
             }
         }
         
@@ -410,7 +416,7 @@ final class AppCoordinator: ObservableObject {
         NSApp.terminate(nil)
     }
     
-    private func toggleOverlay(source: ToggleSource) {
+    private func toggleOverlay(source: ToggleSource, forMouse: Bool = false) {
         refreshHotkeyManagerState()
         
         if source.isShortcutActivation {
@@ -422,6 +428,21 @@ final class AppCoordinator: ObservableObject {
         }
         
         if overlayController.isKeyboardVisible || overlayController.isMouseVisible {
+            debugPrint("For Mouse: \(forMouse), In Mouse Mode: \(settings.inMouseMode)")
+            if forMouse && !settings.inMouseMode {
+                debugPrint("Switching to mouse overlay")
+                overlayController.hide()
+                settings.inMouseMode = true
+                overlayController.show()
+                return
+            } else if !forMouse && settings.inMouseMode {
+                debugPrint("Switching to keyboard overlay")
+                overlayController.hide()
+                settings.inMouseMode = false
+                overlayController.show()
+                return
+            }
+            
             overlayController.hide()
             isOverlayVisible = false
             controllerInputManager.isOverlayVisible = false
@@ -431,6 +452,12 @@ final class AppCoordinator: ObservableObject {
         }
         
         updateActivationPolicyForCurrentUIState()
+        
+        if forMouse {
+            settings.inMouseMode = true
+        } else {
+            settings.inMouseMode = false
+        }
         
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }

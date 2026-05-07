@@ -52,7 +52,8 @@ final class ControllerInputManager: NSObject {
     var onLeftStickChanged: ((CGVector) -> Void)?
     var onRightStickChanged: ((CGVector) -> Void)?
     var onDPadChanged: ((CGVector) -> Void)?
-    var onToggle: (() -> Void)?
+    var onToggleKeyboard: (() -> Void)?
+    var onToggleMouse: (() -> Void)?
     var onMove: ((OverlayMoveDirection, OverlayMoveTrigger) -> Void)?
     var onMouseMove: ((CGVector) -> Void)?
     var onScroll: ((CGVector) -> Void)?
@@ -147,7 +148,6 @@ final class ControllerInputManager: NSObject {
     private var activeMoveDirection: OverlayMoveDirection?
     private var holdRepeatStep = 0
     private var holdRepeatWorkItem: DispatchWorkItem?
-    private var suppressGuideChordUntilRelease = false
     
     // Arrow key emulation
     private let keyEmitter = KeyEmitter()
@@ -296,7 +296,7 @@ final class ControllerInputManager: NSObject {
                 // On modern systems we already handle Menu/Home/Options via the input profile; no paused handler needed.
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
-                    self?.dismissOverlayViaGuideIfNeeded(momentary: true)
+                    self?.dismissOverlayViaGuideIfNeeded()
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
             }
@@ -312,7 +312,7 @@ final class ControllerInputManager: NSObject {
                 // On modern systems we already handle Menu/Home/Options via the input profile; no paused handler needed.
             } else {
                 controller.controllerPausedHandler = { [weak self] _ in
-                    self?.dismissOverlayViaGuideIfNeeded(momentary: true)
+                    self?.dismissOverlayViaGuideIfNeeded()
                     self?.debugLog("controllerPausedHandler fired (guide momentary)")
                 }
             }
@@ -381,23 +381,13 @@ final class ControllerInputManager: NSObject {
     private func setGuidePressed(_ pressed: Bool, source: String) {
         isGuideHeld = pressed
         if pressed {
-            dismissOverlayViaGuideIfNeeded(momentary: false)
+            dismissOverlayViaGuideIfNeeded()
             debugLog("Guide (\(source)) pressed")
-        } else {
-            suppressGuideChordUntilRelease = false
         }
     }
     
-    private func dismissOverlayViaGuideIfNeeded(momentary: Bool) {
+    private func dismissOverlayViaGuideIfNeeded() {
         guard dismissWithGuideButton, isOverlayVisible else { return }
-        
-        suppressGuideChordUntilRelease = true
-        if momentary {
-            DispatchQueue.main.asyncAfter(deadline: .now() + guideChordWindow) { [weak self] in
-                self?.suppressGuideChordUntilRelease = false
-            }
-        }
-        
         debugLog("Dismissed overlay via guide button")
         onDismissWithGuideButton?()
     }
@@ -1047,11 +1037,6 @@ final class ControllerInputManager: NSObject {
         }
         
         if isGuideActive {
-            if suppressGuideChordUntilRelease {
-                debugLog("Ignoring guide chord while dismiss suppression is active")
-                return
-            }
-            
             if let pendingToggleCapture {
                 self.pendingToggleCapture = nil
                 pendingToggleCapture(button)
@@ -1059,9 +1044,14 @@ final class ControllerInputManager: NSObject {
                 return
             }
             
-            if isToggleEnabled && (toggleBindings.keyboardToggle == button || toggleBindings.mouseToggle == button) {
-                debugLog("Toggled overlay via controller binding")
-                onToggle?()
+            if isToggleEnabled {
+                if toggleBindings.keyboardToggle == button {
+                    debugLog("Toggled keyboard overlay via controller binding")
+                    onToggleKeyboard?()
+                } else if toggleBindings.mouseToggle == button {
+                    debugLog("Toggled mouse overlay via controller binding")
+                    onToggleMouse?()
+                }
             }
             
             return
