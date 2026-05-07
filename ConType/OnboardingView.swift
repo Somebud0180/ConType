@@ -218,7 +218,22 @@ struct OnboardingView: View {
             Text("or")
                 .foregroundStyle(.secondary)
             
-            shortcutBadge(settings.controllerKbToggleBinding.title(for: settings.controllerGlyphStyle))
+            shortcutBadge(
+                settings.controllerToggleBindings.shortcutText(
+                    for: .keyboardToggle,
+                    style: settings.controllerGlyphStyle
+                )
+            )
+            
+            Text("or")
+                .foregroundStyle(.secondary)
+            
+            shortcutBadge(
+                settings.controllerToggleBindings.shortcutText(
+                    for: .mouseToggle,
+                    style: settings.controllerGlyphStyle
+                )
+            )
             
             Text("to get started")
                 .foregroundStyle(.secondary)

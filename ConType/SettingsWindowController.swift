@@ -4,19 +4,19 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
-
+    
     private let settings: AppSettings
     private let joystick: JoystickInputModel
-    private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
+    private let onRequestControllerBindingCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
     private let onRestartOnboarding: () -> Void
     private var window: NSWindow?
-
+    
     init(
         settings: AppSettings,
         joystick: JoystickInputModel,
-        onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
+        onRequestControllerBindingCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
         onRestartOnboarding: @escaping () -> Void
@@ -28,31 +28,31 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.onCancelControllerCapture = onCancelControllerCapture
         self.onRestartOnboarding = onRestartOnboarding
     }
-
+    
     var isVisible: Bool {
         window?.isVisible == true
     }
-
+    
     func show() {
         let window = makeWindowIfNeeded()
         window.makeKeyAndOrderFront(nil)
     }
-
+    
     func close() {
         window?.performClose(nil)
     }
-
+    
     func windowWillClose(_ notification: Notification) {
         onClose?()
     }
-
+    
     private func makeWindowIfNeeded() -> NSWindow {
         if let window {
             return window
         }
         let screen = NSScreen.main ?? window?.screen ?? NSScreen.screens.first
         let frame = screen?.visibleFrame
-
+        
         let viewModel = SettingsViewModel(
             settings: settings,
             joystick: joystick,
@@ -61,7 +61,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             onCancelControllerCapture: onCancelControllerCapture,
             onRestartOnboarding: onRestartOnboarding
         )
-
+        
         let hostingController = NSHostingController(
             rootView: SettingsView(viewModel: viewModel)
         )
@@ -77,14 +77,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-
+        
         window.contentViewController = hostingController
         window.title = "Settings"
         window.delegate = self
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 560, height: 240)
         window.maxSize = NSSize(width: 560, height: 600)
-
+        
         self.window = window
         return window
     }

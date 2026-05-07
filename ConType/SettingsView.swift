@@ -76,8 +76,18 @@ struct SettingsView: View {
                                 viewModel.keyboardShortcutButton
                             }
                             
-                            LabeledContent("Controller Shortcut") {
-                                viewModel.controllerToggleButton
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(ControllerToggleBinding.allCases) { toggle in
+                                    LabeledContent(toggle.title) {
+                                        viewModel.controllerTogglePickerButton(
+                                            for: toggle
+                                        )
+                                    }
+                                    
+                                    if toggle != ControllerToggleBinding.allCases.last {
+                                        Divider()
+                                    }
+                                }
                             }
                             
                             Toggle(
@@ -419,7 +429,7 @@ struct SettingsView: View {
                 Button("Reset Hotkeys", role: .destructive) {
                     // Reset hotkeys to default
                     settings.keyboardHotkey = viewModel.defaultKeyboardShortcut
-                    settings.controllerKbToggleBinding = .default
+                    settings.controllerToggleBindings = .default
                     settings.controllerActionBindings = .default
                 }
                 Button("Cancel", role: .cancel) {}

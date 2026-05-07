@@ -45,7 +45,7 @@ final class SettingsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // Callbacks
-    private let onRequestControllerBindingCapture: (@escaping (ControllerToggleBinding) -> Void) -> Void
+    private let onRequestControllerBindingCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
     private let onRestartOnboarding: () -> Void
@@ -61,6 +61,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var keyboardPressedModifiers: NSEvent.ModifierFlags = []
     
     @Published var isRecordingControllerHotkey = false
+    @Published var activeControllerTogglePicker: ControllerToggleBinding?
     @Published var activeControllerActionPicker: ControllerActionBinding?
     @Published var keyboardMovementStyle = KeyboardMovementMode.limited
     @Published var leftStickDeadzone: CGFloat
@@ -86,7 +87,7 @@ final class SettingsViewModel: ObservableObject {
     init(
         settings: AppSettings,
         joystick: JoystickInputModel,
-        onRequestControllerBindingCapture: @escaping (@escaping (ControllerToggleBinding) -> Void) -> Void,
+        onRequestControllerBindingCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
         onRestartOnboarding: @escaping () -> Void
@@ -128,7 +129,7 @@ final class SettingsViewModel: ObservableObject {
     func resetDefaults() {
         // Reset all settings except open on startup
         settings.keyboardHotkey = defaultKeyboardShortcut
-        settings.controllerKbToggleBinding = .default
+        settings.controllerToggleBindings = .default
         settings.controllerActionBindings = .default
         settings.keyboardLayout = .QWERTY
         settings.leftStickInputType = [.overlayMovement, .scrollWheel]
@@ -253,16 +254,30 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    private var keyboardRecordingPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { self.isRecordingKeyboardHotkey },
+            set: { [self] isPresented in
+                if isPresented {
+                    beginKeyboardHotkeyRecording()
+                } else {
+                    endKeyboardHotkeyRecording()
+                }
+            }
+        )
+    }
+    
     // MARK: - Controller toggle recording
-    func beginControllerToggleRecording() {
+    func beginControllerToggleRecording(for toggle: ControllerToggleBinding) {
         if !isRecordingControllerHotkey {
             if isRecordingKeyboardHotkey { endKeyboardHotkeyRecording() }
             if activeControllerActionPicker != nil { endControllerActionPicker() }
             isRecordingControllerHotkey = true
+            activeControllerTogglePicker = toggle
             onRequestControllerBindingCapture { [weak self] binding in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
-                    self.settings.controllerKbToggleBinding = binding
+                    self.settings.controllerToggleBindings.setBinding(binding, for: toggle)
                     self.endControllerToggleRecording(cancelCapture: false)
                 }
             }
@@ -274,6 +289,7 @@ final class SettingsViewModel: ObservableObject {
             guard let self = self else { return }
             let wasRecording = self.isRecordingControllerHotkey
             self.isRecordingControllerHotkey = false
+            self.activeControllerTogglePicker = nil
             if cancelCapture && wasRecording {
                 self.onCancelControllerCapture()
             }
@@ -447,7 +463,7 @@ final class SettingsViewModel: ObservableObject {
                         return .warn(message:"This button is also assigned to \(actionName) and is overriding it. Disable mouse controls in the keyboard or change the button of either controls.")
                     }
                 } else if (ControllerActionBinding.mouseActions.contains(controllerButton)
-                        && ControllerActionBinding.keyboardActions.contains(action)) {
+                           && ControllerActionBinding.keyboardActions.contains(action)) {
                     if !settings.enableMouseInKeyboard {
                         return .normal
                     }
@@ -458,7 +474,7 @@ final class SettingsViewModel: ObservableObject {
                         return .warn(message:"This button is also assigned to \(actionName) and is being overriden. Disable mouse controls in the keyboard or change the button of either controls.")
                     }
                 }
-
+                
                 return .explicit(message: "This button is also assigned to \(actionName). Change the button for one of these actions.")
             }
         }
@@ -761,6 +777,89 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    func controllerTogglePickerButton(for toggle: ControllerToggleBinding) -> some View {
+        let selectedButton = settings.controllerToggleBindings.binding(for: toggle)
+        
+        return Button { [self] in
+            if activeControllerTogglePicker == toggle {
+                endControllerToggleRecording()
+            } else {
+                beginControllerToggleRecording(for: toggle)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                genericGuideGlyph(size: 20)
+                Text("+")
+                    .foregroundStyle(.secondary)
+                buttonGlyph(selectedButton, size: 20)
+                Text(selectedButton.displayTitle(for: settings.controllerGlyphStyle))
+                    .font(.system(.body, design: .monospaced))
+            }
+            .frame(width: 230, alignment: .leading)
+            .frame(minHeight: 32)
+        }
+        .buttonStyle(.bordered)
+        .popover(isPresented: controllerToggleRecordingPresentedBinding(for: toggle), arrowEdge: .bottom) { [self] in
+            controllerTogglePopover(for: toggle)
+        }
+    }
+    
+    private func controllerToggleRecordingPresentedBinding(for toggle: ControllerToggleBinding) -> Binding<Bool> {
+        Binding(
+            get: { self.activeControllerTogglePicker == toggle },
+            set: { [self] isPresented in
+                if !isPresented {
+                    endControllerToggleRecording()
+                } else {
+                    beginControllerToggleRecording(for: toggle)
+                }
+            }
+        )
+    }
+    
+    @ViewBuilder
+    private func controllerTogglePopover(for toggle: ControllerToggleBinding) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Press Controller Shortcut")
+                .font(.headline)
+            
+            Text(toggle.title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            RecordingDisplayContainer {
+                ControllerChordView(
+                    guidePressed: settings.controllerCaptureState.isGuidePressed,
+                    buttons: orderedButtons(from: settings.controllerCaptureState.pressedButtons),
+                    waitingText: waitingControllerText,
+                    controllerGlyphStyle: settings.controllerGlyphStyle
+                )
+            }
+            
+            Divider()
+            
+            Text("Example")
+                .font(.subheadline.weight(.semibold))
+            
+            ControllerChordView(
+                guidePressed: true,
+                buttons: [.west],
+                waitingText: waitingControllerText,
+                controllerGlyphStyle: settings.controllerGlyphStyle
+            )
+            .foregroundStyle(.secondary)
+            
+            HStack {
+                Spacer()
+                Button("Cancel") { [self] in
+                    endControllerToggleRecording()
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: 340)
+    }
+    
     // MARK: - UI Variables
     var keyboardShortcutButton: some View {
         Button { [self] in
@@ -809,85 +908,6 @@ final class SettingsViewModel: ObservableObject {
         }
         .padding(12)
         .frame(width: 300)
-    }
-    
-    var controllerToggleButton: some View {
-        Button { [self] in
-            beginControllerToggleRecording()
-        } label: {
-            HStack(spacing: 8) {
-                genericGuideGlyph(size: 26)
-                Text("+")
-                    .foregroundStyle(.secondary)
-                buttonGlyph(settings.controllerKbToggleBinding.button, size: 26)
-            }
-            .frame(width: 230, alignment: .leading)
-            .frame(minHeight: 32)
-        }
-        .buttonStyle(.bordered)
-        .popover(isPresented: controllerToggleRecordingPresentedBinding, arrowEdge: .bottom) {
-            self.controllerTogglePopover
-        }
-    }
-    
-    private var controllerTogglePopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Press Controller Shortcut")
-                .font(.headline)
-            
-            RecordingDisplayContainer {
-                ControllerChordView(
-                    guidePressed: settings.controllerCaptureState.isGuidePressed,
-                    buttons: orderedButtons(from: settings.controllerCaptureState.pressedButtons),
-                    waitingText: waitingControllerText,
-                    controllerGlyphStyle: settings.controllerGlyphStyle
-                )
-            }
-            
-            Divider()
-            
-            Text("Example")
-                .font(.subheadline.weight(.semibold))
-            
-            ControllerChordView(
-                guidePressed: true,
-                buttons: [.west],
-                waitingText: waitingControllerText,
-                controllerGlyphStyle: settings.controllerGlyphStyle
-            )
-            .foregroundStyle(.secondary)
-            
-            HStack {
-                Spacer()
-                Button("Cancel") { [self] in
-                    endControllerToggleRecording()
-                }
-            }
-        }
-        .padding(12)
-        .frame(width: 340)
-    }
-    
-    private var keyboardRecordingPresentedBinding: Binding<Bool> {
-        Binding(
-            get: { self.isRecordingKeyboardHotkey },
-            set: { [self] isPresented in
-                if !isPresented {
-                    endKeyboardHotkeyRecording()
-                }
-            }
-        )
-    }
-    
-    private var controllerToggleRecordingPresentedBinding: Binding<Bool> {
-        Binding(
-            get: { self.isRecordingControllerHotkey },
-            set: { [self] isPresented in
-                if !isPresented {
-                    endControllerToggleRecording()
-                }
-            }
-        )
     }
     
     var stickDeadzoneConfig: some View {
@@ -1192,4 +1212,3 @@ final class SettingsViewModel: ObservableObject {
     
     SettingsView(viewModel: vm)
 }
-

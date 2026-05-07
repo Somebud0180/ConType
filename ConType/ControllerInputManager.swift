@@ -74,7 +74,7 @@ final class ControllerInputManager: NSObject {
     var onDismissWithGuideButton: (() -> Void)?
     
     var isToggleEnabled = true
-    var toggleBinding: ControllerToggleBinding = .default
+    var toggleBindings: ControllerToggleBindings = .default
     var actionBindings: ControllerActionBindings = .default
     
     var enableMouseInKeyboard = true {
@@ -139,7 +139,7 @@ final class ControllerInputManager: NSObject {
     private var lastGuidePressDate = Date.distantPast
     private let guideChordWindow: TimeInterval = 0.7
     
-    private var pendingToggleCapture: ((ControllerToggleBinding) -> Void)?
+    private var pendingToggleCapture: ((ControllerAssignableButton) -> Void)?
     private var pendingAssignableButtonCapture: ((ControllerAssignableButton) -> Void)?
     
     private var directionPressCounts: [OverlayMoveDirection: Int] = [:]
@@ -205,7 +205,7 @@ final class ControllerInputManager: NSObject {
     private func debugLog(_ message: String) {}
 #endif
     
-    func captureNextToggleBinding(_ onCaptured: @escaping (ControllerToggleBinding) -> Void) {
+    func captureNextToggleBinding(_ onCaptured: @escaping (ControllerAssignableButton) -> Void) {
         pendingToggleCapture = onCaptured
     }
     
@@ -1052,15 +1052,14 @@ final class ControllerInputManager: NSObject {
                 return
             }
             
-            let recorded = ControllerToggleBinding(button: button)
             if let pendingToggleCapture {
                 self.pendingToggleCapture = nil
-                pendingToggleCapture(recorded)
-                debugLog("Captured toggle binding: \(recorded.button)")
+                pendingToggleCapture(button)
+                debugLog("Captured toggle binding: \(button)")
                 return
             }
             
-            if isToggleEnabled && toggleBinding.button == button {
+            if isToggleEnabled && (toggleBindings.keyboardToggle == button || toggleBindings.mouseToggle == button) {
                 debugLog("Toggled overlay via controller binding")
                 onToggle?()
             }

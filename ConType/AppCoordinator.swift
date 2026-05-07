@@ -8,12 +8,12 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var isOverlayVisible = false
     let settings = AppSettings()
     let joystick: JoystickInputModel
-
+    
     private enum ToggleSource {
         case menuBar
         case keyboardShortcut
         case controllerShortcut
-
+        
         var isShortcutActivation: Bool {
             switch self {
             case .menuBar:
@@ -23,10 +23,10 @@ final class AppCoordinator: ObservableObject {
             }
         }
     }
-
+    
     private let hasLaunchedBeforeDefaultsKey = "ConType.hasLaunchedBefore"
     private let launchAtLoginService = SMAppService.mainApp
-
+    
     private lazy var overlayController = OverlayWindowController(settings: settings)
     private lazy var settingsController = SettingsWindowController(
         settings: settings,
@@ -50,7 +50,7 @@ final class AppCoordinator: ObservableObject {
     private let mouseEmitter = MouseEmitter()
     private var cancellables = Set<AnyCancellable>()
     private var isHotkeyManagerRunning = false
-
+    
     private var hasLaunchedBefore: Bool {
         get {
             UserDefaults.standard.bool(forKey: hasLaunchedBeforeDefaultsKey)
@@ -59,8 +59,8 @@ final class AppCoordinator: ObservableObject {
             UserDefaults.standard.set(newValue, forKey: hasLaunchedBeforeDefaultsKey)
         }
     }
-
-    init() {        
+    
+    init() {
         joystick = JoystickInputModel(manager: controllerInputManager)
         
         hotkeyManager.onToggle = { [weak self] in
@@ -68,19 +68,19 @@ final class AppCoordinator: ObservableObject {
                 self?.toggleOverlay(source: .keyboardShortcut)
             }
         }
-
+        
         controllerInputManager.onToggle = { [weak self] in
             Task { @MainActor in
                 self?.toggleOverlay(source: .controllerShortcut)
             }
         }
-
+        
         controllerInputManager.onDismissWithGuideButton = { [weak self] in
             Task { @MainActor in
                 self?.dismissOverlayViaGuideButtonIfNeeded()
             }
         }
-
+        
         controllerInputManager.onMove = { [weak self] direction, trigger in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -104,7 +104,7 @@ final class AppCoordinator: ObservableObject {
                 self.mouseEmitter.scroll(delta)
             }
         }
-
+        
         controllerInputManager.onSelect = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -112,7 +112,7 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateSelectedKey()
             }
         }
-
+        
         controllerInputManager.onBackspace = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -120,7 +120,7 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateBackspaceKey()
             }
         }
-
+        
         controllerInputManager.onSpace = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -128,7 +128,7 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateSpaceKey()
             }
         }
-
+        
         controllerInputManager.onEnter = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -136,7 +136,7 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateEnterKey()
             }
         }
-
+        
         controllerInputManager.onShift = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -144,7 +144,7 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.activateShiftShortcut(cyclesToCapsLock: self.settings.shiftShortcutCyclesToCapsLock)
             }
         }
-
+        
         controllerInputManager.onCapsLock = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible else { return }
@@ -199,31 +199,31 @@ final class AppCoordinator: ObservableObject {
                 self.overlayController.shrinkWindow()
             }
         }
-
+        
         controllerInputManager.onGlyphStyleChanged = { [weak self] style in
             Task { @MainActor in
                 self?.settings.controllerGlyphStyle = style
             }
         }
-
+        
         controllerInputManager.onCaptureStateChanged = { [weak self] captureState in
             Task { @MainActor in
                 self?.settings.controllerCaptureState = captureState
             }
         }
-
+        
         controllerInputManager.onDetectedControllerChanged = { [weak self] detectedController in
             Task { @MainActor in
                 self?.settings.detectedController = detectedController
             }
         }
-
+        
         settingsController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.updateActivationPolicyForCurrentUIState()
             }
         }
-
+        
         onboardingController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.refreshHotkeyManagerState()
@@ -236,15 +236,15 @@ final class AppCoordinator: ObservableObject {
                 self?.settingsController.show()
             }
         }
-
+        
         onboardingController.onAccessibilityTrustChanged = { [weak self] _ in
             Task { @MainActor in
                 self?.refreshHotkeyManagerState()
             }
         }
-
+        
         hotkeyManager.shortcut = settings.keyboardHotkey
-        controllerInputManager.toggleBinding = settings.controllerKbToggleBinding
+        controllerInputManager.toggleBindings = settings.controllerToggleBindings
         controllerInputManager.actionBindings = settings.controllerActionBindings
         controllerInputManager.leftStickInputType = settings.leftStickInputType
         controllerInputManager.rightStickInputType = settings.rightStickInputType
@@ -263,19 +263,19 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.invertScrollY = settings.invertScrollY
         controllerInputManager.enableMouseInKeyboard = settings.enableMouseInKeyboard
         refreshControllerOverlayVisibility()
-
+        
         settings.$keyboardHotkey
             .sink { [weak self] value in
                 self?.hotkeyManager.shortcut = value
             }
             .store(in: &cancellables)
-
-        settings.$controllerKbToggleBinding
+        
+        settings.$controllerToggleBindings
             .sink { [weak self] value in
-                self?.controllerInputManager.toggleBinding = value
+                self?.controllerInputManager.toggleBindings = value
             }
             .store(in: &cancellables)
-
+        
         settings.$controllerActionBindings
             .sink { [weak self] value in
                 self?.controllerInputManager.actionBindings = value
@@ -299,7 +299,7 @@ final class AppCoordinator: ObservableObject {
                 self?.controllerInputManager.padInputType = value
             }
             .store(in: &cancellables)
-
+        
         settings.$dismissWithGuideButton
             .sink { [weak self] value in
                 self?.controllerInputManager.dismissWithGuideButton = value
@@ -311,7 +311,7 @@ final class AppCoordinator: ObservableObject {
                 self?.controllerInputManager.keyboardMovementStyle = value
             }
             .store(in: &cancellables)
-
+        
         settings.$leftStickDeadzone
             .sink { [weak self] value in
                 self?.controllerInputManager.leftStickDeadzone = value
@@ -365,13 +365,13 @@ final class AppCoordinator: ObservableObject {
                 self?.controllerInputManager.invertScrollY = value
             }
             .store(in: &cancellables)
-
+        
         settings.$enableMouseInKeyboard
             .sink { [weak self] value in
                 self?.controllerInputManager.enableMouseInKeyboard = value
             }
             .store(in: &cancellables)
-
+        
         settings.$inMouseMode
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
@@ -381,46 +381,46 @@ final class AppCoordinator: ObservableObject {
             .store(in: &cancellables)
         
         configureOpenAppOnStartup()
-
+        
         setAccessoryMode()
         refreshHotkeyManagerState()
         controllerInputManager.start()
-
+        
         DispatchQueue.main.async { [weak self] in
             self?.presentOnboardingIfNeededOnLaunch()
         }
     }
-
+    
     func toggleOverlay() {
         toggleOverlay(source: .menuBar)
     }
-
+    
     func openSettings() {
         setRegularMode()
         settingsController.show()
         NSApp.activate(ignoringOtherApps: true)
     }
-
+    
     private func restartOnboardingFromSettings() {
         settingsController.close()
         presentOnboarding(startAtWelcome: true)
     }
-
+    
     func quit() {
         NSApp.terminate(nil)
     }
-
+    
     private func toggleOverlay(source: ToggleSource) {
         refreshHotkeyManagerState()
-
+        
         if source.isShortcutActivation {
             onboardingController.handleShortcutActivation()
         }
-
+        
         if !InputMonitoringPermission.isAuthorized() {
             presentOnboarding(startAtWelcome: false)
         }
-
+        
         if overlayController.isKeyboardVisible || overlayController.isMouseVisible {
             overlayController.hide()
             isOverlayVisible = false
@@ -429,9 +429,9 @@ final class AppCoordinator: ObservableObject {
             updateActivationPolicyForCurrentUIState()
             return
         }
-
+        
         updateActivationPolicyForCurrentUIState()
-
+        
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isOverlayVisible = self.overlayController.show()
@@ -441,7 +441,7 @@ final class AppCoordinator: ObservableObject {
             NSApp.deactivate()
         }
     }
-
+    
     private func dismissOverlayViaGuideButtonIfNeeded() {
         guard overlayController.isKeyboardVisible || overlayController.isMouseVisible else { return }
         overlayController.hide()
@@ -450,28 +450,28 @@ final class AppCoordinator: ObservableObject {
         refreshControllerOverlayVisibility()
         updateActivationPolicyForCurrentUIState()
     }
-
+    
     private func refreshControllerOverlayVisibility() {
         controllerInputManager.isKeyboardOverlayVisible = overlayController.isKeyboardVisible
         controllerInputManager.isMouseOverlayVisible = overlayController.isMouseVisible
     }
-
+    
     private func presentOnboardingIfNeededOnLaunch() {
         let isFirstLaunch = !hasLaunchedBefore
         if isFirstLaunch {
             hasLaunchedBefore = true
         }
-
+        
         let shouldShowForMissingPermission = !InputMonitoringPermission.isAuthorized()
         let shouldShowAfterRestart = settings.restartedFromPermissionScreen
-
+        
         guard isFirstLaunch || shouldShowForMissingPermission || shouldShowAfterRestart else { return }
         presentOnboarding(startAtWelcome: isFirstLaunch)
     }
-
+    
     private func configureOpenAppOnStartup() {
         settings.openAppOnStartup = isLaunchAtLoginEnabled
-
+        
         settings.$openAppOnStartup
             .removeDuplicates()
             .sink { [weak self] shouldEnable in
@@ -479,7 +479,7 @@ final class AppCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
     }
-
+    
     private var isLaunchAtLoginEnabled: Bool {
         switch launchAtLoginService.status {
         case .enabled, .requiresApproval:
@@ -490,10 +490,10 @@ final class AppCoordinator: ObservableObject {
             return false
         }
     }
-
+    
     private func setLaunchAtLoginEnabled(_ shouldEnable: Bool) {
         guard isLaunchAtLoginEnabled != shouldEnable else { return }
-
+        
         do {
             if shouldEnable {
                 try launchAtLoginService.register()
@@ -503,25 +503,25 @@ final class AppCoordinator: ObservableObject {
         } catch {
             debugPrint("[AppSettings] Failed to update launch-at-login setting:", error)
         }
-
+        
         let resolvedValue = isLaunchAtLoginEnabled
         if settings.openAppOnStartup != resolvedValue {
             settings.openAppOnStartup = resolvedValue
         }
     }
-
+    
     private func presentOnboarding(startAtWelcome: Bool) {
         guard !onboardingController.isVisible else {
             setRegularMode()
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-
+        
         setRegularMode()
         onboardingController.show(startAtWelcome: startAtWelcome)
         NSApp.activate(ignoringOtherApps: true)
     }
-
+    
     private func updateActivationPolicyForCurrentUIState() {
         if settingsController.isVisible || onboardingController.isVisible {
             setRegularMode()
@@ -529,26 +529,26 @@ final class AppCoordinator: ObservableObject {
             setAccessoryMode()
         }
     }
-
+    
     private func refreshHotkeyManagerState() {
         let shouldRunHotkeyManager = InputMonitoringPermission.isAuthorized()
-
+        
         if shouldRunHotkeyManager {
             guard !isHotkeyManagerRunning else { return }
             hotkeyManager.start()
             isHotkeyManagerRunning = true
             return
         }
-
+        
         guard isHotkeyManagerRunning else { return }
         hotkeyManager.stop()
         isHotkeyManagerRunning = false
     }
-
+    
     private func setAccessoryMode() {
         NSApp.setActivationPolicy(.accessory)
     }
-
+    
     private func setRegularMode() {
         NSApp.setActivationPolicy(.regular)
     }

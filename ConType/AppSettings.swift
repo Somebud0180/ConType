@@ -46,12 +46,12 @@ enum ControllerGlyphStyle: Equatable {
     case generic
     case playStation
     case nintendoSwitch
-
+    
     static func detect(vendorName: String?, productCategory: String?) -> ControllerGlyphStyle {
         let parts = [vendorName, productCategory]
             .compactMap { $0?.lowercased() }
             .joined(separator: " ")
-
+        
         if parts.contains("dualsense")
             || parts.contains("dualshock")
             || parts.contains("playstation")
@@ -59,7 +59,7 @@ enum ControllerGlyphStyle: Equatable {
             || (parts.contains("wireless controller") && !parts.contains("xbox")) {
             return .playStation
         }
-
+        
         if parts.contains("nintendo")
             || parts.contains("switch")
             || parts.contains("joy-con")
@@ -67,10 +67,10 @@ enum ControllerGlyphStyle: Equatable {
             || parts.contains("pro controller") {
             return .nintendoSwitch
         }
-
+        
         return .generic
     }
-
+    
     var guideGlyphAssetName: String {
         switch self {
         case .generic:
@@ -87,7 +87,7 @@ enum ControllerGuideButton: String, CaseIterable, Equatable {
     case menu
     case home
     case options
-
+    
     func displayTitle(for style: ControllerGlyphStyle) -> String {
         switch (style, self) {
         case (.nintendoSwitch, .menu):
@@ -110,7 +110,7 @@ enum ControllerGuideButton: String, CaseIterable, Equatable {
             return "Options"
         }
     }
-
+    
     func glyphAssetName(for style: ControllerGlyphStyle) -> String? {
         switch (style, self) {
         case (.playStation, .menu):
@@ -136,17 +136,54 @@ struct DetectedController: Equatable {
     var guideButtons: [ControllerGuideButton]
 }
 
-struct ControllerToggleBinding: Equatable {
-    var button: ControllerAssignableButton
-
-    static let `default` = ControllerToggleBinding(button: .west)
-
-    func title(for style: ControllerGlyphStyle) -> String {
-        "Guide + \(button.displayTitle(for: style))"
-    }
-
+enum ControllerToggleBinding: String, CaseIterable, Identifiable {
+    case keyboardToggle
+    case mouseToggle
+    
+    var id: String { rawValue }
+    
     var title: String {
-        title(for: .generic)
+        switch self {
+        case .keyboardToggle: return "Keyboard Toggle"
+        case .mouseToggle: return "Mouse Toggle"
+        }
+    }
+    
+    func glyphName(_ binding: ControllerAssignableButton, for style: ControllerGlyphStyle) -> String {
+        "Guide + \(binding.displayTitle(for: style))"
+    }
+}
+
+struct ControllerToggleBindings: Equatable {
+    var keyboardToggle: ControllerAssignableButton
+    var mouseToggle: ControllerAssignableButton
+    
+    static let `default` = ControllerToggleBindings(
+        keyboardToggle: .west,
+        mouseToggle: .north
+    )
+    
+    func binding(for shortcut: ControllerToggleBinding) -> ControllerAssignableButton {
+        switch shortcut {
+        case .keyboardToggle:
+            return keyboardToggle
+        case .mouseToggle:
+            return mouseToggle
+        }
+    }
+    
+    mutating func setBinding(_ binding: ControllerAssignableButton, for shortcut: ControllerToggleBinding) {
+        switch shortcut {
+        case .keyboardToggle:
+            keyboardToggle = binding
+        case .mouseToggle:
+            mouseToggle = binding
+        }
+    }
+    
+    func shortcutText(for shortcut: ControllerToggleBinding, style: ControllerGlyphStyle) -> String {
+        let binding = binding(for: shortcut)
+        return "Guide + \(binding.displayTitle(for: style))"
     }
 }
 
@@ -162,9 +199,9 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
     case leftStickPress
     case rightStickPress
     case none
-
+    
     var id: String { rawValue }
-
+    
     var title: String {
         switch self {
         case .south: return "A"
@@ -180,7 +217,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .none: return "Disabled"
         }
     }
-
+    
     func displayTitle(for style: ControllerGlyphStyle) -> String {
         switch self {
         case .south:
@@ -207,7 +244,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
             return "Disabled"
         }
     }
-
+    
     var fallbackGlyphText: String {
         switch self {
         case .south: return "A"
@@ -223,7 +260,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
         case .none: return "nosign"
         }
     }
-
+    
     func glyphAssetName(for style: ControllerGlyphStyle) -> String {
         switch self {
         case .south:
@@ -255,7 +292,7 @@ enum ControllerAssignableButton: String, CaseIterable, Identifiable {
 struct ControllerCaptureState: Equatable {
     var isGuidePressed = false
     var pressedButtons: Set<ControllerAssignableButton> = []
-
+    
     static let empty = ControllerCaptureState()
 }
 
@@ -272,7 +309,7 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     case mouseRightClick
     case enlargeWindow
     case shrinkWindow
-
+    
     static let overlayActions: [ControllerActionBinding] = [.shrinkWindow, .enlargeWindow]
     
     static let keyboardActions: [ControllerActionBinding] = [.acceptType, .backspace, .space, .enter, .shift, .capsLock, .moveCaretLeft, .moveCaretRight]
@@ -280,7 +317,7 @@ enum ControllerActionBinding: String, CaseIterable, Identifiable {
     static let mouseActions: [ControllerActionBinding] = [.mouseLeftClick, .mouseRightClick]
     
     var id: String { rawValue }
-
+    
     var title: String {
         switch self {
         case .acceptType: return "Accept/Type"
@@ -312,7 +349,7 @@ struct ControllerActionBindings: Equatable {
     var mouseRightClick: ControllerAssignableButton
     var shrinkWindow: ControllerAssignableButton
     var enlargeWindow: ControllerAssignableButton
-
+    
     static let `default` = ControllerActionBindings(
         // Keyboard Controls
         acceptType: .south,
@@ -332,7 +369,7 @@ struct ControllerActionBindings: Equatable {
         shrinkWindow: .leftTrigger,
         enlargeWindow: .rightTrigger
     )
-
+    
     func button(for action: ControllerActionBinding) -> ControllerAssignableButton {
         switch action {
         case .acceptType:
@@ -361,7 +398,7 @@ struct ControllerActionBindings: Equatable {
             return enlargeWindow
         }
     }
-
+    
     mutating func setButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
         switch action {
         case .acceptType:
@@ -430,7 +467,7 @@ final class AppSettings: ObservableObject {
     
     // Bindings
     @Published var keyboardHotkey = KeyboardHotkeyManager.Shortcut(key: "k", modifiers: [.command])
-    @Published var controllerKbToggleBinding: ControllerToggleBinding = .default
+    @Published var controllerToggleBindings: ControllerToggleBindings = .default
     @Published var controllerActionBindings: ControllerActionBindings = .default
     
     // Preferences
@@ -472,7 +509,7 @@ final class AppSettings: ObservableObject {
         let saveTriggers: [AnyPublisher<Void, Never>] = [
             $restartedFromPermissionScreen.map { _ in () }.eraseToAnyPublisher(),
             $keyboardHotkey.map { _ in () }.eraseToAnyPublisher(),
-            $controllerKbToggleBinding.map { _ in () }.eraseToAnyPublisher(),
+            $controllerToggleBindings.map { _ in () }.eraseToAnyPublisher(),
             $controllerActionBindings.map { _ in () }.eraseToAnyPublisher(),
             $enableMouseInKeyboard.map { _ in () }.eraseToAnyPublisher(),
             $prioritizeMouseOverKeyboard.map { _ in () }.eraseToAnyPublisher(),
@@ -520,7 +557,7 @@ final class AppSettings: ObservableObject {
         let codable = AppSettingsCodable(
             restartedFromPermissionScreen: restartedFromPermissionScreen,
             keyboardHotkey: keyboardHotkey,
-            controllerKbToggleBinding: controllerKbToggleBinding,
+            controllerToggleBindings: controllerToggleBindings,
             controllerActionBindings: controllerActionBindings,
             enableMouseInKeyboard: enableMouseInKeyboard,
             prioritizeMouseOverKeyboard: prioritizeMouseOverKeyboard,
@@ -562,7 +599,7 @@ final class AppSettings: ObservableObject {
             let codable = try JSONDecoder().decode(AppSettingsCodable.self, from: data)
             self.restartedFromPermissionScreen = codable.restartedFromPermissionScreen
             self.keyboardHotkey = codable.keyboardHotkey
-            self.controllerKbToggleBinding = codable.controllerKbToggleBinding
+            self.controllerToggleBindings = codable.controllerToggleBindings
             self.controllerActionBindings = codable.controllerActionBindings
             self.enableMouseInKeyboard = codable.enableMouseInKeyboard
             self.prioritizeMouseOverKeyboard = codable.prioritizeMouseOverKeyboard
@@ -618,6 +655,7 @@ extension KeyboardHotkeyManager.Shortcut: Codable {
     }
 }
 extension ControllerToggleBinding: Codable {}
+extension ControllerToggleBindings: Codable {}
 extension ControllerActionBindings: Codable {}
 extension ControllerAssignableButton: Codable {}
 extension ControllerActionBinding: Codable {}
@@ -682,7 +720,7 @@ struct CodablePoint: Codable {
 private struct AppSettingsCodable: Codable {
     var restartedFromPermissionScreen: Bool
     var keyboardHotkey: KeyboardHotkeyManager.Shortcut
-    var controllerKbToggleBinding: ControllerToggleBinding
+    var controllerToggleBindings: ControllerToggleBindings
     var controllerActionBindings: ControllerActionBindings
     var enableMouseInKeyboard: Bool
     var prioritizeMouseOverKeyboard: Bool
