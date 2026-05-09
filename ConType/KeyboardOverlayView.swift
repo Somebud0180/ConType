@@ -130,6 +130,7 @@ struct KeyboardOverlayView: View {
                 Text(action.title)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .minimumScaleFactor(0.15)
                 controllerShortcutGlyph(for: hotkey, metrics: metrics)
             }
         }
@@ -179,7 +180,7 @@ struct KeyboardOverlayView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Text(key.baseLabel)
-                    .font(.system(size: metrics.activeLegendFontSize, weight: .medium, design: .rounded))
+                    .font(.system(size: metrics.shortcutFontSize, weight: .medium, design: .rounded))
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, metrics.commandSymbolInset)
@@ -386,7 +387,7 @@ struct KeyboardOverlayView: View {
         let rowSpacing = max(8, min(18, size.height * 0.03))
         let columnSpacing = max(6, min(14, size.width * 0.008))
         
-        let guideBar = settings.showGuideBar ? min(size.width, size.height) * 0.1 : 0
+        let guideBar = settings.showGuideBar ? max(12, min(44, size.height * 0.1)) : 0
         
         let contentWidth = max(1, size.width - (innerPadding * 2))
         let contentHeight = max(1, size.height - (innerPadding * 2) - guideBar)
@@ -407,14 +408,15 @@ struct KeyboardOverlayView: View {
             rowSpacing: rowSpacing,
             innerPadding: innerPadding,
             contentWidth: contentWidth,
+            shortcutFontSize: max(6, min(22, keyHeight * 0.28)),
             activeLegendFontSize: max(9, min(22, keyHeight * 0.32)),
             inactiveLegendFontSize: max(6, min(16, keyHeight * 0.23)),
             legendSpacing: max(1, min(6, keyHeight * 0.06)),
             commandSymbolFontSize: max(8, min(15, keyHeight * 0.24)),
-            commandLabelFontSize: max(7, min(13, keyHeight * 0.18)),
+            commandLabelFontSize: max(7, min(13, keyHeight * 0.2)),
             commandSymbolInset: max(3, min(9, keyHeight * 0.1)),
             commandLabelBottomInset: max(3, min(10, keyHeight * 0.11)),
-            controllerGlyphSize: max(14, min(24, keyHeight * 0.32)),
+            controllerGlyphSize: max(14, min(32, keyHeight * 0.38)),
             controllerGlyphInset: max(3, min(8, keyHeight * 0.1)),
             controllerFallbackFontSize: max(8, min(12, keyHeight * 0.18)),
             keyCornerRadius: max(8, min(14, keyHeight * 0.23)),
@@ -431,6 +433,7 @@ struct KeyboardOverlayView: View {
         let rowSpacing: CGFloat
         let innerPadding: CGFloat
         let contentWidth: CGFloat
+        let shortcutFontSize: CGFloat
         let activeLegendFontSize: CGFloat
         let inactiveLegendFontSize: CGFloat
         let legendSpacing: CGFloat
