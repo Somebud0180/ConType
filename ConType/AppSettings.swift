@@ -493,6 +493,7 @@ final class AppSettings: ObservableObject {
     
     // Overlay
     @Published var inMouseMode: Bool = false
+    @Published var showGuideBar: Bool = true
     @Published var windowSize: WindowSize = .small
     @Published var windowPosition: NSPoint = .zero
     
@@ -502,7 +503,7 @@ final class AppSettings: ObservableObject {
     @Published var detectedController: DetectedController?
     
     private var cancellables = Set<AnyCancellable>()
-        
+    
     init() {
         load()
         
@@ -531,6 +532,7 @@ final class AppSettings: ObservableObject {
             $invertScrollX.map { _ in () }.eraseToAnyPublisher(),
             $invertScrollY.map { _ in () }.eraseToAnyPublisher(),
             $inMouseMode.map { _ in () }.eraseToAnyPublisher(),
+            $showGuideBar.map { _ in () }.eraseToAnyPublisher(),
             $windowSize.map { _ in () }.eraseToAnyPublisher(),
             $windowPosition.map { _ in () }.eraseToAnyPublisher()
         ]
@@ -579,6 +581,7 @@ final class AppSettings: ObservableObject {
             invertScrollX: invertScrollX,
             invertScrollY: invertScrollY,
             inMouseMode: inMouseMode,
+            showGuideBar: showGuideBar,
             windowSize: windowSize,
             windowPosition: CodablePoint(windowPosition)
         )
@@ -626,6 +629,7 @@ final class AppSettings: ObservableObject {
             self.invertScrollX = codable.invertScrollX
             self.invertScrollY = codable.invertScrollY
             self.inMouseMode = codable.inMouseMode
+            self.showGuideBar = codable.showGuideBar
             self.windowSize = codable.windowSize
             self.windowPosition = codable.windowPosition.nsPoint
         } catch {
@@ -663,6 +667,7 @@ final class AppSettings: ObservableObject {
             self.invertScrollX = false
             self.invertScrollY = false
             self.inMouseMode = false
+            self.showGuideBar = true
             self.windowSize = .small
             self.windowPosition = .zero
             return
@@ -778,35 +783,7 @@ private struct AppSettingsCodable: Codable {
     var invertScrollX: Bool
     var invertScrollY: Bool
     var inMouseMode: Bool
+    var showGuideBar: Bool
     var windowSize: WindowSize
     var windowPosition: CodablePoint
-    
-    static let shared = AppSettingsCodable(
-        restartedFromPermissionScreen: false,
-        keyboardHotkey: .init(key: "k", modifiers: [.command]),
-        controllerToggleBindings: .default,
-        controllerActionBindings: .default,
-        enableMouseInKeyboard: true,
-        prioritizeMouseOverKeyboard: false,
-        keyboardLayoutName: KeyboardLayout.QWERTY.name,
-        leftStickInputType: [.overlayMovement, .scrollWheel],
-        rightStickInputType: [.mouseMovement],
-        padInputType: [.overlayMovement],
-        shiftShortcutCyclesToCapsLock: true,
-        dismissWithGuideButton: true,
-        openAppOnStartup: false,
-        keyboardMovementStyle: .limited,
-        leftStickDeadzone: 0.4,
-        rightStickDeadzone: 0.4,
-        mouseSensitivity: 300,
-        mouseSmoothing: 0.4,
-        invertMouseX: false,
-        invertMouseY: false,
-        scrollSpeed: 300,
-        invertScrollX: false,
-        invertScrollY: false,
-        inMouseMode: false,
-        windowSize: .small,
-        windowPosition: .init(.zero)
-    )
 }
