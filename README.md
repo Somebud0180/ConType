@@ -1,6 +1,6 @@
 # ConType
 <div align="center">
-  <img width="80%" alt="ConType Banner" src="https://github.com/user-attachments/assets/90312fb4-2ff2-420c-8e80-3290e25b1632" />
+  <img width="80%" alt="ConType Banner" src="https://github.com/user-attachments/assets/30c546c1-0f44-4e64-b1aa-16b0e18a7925" />
   <h3 align="center">Make your controller control</h3>
 <!--  <a href="https://testflight.apple.com/join/cesGDw2f">Available on TestFlight</a> --> 
 </div>
