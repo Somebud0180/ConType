@@ -388,9 +388,10 @@ struct KeyboardOverlayView: View {
         let columnSpacing = max(6, min(14, size.width * 0.008))
         
         let guideBar = settings.showGuideBar ? max(12, min(44, size.height * 0.1)) : 0
+        let guideBarSpacing = settings.showGuideBar ? rowSpacing : 0
         
         let contentWidth = max(1, size.width - (innerPadding * 2))
-        let contentHeight = max(1, size.height - (innerPadding * 2) - guideBar)
+        let contentHeight = max(1, size.height - (innerPadding * 2) - guideBar + guideBarSpacing)
         
         let referenceRow = viewModel.rows.first ?? []
         let referenceUnits = max(1, referenceRow.reduce(CGFloat(0)) { $0 + $1.widthUnits })
