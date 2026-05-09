@@ -54,6 +54,12 @@ final class KeyboardOverlayViewModel: ObservableObject {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardLayout = settings.keyboardLayout
+
+        settings.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
         
         settings.$keyboardLayout
             .sink { [weak self] value in

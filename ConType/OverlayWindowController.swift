@@ -29,6 +29,12 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
+
+        settings.$windowSize
+            .sink { [weak self] size in
+                self?.resizeWindow(to: size)
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -103,13 +109,13 @@ final class OverlayWindowController {
         } else {
             switch settings.windowSize {
             case .small:
-                resizeWindow(to: .medium)
+                settings.windowSize = .medium
                 break
             case .medium:
-                resizeWindow(to: .large)
+                settings.windowSize = .large
                 break
             case .large:
-                resizeWindow(to: .xLarge)
+                settings.windowSize = .xLarge
                 break
             case .xLarge:
                 break
@@ -127,13 +133,13 @@ final class OverlayWindowController {
                 show()
                 break
             case .medium:
-                resizeWindow(to: .small)
+                settings.windowSize = .small
                 break
             case .large:
-                resizeWindow(to: .medium)
+                settings.windowSize = .medium
                 break
             case .xLarge:
-                resizeWindow(to: .large)
+                settings.windowSize = .large
                 break
             }
         }
@@ -197,9 +203,8 @@ final class OverlayWindowController {
         guard let keyboardWindow else { return }
         let screen = NSScreen.main ?? keyboardWindow.screen ?? NSScreen.screens.first
         guard let frame = screen?.visibleFrame else { return }
-        
-        settings.windowSize = size
-        let keyboardWindowDimensions = settings.windowSize.windowDimensions
+
+        let keyboardWindowDimensions = size.windowDimensions
         let keyboardWindowPosition = settings.windowPosition
         
         let targetSize = NSSize(
