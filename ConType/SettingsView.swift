@@ -144,6 +144,16 @@ struct SettingsView: View {
                                 Divider()
                                 
                                 Toggle(
+                                    "Show guide bar",
+                                    isOn: Binding(
+                                        get: { viewModel.settings.showGuideBar },
+                                        set: { viewModel.settings.showGuideBar = $0 }
+                                    )
+                                )
+                                
+                                Divider()
+                                
+                                Toggle(
                                     "Enables mouse controls in keyboard overlay",
                                     isOn: Binding(
                                         get: { viewModel.settings.enableMouseInKeyboard },

@@ -386,7 +386,7 @@ struct KeyboardOverlayView: View {
         let rowSpacing = max(8, min(18, size.height * 0.03))
         let columnSpacing = max(6, min(14, size.width * 0.008))
         
-        let guideBar = min(size.width, size.height) * 0.1
+        let guideBar = settings.showGuideBar ? min(size.width, size.height) * 0.1 : 0
         
         let contentWidth = max(1, size.width - (innerPadding * 2))
         let contentHeight = max(1, size.height - (innerPadding * 2) - guideBar)
