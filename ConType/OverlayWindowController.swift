@@ -30,13 +30,6 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
-
-        settings.$customWindowDimensions
-            .sink { [weak self] _ in
-                guard let self, self.settings.windowSize == .custom else { return }
-                self.resizeWindow(to: .custom)
-            }
-            .store(in: &cancellables)
     }
 
     deinit {
@@ -146,6 +139,7 @@ final class OverlayWindowController {
         ) { [weak self] key, modifiers in
             self?.keyEmitter.emit(key, modifiers: modifiers)
         }
+            .frame(minWidth: 640, maxWidth: 1440, minHeight: 240, maxHeight: 540)
         
         let windowDimensions = settings.windowSize.windowDimensions(customSize: settings.customWindowDimensions)
         
@@ -176,7 +170,7 @@ final class OverlayWindowController {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.aspectRatio = NSSize(width: 8, height: 3)
-        window.minSize = NSSize(width: 800, height: 300)
+        window.minSize = NSSize(width: 640, height: 240)
         window.maxSize = NSSize(width: 1440, height: 540)
         
         self.keyboardWindow = window
@@ -208,8 +202,8 @@ final class OverlayWindowController {
         let keyboardWindowPosition = settings.windowPosition
         
         let targetSize = NSSize(
-            width: min(1440, max(800, keyboardWindowDimensions.width)),
-            height: min(540, max(300, keyboardWindowDimensions.height))
+            width: min(1440, max(640, keyboardWindowDimensions.width)),
+            height: min(540, max(240, keyboardWindowDimensions.height))
         )
         
         let normalizedSize = NSSize(
@@ -260,6 +254,7 @@ final class OverlayWindowController {
             self?.settings.inMouseMode = false
             self?.show()
         }
+            .frame(minWidth: 64, maxWidth: 64, minHeight: 64, maxHeight: 64)
         
         let hostingController = NSHostingController(rootView: contentView)
         let baseMask: NSWindow.StyleMask = [
@@ -286,7 +281,7 @@ final class OverlayWindowController {
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.contentAspectRatio = NSSize(width: 1, height: 1)
+        window.aspectRatio = NSSize(width: 1, height: 1)
         window.minSize = NSSize(width: 64, height: 64)
         window.maxSize = NSSize(width: 64, height: 64)
         
@@ -310,6 +305,7 @@ final class OverlayWindowController {
 
         settings.customWindowDimensions = window.frame.size
         settings.windowPosition = window.frame.origin
+        settings.windowSize = .custom
 
 //        let snappedPreset = WindowSize.preset(for: window.frame.size)
 //        let snappedDimensions = snappedPreset.windowDimensions()
@@ -320,7 +316,5 @@ final class OverlayWindowController {
 //        } else {
 //            settings.windowSize = .custom
 //        }
-        
-        settings.windowSize = .custom
     }
 }
