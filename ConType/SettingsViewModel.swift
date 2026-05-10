@@ -49,6 +49,7 @@ final class SettingsViewModel: ObservableObject {
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
     private let onRestartOnboarding: () -> Void
+    var onUpdateWindowSize: () -> Void
     
     // Published UI state
     @Published var isAccessibilityTrusted: Bool
@@ -90,7 +91,8 @@ final class SettingsViewModel: ObservableObject {
         onRequestControllerBindingCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
-        onRestartOnboarding: @escaping () -> Void
+        onRestartOnboarding: @escaping () -> Void,
+        onUpdateWindowSize: @escaping () -> Void
     ) {
         self.settings = settings
         self.joystick = joystick
@@ -98,6 +100,7 @@ final class SettingsViewModel: ObservableObject {
         self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
         self.onCancelControllerCapture = onCancelControllerCapture
         self.onRestartOnboarding = onRestartOnboarding
+        self.onUpdateWindowSize = onUpdateWindowSize
         self.isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
         self.leftStickDeadzone = settings.leftStickDeadzone
         self.rightStickDeadzone = settings.rightStickDeadzone
@@ -1182,7 +1185,8 @@ final class SettingsViewModel: ObservableObject {
         onRequestControllerBindingCapture: { _ in },
         onRequestControllerActionButtonCapture: { _ in },
         onCancelControllerCapture: {},
-        onRestartOnboarding: {}
+        onRestartOnboarding: {},
+        onUpdateWindowSize: {}
     )
     
     SettingsView(viewModel: vm)

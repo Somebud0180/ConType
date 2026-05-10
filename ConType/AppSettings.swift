@@ -434,6 +434,7 @@ enum WindowSize: String, CaseIterable, Identifiable {
     case medium
     case large
     case xLarge
+    case custom
     
     var id: String { rawValue }
     
@@ -443,20 +444,81 @@ enum WindowSize: String, CaseIterable, Identifiable {
         case .medium: return "Medium"
         case .large: return "Large"
         case .xLarge: return "Extra Large"
+        case .custom: return "Custom"
         }
     }
     
-    var windowDimensions: (width: CGFloat, height: CGFloat) {
+    var isCustom: Bool {
+        self == .custom
+    }
+    
+    static let selectableCases: [WindowSize] = [.small, .medium, .large, .xLarge]
+    
+    func windowDimensions(customSize: NSSize? = nil) -> NSSize {
         switch self {
         case .small:
-            return (800, 300)
+            return NSSize(width: 800, height: 300)
         case .medium:
-            return (1000, 375)
+            return NSSize(width: 1000, height: 375)
         case .large:
-            return (1200, 450)
+            return NSSize(width: 1200, height: 450)
         case .xLarge:
-            return (1440, 540)
+            return NSSize(width: 1440, height: 540)
+        case .custom:
+            return customSize ?? NSSize(width: 1000, height: 375)
         }
+    }
+
+    func largerPreset(using customSize: NSSize? = nil) -> WindowSize {
+        switch self {
+        case .small:
+            return .medium
+        case .medium:
+            return .large
+        case .large:
+            return .xLarge
+        case .xLarge:
+            return .xLarge
+        case .custom:
+            let dimensions = customSize ?? windowDimensions(customSize: customSize)
+            let currentIndex = Self.presetIndex(for: dimensions)
+            return Self.selectableCases[min(currentIndex + 1, Self.selectableCases.count - 1)]
+        }
+    }
+
+    func smallerPreset(using customSize: NSSize? = nil) -> WindowSize {
+        switch self {
+        case .small:
+            return .small
+        case .medium:
+            return .small
+        case .large:
+            return .medium
+        case .xLarge:
+            return .large
+        case .custom:
+            let dimensions = customSize ?? windowDimensions(customSize: customSize)
+            let currentIndex = Self.presetIndex(for: dimensions)
+            return Self.selectableCases[currentIndex]
+        }
+    }
+
+    static func preset(for dimensions: NSSize) -> WindowSize {
+        let index = presetIndex(for: dimensions)
+        return selectableCases[index]
+    }
+
+    private static func presetIndex(for dimensions: NSSize) -> Int {
+        let widths = selectableCases.map { $0.windowDimensions().width }
+        var currentIndex = 0
+
+        for (index, width) in widths.enumerated() {
+            if dimensions.width >= width {
+                currentIndex = index
+            }
+        }
+
+        return currentIndex
     }
 }
 
@@ -495,6 +557,7 @@ final class AppSettings: ObservableObject {
     @Published var inMouseMode: Bool = false
     @Published var showGuideBar: Bool = true
     @Published var windowSize: WindowSize = .small
+    @Published var customWindowDimensions: NSSize = WindowSize.medium.windowDimensions()
     @Published var windowPosition: NSPoint = .zero
     
     // App state (Does not persist)
@@ -534,6 +597,7 @@ final class AppSettings: ObservableObject {
             $inMouseMode.map { _ in () }.eraseToAnyPublisher(),
             $showGuideBar.map { _ in () }.eraseToAnyPublisher(),
             $windowSize.map { _ in () }.eraseToAnyPublisher(),
+            $customWindowDimensions.map { _ in () }.eraseToAnyPublisher(),
             $windowPosition.map { _ in () }.eraseToAnyPublisher()
         ]
         
@@ -583,6 +647,7 @@ final class AppSettings: ObservableObject {
             inMouseMode: inMouseMode,
             showGuideBar: showGuideBar,
             windowSize: windowSize,
+            customWindowDimensions: CodableSize(customWindowDimensions),
             windowPosition: CodablePoint(windowPosition)
         )
         do {
@@ -631,6 +696,9 @@ final class AppSettings: ObservableObject {
             self.inMouseMode = codable.inMouseMode
             self.showGuideBar = codable.showGuideBar
             self.windowSize = codable.windowSize
+            if let customWindowDimensions = codable.customWindowDimensions?.nsSize {
+                self.customWindowDimensions = customWindowDimensions
+            }
             self.windowPosition = codable.windowPosition.nsPoint
         } catch {
             debugPrint("[AppSettings] Failed to load settings: \(error)")
@@ -669,6 +737,7 @@ final class AppSettings: ObservableObject {
             self.inMouseMode = false
             self.showGuideBar = true
             self.windowSize = .small
+            self.customWindowDimensions = WindowSize.medium.windowDimensions()
             self.windowPosition = .zero
             return
         }
@@ -712,6 +781,7 @@ extension WindowSize: Codable {
         case .medium: try container.encode("medium", forKey: .value)
         case .large: try container.encode("large", forKey: .value)
         case .xLarge: try container.encode("xLarge", forKey: .value)
+        case .custom: try container.encode("custom", forKey: .value)
         }
     }
     public init(from decoder: Decoder) throws {
@@ -721,6 +791,8 @@ extension WindowSize: Codable {
         case "small": self = .small
         case "medium": self = .medium
         case "large": self = .large
+        case "xLarge": self = .xLarge
+        case "custom": self = .custom
         default: self = .small
         }
     }
@@ -758,6 +830,18 @@ struct CodablePoint: Codable {
     var nsPoint: NSPoint { NSPoint(x: x, y: y) }
 }
 
+struct CodableSize: Codable {
+    var width: CGFloat
+    var height: CGFloat
+    
+    init(_ size: NSSize) {
+        self.width = size.width
+        self.height = size.height
+    }
+    
+    var nsSize: NSSize { NSSize(width: width, height: height) }
+}
+
 private struct AppSettingsCodable: Codable {
     var restartedFromPermissionScreen: Bool
     var keyboardHotkey: KeyboardHotkeyManager.Shortcut
@@ -785,5 +869,6 @@ private struct AppSettingsCodable: Codable {
     var inMouseMode: Bool
     var showGuideBar: Bool
     var windowSize: WindowSize
+    var customWindowDimensions: CodableSize?
     var windowPosition: CodablePoint
 }

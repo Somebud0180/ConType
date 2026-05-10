@@ -11,6 +11,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let onRequestControllerActionButtonCapture: (@escaping (ControllerAssignableButton) -> Void) -> Void
     private let onCancelControllerCapture: () -> Void
     private let onRestartOnboarding: () -> Void
+    private let onUpdateWindowSize: () -> Void
     private var window: NSWindow?
     
     init(
@@ -19,7 +20,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         onRequestControllerBindingCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
-        onRestartOnboarding: @escaping () -> Void
+        onRestartOnboarding: @escaping () -> Void,
+        onUpdateWindowSize: @escaping () -> Void
     ) {
         self.settings = settings
         self.joystick = joystick
@@ -27,6 +29,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.onRequestControllerActionButtonCapture = onRequestControllerActionButtonCapture
         self.onCancelControllerCapture = onCancelControllerCapture
         self.onRestartOnboarding = onRestartOnboarding
+        self.onUpdateWindowSize = onUpdateWindowSize
     }
     
     var isVisible: Bool {
@@ -59,7 +62,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             onRequestControllerBindingCapture: onRequestControllerBindingCapture,
             onRequestControllerActionButtonCapture: onRequestControllerActionButtonCapture,
             onCancelControllerCapture: onCancelControllerCapture,
-            onRestartOnboarding: onRestartOnboarding
+            onRestartOnboarding: onRestartOnboarding,
+            onUpdateWindowSize: onUpdateWindowSize
         )
         
         let hostingController = NSHostingController(

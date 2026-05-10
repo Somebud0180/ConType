@@ -42,6 +42,9 @@ final class AppCoordinator: ObservableObject {
         },
         onRestartOnboarding: { [weak self] in
             self?.restartOnboardingFromSettings()
+        },
+        onUpdateWindowSize: { [weak self] in
+            self?.overlayController.updateWindowSize()
         }
     )
     private lazy var onboardingController = OnboardingWindowController(settings: settings)

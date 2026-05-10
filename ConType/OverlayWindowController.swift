@@ -11,6 +11,7 @@ private final class NonActivatingOverlayPanel: NSPanel {
 @MainActor
 final class OverlayWindowController {
     private var hasShownKeyboard = false
+    private var isApplyingProgrammaticResize = false
     private var cancellables = Set<AnyCancellable>()
     private var keyboardWindow: NSWindow?
     private var mouseWindow: NSWindow?
@@ -30,9 +31,10 @@ final class OverlayWindowController {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
 
-        settings.$windowSize
-            .sink { [weak self] size in
-                self?.resizeWindow(to: size)
+        settings.$customWindowDimensions
+            .sink { [weak self] _ in
+                guard let self, self.settings.windowSize == .custom else { return }
+                self.resizeWindow(to: .custom)
             }
             .store(in: &cancellables)
     }
@@ -100,6 +102,10 @@ final class OverlayWindowController {
     func activateCapsLockShortcut() {
         keyboardViewModel.toggleCapsLockShortcut()
     }
+    
+    func updateWindowSize() {
+        resizeWindow(to: settings.windowSize)
+    }
 
     func enlargeWindow() {
         if settings.inMouseMode {
@@ -107,19 +113,8 @@ final class OverlayWindowController {
             show()
             return
         } else {
-            switch settings.windowSize {
-            case .small:
-                settings.windowSize = .medium
-                break
-            case .medium:
-                settings.windowSize = .large
-                break
-            case .large:
-                settings.windowSize = .xLarge
-                break
-            case .xLarge:
-                break
-            }
+            settings.windowSize = settings.windowSize.largerPreset(using: settings.customWindowDimensions)
+            updateWindowSize()
         }
     }
 
@@ -127,20 +122,16 @@ final class OverlayWindowController {
         if settings.inMouseMode {
             return
         } else {
-            switch settings.windowSize {
-            case .small:
+            let nextSize = settings.windowSize.smallerPreset(using: settings.customWindowDimensions)
+            if settings.windowSize == .custom {
+                settings.windowSize = nextSize
+                updateWindowSize()
+            } else if nextSize == .small && settings.windowSize == .small {
                 settings.inMouseMode = true
                 show()
-                break
-            case .medium:
-                settings.windowSize = .small
-                break
-            case .large:
-                settings.windowSize = .medium
-                break
-            case .xLarge:
-                settings.windowSize = .large
-                break
+            } else {
+                settings.windowSize = nextSize
+                updateWindowSize()
             }
         }
     }
@@ -156,7 +147,7 @@ final class OverlayWindowController {
             self?.keyEmitter.emit(key, modifiers: modifiers)
         }
         
-        let windowDimensions = settings.windowSize.windowDimensions
+        let windowDimensions = settings.windowSize.windowDimensions(customSize: settings.customWindowDimensions)
         
         let hostingController = NSHostingController(rootView: contentView)
         let baseMask: NSWindow.StyleMask = [
@@ -195,16 +186,24 @@ final class OverlayWindowController {
             name: NSWindow.didMoveNotification,
             object: keyboardWindow
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidEndLiveResize(_:)),
+            name: NSWindow.didEndLiveResizeNotification,
+            object: keyboardWindow
+        )
         
         return window
     }
 
     private func resizeWindow(to size: WindowSize) {
         guard let keyboardWindow else { return }
+        guard !isApplyingProgrammaticResize else { return }
         let screen = NSScreen.main ?? keyboardWindow.screen ?? NSScreen.screens.first
         guard let frame = screen?.visibleFrame else { return }
 
-        let keyboardWindowDimensions = size.windowDimensions
+        let keyboardWindowDimensions = size.windowDimensions(customSize: settings.customWindowDimensions)
         let keyboardWindowPosition = settings.windowPosition
         
         let targetSize = NSSize(
@@ -242,11 +241,13 @@ final class OverlayWindowController {
             )
         }
         
+        isApplyingProgrammaticResize = true
         keyboardWindow.setFrame(
             NSRect(origin: newOrigin, size: normalizedSize),
             display: true,
             animate: true
         )
+        isApplyingProgrammaticResize = false
     }
     
     private func makeMouseWindowIfNeeded() -> NSWindow {
@@ -297,5 +298,25 @@ final class OverlayWindowController {
             window === self.keyboardWindow
         else { return }
         settings.windowPosition = window.frame.origin
+    }
+
+    @objc private func windowDidEndLiveResize(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+            window === self.keyboardWindow,
+            !isApplyingProgrammaticResize
+        else { return }
+
+        settings.customWindowDimensions = window.frame.size
+        settings.windowPosition = window.frame.origin
+
+        let snappedPreset = WindowSize.preset(for: window.frame.size)
+        let snappedDimensions = snappedPreset.windowDimensions()
+
+        if window.frame.size.width == snappedDimensions.width
+            && window.frame.size.height == snappedDimensions.height {
+            settings.windowSize = snappedPreset
+        } else {
+            settings.windowSize = .custom
+        }
     }
 }

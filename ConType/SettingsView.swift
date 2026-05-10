@@ -104,13 +104,28 @@ struct SettingsView: View {
                                 Text("Overlay Sizing")
                                     .font(.headline)
                                 
-                                Picker("Keyboard Size", selection: Binding(
-                                    get: { viewModel.settings.windowSize },
-                                    set: { viewModel.settings.windowSize = $0 }
-                                )) {
-                                    ForEach(WindowSize.allCases) { size in
-                                        Text(size.name).tag(size)
+                                HStack {
+                                    Text("Keyboard Size")
+                                    Spacer()
+                                    Menu {
+                                        ForEach(WindowSize.selectableCases) { size in
+                                            Button(size.name) {
+                                                viewModel.settings.windowSize = size
+                                                viewModel.onUpdateWindowSize()
+                                            }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Text(viewModel.settings.windowSize.name)
+                                        }
+                                        .frame(width: 160, alignment: .leading)
                                     }
+                                }
+                                
+                                if viewModel.settings.windowSize == .custom {
+                                    Text("Custom size was set by manually resizing the keyboard window.")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
                                 }
                                 
                                 ForEach(ControllerActionBinding.overlayActions) { action in
@@ -235,18 +250,30 @@ struct SettingsView: View {
                 Tab("Keyboard", systemImage: "keyboard") {
                     Form {
                         Section("Keyboard Layout") {
-                            Picker(
-                                "Keyboard Layout",
-                                selection: Binding(
-                                    get: { viewModel.settings.keyboardLayout },
-                                    set: {
-                                        viewModel.settings.keyboardLayout = $0
+                            HStack {
+                                Text("Keyboard Size")
+                                Spacer()
+                                Menu {
+                                    ForEach(WindowSize.selectableCases) { size in
+                                        Button(size.name) {
+                                            viewModel.settings.windowSize = size
+                                        }
                                     }
-                                )
-                            ) {
-                                ForEach(KeyboardLayout.all) { layout in
-                                    Text(layout.name).tag(layout)
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Text(viewModel.settings.windowSize.name)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(width: 160, alignment: .leading)
                                 }
+                            }
+                            
+                            if viewModel.settings.windowSize == .custom {
+                                Text("Custom size was set by manually resizing the keyboard window.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
                             
                             KeyboardOverlayView(
@@ -471,7 +498,8 @@ struct SettingsView: View {
         onRequestControllerBindingCapture: { _ in },
         onRequestControllerActionButtonCapture: { _ in },
         onCancelControllerCapture: {},
-        onRestartOnboarding: {}
+        onRestartOnboarding: {},
+        onUpdateWindowSize: {}
     )
     
     SettingsView(viewModel: vm)
