@@ -995,7 +995,7 @@ final class SettingsViewModel: ObservableObject {
                     get: { Double(self.scrollSpeed) },
                     set: { self.scrollSpeed = $0.rounded() }
                 ), in: 100...2000, step: 100) {
-                    Text("Sensitivity")
+                    Text("Scrolling Speed")
                 }
                 .onChange(of: self.scrollSpeed) { [self] in
                     settings.scrollSpeed = scrollSpeed
