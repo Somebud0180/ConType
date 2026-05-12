@@ -276,7 +276,7 @@ final class ControllerInputManager: NSObject {
     }
     
     //MARK: - Haptics Handling
-    func playMoveRumbleIfSupported() {
+    func playRumbleIfSupported() {
         guard enableHaptics else {
             debugLog("Haptics disabled; skipping move rumble")
             return
@@ -302,7 +302,7 @@ final class ControllerInputManager: NSObject {
             
             do {
                 try recreatedEngine.start()
-                try playMoveRumble(with: recreatedEngine)
+                try playRumble(with: recreatedEngine)
             } catch {
                 debugLog("Controller haptics recovery failed: \(error)")
             }
@@ -311,7 +311,7 @@ final class ControllerInputManager: NSObject {
 
         // Play the rumble pattern
         do {
-            try playMoveRumble(with: engine)
+            try playRumble(with: engine)
         } catch {
             debugLog("Controller move rumble playback failed: \(error)")
         }
@@ -319,7 +319,7 @@ final class ControllerInputManager: NSObject {
 
     /// Plays a transient haptic pattern suitable for movement/navigation feedback.
     /// Uses intensity of 0.35 and sharpness of 0.45 for a subtle, responsive feel.
-    private func playMoveRumble(with engine: CHHapticEngine) throws {
+    private func playRumble(with engine: CHHapticEngine) throws {
         let events = [
             CHHapticEvent(
                 eventType: .hapticContinuous,

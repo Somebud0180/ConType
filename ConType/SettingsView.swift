@@ -496,7 +496,8 @@ struct SettingsView: View {
         onRequestControllerActionButtonCapture: { _ in },
         onCancelControllerCapture: {},
         onRestartOnboarding: {},
-        onUpdateWindowSize: {}
+        onUpdateWindowSize: {},
+        onTriggerHaptics: {}
     )
     
     SettingsView(viewModel: vm)

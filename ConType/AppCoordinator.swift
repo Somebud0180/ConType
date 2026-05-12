@@ -45,6 +45,9 @@ final class AppCoordinator: ObservableObject {
         },
         onUpdateWindowSize: { [weak self] in
             self?.overlayController.updateWindowSize()
+        },
+        onTriggerHaptics: { [weak self] in
+            self?.controllerInputManager.playRumbleIfSupported()
         }
     )
     private lazy var onboardingController = OnboardingWindowController(settings: settings)
@@ -96,7 +99,7 @@ final class AppCoordinator: ObservableObject {
                 NSApp.deactivate()
                 let didMove = self.overlayController.moveSelection(direction, trigger: trigger)
                 if didMove {
-                    self.controllerInputManager.playMoveRumbleIfSupported()
+                    self.controllerInputManager.playRumbleIfSupported()
                 }
             }
         }

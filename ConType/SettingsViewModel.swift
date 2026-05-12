@@ -50,6 +50,7 @@ final class SettingsViewModel: ObservableObject {
     private let onCancelControllerCapture: () -> Void
     private let onRestartOnboarding: () -> Void
     var onUpdateWindowSize: () -> Void
+    var onTriggerHaptics: () -> Void
     
     // Published UI state
     @Published var isAccessibilityTrusted: Bool
@@ -92,7 +93,8 @@ final class SettingsViewModel: ObservableObject {
         onRequestControllerActionButtonCapture: @escaping (@escaping (ControllerAssignableButton) -> Void) -> Void,
         onCancelControllerCapture: @escaping () -> Void,
         onRestartOnboarding: @escaping () -> Void,
-        onUpdateWindowSize: @escaping () -> Void
+        onUpdateWindowSize: @escaping () -> Void,
+        onTriggerHaptics: @escaping () -> Void
     ) {
         self.settings = settings
         self.joystick = joystick
@@ -101,6 +103,7 @@ final class SettingsViewModel: ObservableObject {
         self.onCancelControllerCapture = onCancelControllerCapture
         self.onRestartOnboarding = onRestartOnboarding
         self.onUpdateWindowSize = onUpdateWindowSize
+        self.onTriggerHaptics = onTriggerHaptics
         self.isAccessibilityTrusted = InputMonitoringPermission.isAuthorized()
         self.leftStickDeadzone = settings.leftStickDeadzone
         self.rightStickDeadzone = settings.rightStickDeadzone
@@ -1134,6 +1137,8 @@ final class SettingsViewModel: ObservableObject {
             stickPosition
         }
         
+        let isOutsideDeadzone = length > deadzoneRadius
+        
         ZStack {
             // Outer circle (joystick range)
             Circle()
@@ -1141,7 +1146,7 @@ final class SettingsViewModel: ObservableObject {
                 .frame(width: size, height: size)
             // Deadzone circle
             Circle()
-                .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
+                .stroke(isOutsideDeadzone ? Color.accentColor.opacity(0.5) : Color.primary.opacity(0.5), lineWidth: 2)
                 .frame(width: size * deadzoneRadius, height: size * deadzoneRadius)
             // Stick dot
             Circle()
@@ -1150,13 +1155,8 @@ final class SettingsViewModel: ObservableObject {
                 .offset(x: stick.dx * (size/2 - 7), y: -stick.dy * (size/2 - 7))
                 .shadow(radius: 2)
         }
-        .onChange(of: stickPosition) {
-            // Haptic feedback when crossing deadzone boundary
-            let distance = sqrt(stickPosition.dx * stickPosition.dx + stickPosition.dy * stickPosition.dy)
-            if (distance < deadzoneRadius && distance > deadzoneRadius - 0.05) ||
-                (distance > deadzoneRadius && distance < deadzoneRadius + 0.05) {
-                NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-            }
+        .onChange(of: isOutsideDeadzone) {
+            self.onTriggerHaptics()
         }
         .frame(width: size, height: size)
     }
@@ -1186,7 +1186,8 @@ final class SettingsViewModel: ObservableObject {
         onRequestControllerActionButtonCapture: { _ in },
         onCancelControllerCapture: {},
         onRestartOnboarding: {},
-        onUpdateWindowSize: {}
+        onUpdateWindowSize: {},
+        onTriggerHaptics: {}
     )
     
     SettingsView(viewModel: vm)
