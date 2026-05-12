@@ -218,7 +218,7 @@ final class ControllerInputManager: NSObject {
     private var holdRepeatAcceleration: Double?
     
 #if DEBUG
-    private func debugLog(_ message: String) { print("[Controller] \(message)") }
+    private func debugLog(_ message: String) { debugPrint("[Controller] \(message)") }
 #else
     private func debugLog(_ message: String) {}
 #endif
