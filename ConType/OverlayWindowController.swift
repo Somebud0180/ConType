@@ -241,10 +241,7 @@ final class OverlayWindowController {
             if keyboardWindowPosition != .zero {
                 newOrigin = keyboardWindowPosition
             } else {
-                newOrigin = NSPoint(
-                    x: frame.midX - (normalizedSize.width / 2),
-                    y: frame.midY - (normalizedSize.height / 2)
-                )
+                newOrigin = defaultWindowPlacement(isKeyboard: true, windowSize: normalizedSize, screenFrame: frame)
             }
             
             hasShownKeyboard = true
@@ -556,6 +553,20 @@ final class OverlayWindowController {
         hypot(first.x - second.x, first.y - second.y)
     }
     
+    private func defaultWindowPlacement(isKeyboard: Bool, windowSize: NSSize, screenFrame: NSRect) -> NSPoint {
+        if isKeyboard {
+            return NSPoint(
+                x: screenFrame.midX - (windowSize.width / 2),
+                y: screenFrame.midY - (windowSize.height / 2)
+            )
+        } else {
+            let inset: CGFloat = 16
+            let x = screenFrame.minX + inset
+            let y = screenFrame.minY + inset
+            return NSPoint(x: x, y: y)
+        }
+    }
+    
     private func makeMouseWindowIfNeeded() -> NSWindow {
         if let mouseWindow {
             return mouseWindow
@@ -619,10 +630,7 @@ final class OverlayWindowController {
         if mouseWindowPosition != .zero {
             newOrigin = mouseWindowPosition
         } else {
-            // Place in bottom left
-            let x = frame.minX + 16
-            let y = frame.minY + 16
-            newOrigin = NSPoint(x: x, y: y)
+            newOrigin = defaultWindowPlacement(isKeyboard: false, windowSize: mouseWindow.frame.size, screenFrame: frame)
         }
         
         isApplyingProgrammaticSnap = true
