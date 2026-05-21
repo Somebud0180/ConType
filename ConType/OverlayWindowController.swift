@@ -278,6 +278,7 @@ final class OverlayWindowController {
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -287,14 +288,24 @@ final class OverlayWindowController {
         
         self.mouseWindow = window
         
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidMove(_:)),
+            name: NSWindow.didMoveNotification,
+            object: mouseWindow
+        )
+        
         return window
     }
 
+    //MARK: - Window Event Handlers
     @objc private func windowDidMove(_ notification: Notification) {
-        guard let window = notification.object as? NSWindow,
-            window === self.keyboardWindow
-        else { return }
-        settings.keyboardWindowPosition = window.frame.origin
+        guard let window = notification.object as? NSWindow else { return }
+        if window == keyboardWindow {
+            settings.keyboardWindowPosition = window.frame.origin
+        } else if window == mouseWindow {
+            settings.mouseWindowPosition = window.frame.origin
+        }
     }
 
     @objc private func windowDidEndLiveResize(_ notification: Notification) {

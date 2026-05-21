@@ -560,6 +560,7 @@ final class AppSettings: ObservableObject {
     @Published var keyboardWindowSize: WindowSize = .small
     @Published var keyboardCustomDimensions: NSSize = WindowSize.medium.windowDimensions()
     @Published var keyboardWindowPosition: NSPoint = .zero
+    @Published var mouseWindowPosition: NSPoint = .zero
     
     // App state (Does not persist)
     @Published var controllerGlyphStyle: ControllerGlyphStyle = .generic
@@ -600,7 +601,8 @@ final class AppSettings: ObservableObject {
             $showGuideBar.map { _ in () }.eraseToAnyPublisher(),
             $keyboardWindowSize.map { _ in () }.eraseToAnyPublisher(),
             $keyboardCustomDimensions.map { _ in () }.eraseToAnyPublisher(),
-            $keyboardWindowPosition.map { _ in () }.eraseToAnyPublisher()
+            $keyboardWindowPosition.map { _ in () }.eraseToAnyPublisher(),
+            $mouseWindowPosition.map { _ in () }.eraseToAnyPublisher()
         ]
         
         Publishers.MergeMany(saveTriggers)
@@ -651,7 +653,8 @@ final class AppSettings: ObservableObject {
             showGuideBar: showGuideBar,
             keyboardWindowSize: keyboardWindowSize,
             keyboardCustomDimensions: CodableSize(keyboardCustomDimensions),
-            keyboardWindowPosition: CodablePoint(keyboardWindowPosition)
+            keyboardWindowPosition: CodablePoint(keyboardWindowPosition),
+            mouseWindowPosition: CodablePoint(mouseWindowPosition)
         )
         do {
             debugPrint("[AppSettings] Saving app settings to file...")
@@ -704,6 +707,7 @@ final class AppSettings: ObservableObject {
                 self.keyboardCustomDimensions = keyboardCustomDimensions
             }
             self.keyboardWindowPosition = codable.keyboardWindowPosition.nsPoint
+            self.mouseWindowPosition = codable.mouseWindowPosition.nsPoint
         } catch {
             debugPrint("[AppSettings] Failed to load settings: \(error)")
         }
@@ -744,6 +748,7 @@ final class AppSettings: ObservableObject {
             self.keyboardWindowSize = .small
             self.keyboardCustomDimensions = WindowSize.medium.windowDimensions()
             self.keyboardWindowPosition = .zero
+            self.mouseWindowPosition = .zero
             return
         }
     }
@@ -877,4 +882,5 @@ private struct AppSettingsCodable: Codable {
     var keyboardWindowSize: WindowSize
     var keyboardCustomDimensions: CodableSize?
     var keyboardWindowPosition: CodablePoint
+    var mouseWindowPosition: CodablePoint
 }
