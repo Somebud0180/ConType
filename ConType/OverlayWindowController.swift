@@ -5,7 +5,7 @@ import SwiftUI
 
 enum DragPhase { case began, changed, ended }
 
-private final class NonActivatingOverlayPanel: NSPanel {
+final class NonActivatingOverlayPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
     
@@ -33,12 +33,9 @@ private final class NonActivatingOverlayPanel: NSPanel {
 
 @MainActor
 final class OverlayWindowController {
-    // How far the user has to pull before freeing from snap
-    @State private var keyboardSnapDistance: CGFloat = 72
-    @State private var mouseSnapDistance: CGFloat = 44
-    
     private var hasShownKeyboard = false
     private var isApplyingProgrammaticResize = false
+    private var isApplyingProgrammaticSnap = false
     private var guideHideWorkItem: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
     private var keyboardWindow: NSWindow?
@@ -46,20 +43,8 @@ final class OverlayWindowController {
     private var positionGuideWindow: NSWindow?
     private let settings: AppSettings
     private let keyboardViewModel: KeyboardOverlayViewModel
-    private let positionGuideModel = OverlayPositionGuideModel()
+    private let snappingManager: OverlaySnappingManager
     private let keyEmitter = KeyEmitter()
-    
-    // Snap/Drag variables
-    private var isApplyingProgrammaticSnap = false
-    private var keyboardSnapLockOrigin: NSPoint?
-    private var mouseSnapLockOrigin: NSPoint?
-    private var keyboardSnapSuppressionOrigin: NSPoint?
-    private var mouseSnapSuppressionOrigin: NSPoint?
-    private var keyboardSessionHasSnap = false
-    private var mouseSessionHasSnap = false
-    private var dragStartMouseLocation: NSPoint = .zero
-    private var dragStartWindowOrigin: NSPoint = .zero
-    private var virtualWindowOrigin: NSPoint = .zero
 
     var isKeyboardVisible: Bool {
         keyboardWindow?.isVisible == true
@@ -72,6 +57,7 @@ final class OverlayWindowController {
     init(settings: AppSettings) {
         self.settings = settings
         self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
+        self.snappingManager = OverlaySnappingManager(settings: settings, keyboardWindow: keyboardWindow, mouseWindow: mouseWindow)
     }
 
     deinit {
@@ -103,13 +89,13 @@ final class OverlayWindowController {
     func hide() {
         keyboardWindow?.orderOut(nil)
         mouseWindow?.orderOut(nil)
-        clearPositionGuide()
-        keyboardSnapLockOrigin = nil
-        mouseSnapLockOrigin = nil
-        keyboardSnapSuppressionOrigin = nil
-        mouseSnapSuppressionOrigin = nil
-        keyboardSessionHasSnap = false
-        mouseSessionHasSnap = false
+        snappingManager.clearPositionGuide()
+        snappingManager.keyboardSnapLockOrigin = nil
+        snappingManager.mouseSnapLockOrigin = nil
+        snappingManager.keyboardSnapSuppressionOrigin = nil
+        snappingManager.mouseSnapSuppressionOrigin = nil
+        snappingManager.keyboardSessionHasSnap = false
+        snappingManager.mouseSessionHasSnap = false
     }
 
     @discardableResult
@@ -178,6 +164,20 @@ final class OverlayWindowController {
             }
         }
     }
+    
+    func defaultWindowPlacement(isKeyboard: Bool, windowSize: NSSize, screenFrame: NSRect) -> NSPoint {
+        if isKeyboard {
+            return NSPoint(
+                x: screenFrame.midX - (windowSize.width / 2),
+                y: screenFrame.midY - (windowSize.height / 2)
+            )
+        } else {
+            let inset: CGFloat = 16
+            let x = screenFrame.minX + inset
+            let y = screenFrame.minY + inset
+            return NSPoint(x: x, y: y)
+        }
+    }
 
     private func makeWindowIfNeeded() -> NSWindow {
         if let keyboardWindow {
@@ -222,10 +222,11 @@ final class OverlayWindowController {
         window.minSize = NSSize(width: 640, height: 240)
         window.maxSize = NSSize(width: 1440, height: 540)
         window.dragHandler = { [weak self] event, phase in
-            self?.handleWindowDrag(phase: phase, window: window)
+            self?.snappingManager.handleWindowDrag(phase: phase, window: window)
         }
         
         self.keyboardWindow = window
+        self.snappingManager.keyboardWindow = window
         
         NotificationCenter.default.addObserver(
             self,
@@ -292,11 +293,11 @@ final class OverlayWindowController {
             animate: true
         )
         isApplyingProgrammaticResize = false
-        keyboardSnapLockOrigin = nil
-        keyboardSnapSuppressionOrigin = nil
-        keyboardSessionHasSnap = false
+        snappingManager.keyboardSnapLockOrigin = nil
+        snappingManager.keyboardSnapSuppressionOrigin = nil
+        snappingManager.keyboardSessionHasSnap = false
         if refreshGuide {
-            refreshPositionGuide(for: keyboardWindow)
+            snappingManager.refreshPositionGuide(for: keyboardWindow)
         }
     }
     
@@ -340,10 +341,11 @@ final class OverlayWindowController {
         window.minSize = NSSize(width: 64, height: 64)
         window.maxSize = NSSize(width: 64, height: 64)
         window.dragHandler = { [weak self] event, phase in
-            self?.handleWindowDrag(phase: phase, window: window)
+            self?.snappingManager.handleWindowDrag(phase: phase, window: window)
         }
         
         self.mouseWindow = window
+        self.snappingManager.mouseWindow = window
         
         NotificationCenter.default.addObserver(
             self,
@@ -353,253 +355,6 @@ final class OverlayWindowController {
         )
         
         return window
-    }
-
-    //MARK: - Position Guide Logic
-    private func makePositionGuideWindowIfNeeded(for screenFrame: NSRect) -> NSWindow {
-        if let positionGuideWindow {
-            if positionGuideWindow.frame != screenFrame {
-                positionGuideWindow.setFrame(screenFrame, display: false)
-            }
-            return positionGuideWindow
-        }
-        
-        let hostingController = NSHostingController(
-            rootView: OverlayPositionGuideView(model: positionGuideModel)
-        )
-        let baseMask: NSWindow.StyleMask = [
-            .borderless, .fullSizeContentView,
-        ]
-        let window = NonActivatingOverlayPanel(
-            contentRect: screenFrame,
-            styleMask: baseMask.union(.nonactivatingPanel),
-            backing: .buffered,
-            defer: false
-        )
-        
-        window.contentViewController = hostingController
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = false
-        window.level = .floating
-        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        window.ignoresMouseEvents = true
-        window.isReleasedWhenClosed = false
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        
-        self.positionGuideWindow = window
-        return window
-    }
-    
-    private func refreshPositionGuide(for window: NSWindow) {
-        guard let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame else {
-            clearPositionGuide()
-            return
-        }
-        
-        let screenRect = NSRect(origin: screenFrame.origin, size: screenFrame.size)
-        positionGuideModel.screenFrame = screenRect
-        
-        if window == keyboardWindow {
-            let targetFrame = keyboardGuideTargetFrame(for: window.frame, screenFrame: screenRect)
-            let distance = centerDistance(between: window.frame, and: targetFrame)
-            let revealDistance: CGFloat = 88
-            let snapDistance: CGFloat = 24
-            let releaseDistance: CGFloat = keyboardSessionHasSnap ? 156 : 96
-            let suppressionDistance: CGFloat = keyboardSessionHasSnap ? 100 : 68
-            
-            if let snapOrigin = keyboardSnapLockOrigin {
-                let movedAwayDistance = originDistance(between: window.frame.origin, and: snapOrigin)
-                if movedAwayDistance < releaseDistance {
-                    clearPositionGuide()
-                    return
-                }
-                keyboardSnapSuppressionOrigin = snapOrigin
-                keyboardSnapLockOrigin = nil
-            }
-            
-            if let suppressionOrigin = keyboardSnapSuppressionOrigin {
-                let suppressionOffset = originDistance(between: window.frame.origin, and: suppressionOrigin)
-                if suppressionOffset < suppressionDistance {
-                    clearPositionGuide()
-                    return
-                }
-                keyboardSnapSuppressionOrigin = nil
-            }
-            
-            if distance <= snapDistance {
-                snapKeyboardWindow(to: targetFrame.origin)
-                clearPositionGuide()
-                return
-            }
-            
-            if distance <= revealDistance && distance > 1 {
-                positionGuideModel.targets = [OverlayPositionGuideTarget(kind: .keyboard, frame: targetFrame)]
-                makePositionGuideWindowIfNeeded(for: screenRect).orderFrontRegardless()
-            } else {
-                clearPositionGuide()
-            }
-        } else if window == mouseWindow {
-            let targets = mouseGuideTargets(for: window.frame.size, screenFrame: screenRect)
-            guard let nearestTarget = targets.min(by: {
-                originDistance(between: window.frame.origin, and: $0.frame.origin) < originDistance(between: window.frame.origin, and: $1.frame.origin)
-            }) else {
-                clearPositionGuide()
-                return
-            }
-            
-            let distance = originDistance(between: window.frame.origin, and: nearestTarget.frame.origin)
-            let revealDistance: CGFloat = 52
-            let snapDistance: CGFloat = 18
-            let releaseDistance: CGFloat = mouseSessionHasSnap ? 108 : 64
-            let suppressionDistance: CGFloat = mouseSessionHasSnap ? 72 : 44
-            
-            if let snapOrigin = mouseSnapLockOrigin {
-                let movedAwayDistance = originDistance(between: window.frame.origin, and: snapOrigin)
-                if movedAwayDistance < releaseDistance {
-                    clearPositionGuide()
-                    return
-                }
-                mouseSnapSuppressionOrigin = snapOrigin
-                mouseSnapLockOrigin = nil
-            }
-            
-            if let suppressionOrigin = mouseSnapSuppressionOrigin {
-                let suppressionOffset = originDistance(between: window.frame.origin, and: suppressionOrigin)
-                if suppressionOffset < suppressionDistance {
-                    clearPositionGuide()
-                    return
-                }
-                mouseSnapSuppressionOrigin = nil
-            }
-            
-            if distance <= snapDistance {
-                snapMouseWindow(to: nearestTarget.frame.origin)
-                clearPositionGuide()
-                return
-            }
-            
-            if distance <= revealDistance && distance > 1 {
-                positionGuideModel.targets = [nearestTarget]
-                makePositionGuideWindowIfNeeded(for: screenRect).orderFrontRegardless()
-            } else {
-                clearPositionGuide()
-            }
-        } else {
-            clearPositionGuide()
-        }
-    }
-    
-    private func clearPositionGuide() {
-        guideHideWorkItem?.cancel()
-        guideHideWorkItem = nil
-        positionGuideWindow?.orderOut(nil)
-        positionGuideModel.clear()
-    }
-    
-    private func scheduleGuideAutoHide() {
-        guideHideWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.guideHideWorkItem = nil
-            self?.positionGuideWindow?.orderOut(nil)
-            self?.positionGuideModel.clear()
-            self?.keyboardSessionHasSnap = false
-            self?.mouseSessionHasSnap = false
-        }
-        guideHideWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: workItem)
-    }
-    
-    private func snapKeyboardWindow(to origin: NSPoint) {
-        guard let keyboardWindow, keyboardWindow.frame.origin != origin else { return }
-        isApplyingProgrammaticSnap = true
-        keyboardWindow.setFrameOrigin(origin)
-        isApplyingProgrammaticSnap = false
-        keyboardSnapLockOrigin = origin
-        keyboardSnapSuppressionOrigin = nil
-        keyboardSessionHasSnap = true
-        settings.keyboardWindowPosition = origin
-    }
-    
-    private func snapMouseWindow(to origin: NSPoint) {
-        guard let mouseWindow, mouseWindow.frame.origin != origin else { return }
-        isApplyingProgrammaticSnap = true
-        mouseWindow.setFrameOrigin(origin)
-        isApplyingProgrammaticSnap = false
-        mouseSnapLockOrigin = origin
-        mouseSnapSuppressionOrigin = nil
-        mouseSessionHasSnap = true
-        settings.mouseWindowPosition = origin
-    }
-    
-    private func keyboardGuideTargetFrame(for currentFrame: NSRect, screenFrame: NSRect) -> NSRect {
-        NSRect(
-            x: screenFrame.midX - (currentFrame.width / 2),
-            y: screenFrame.midY - (currentFrame.height / 2),
-            width: currentFrame.width,
-            height: currentFrame.height
-        )
-    }
-    
-    private func mouseGuideTargets(for windowSize: NSSize, screenFrame: NSRect) -> [OverlayPositionGuideTarget] {
-        let inset: CGFloat = 16
-        let width = windowSize.width
-        let height = windowSize.height
-        
-        let bottomLeft = NSRect(
-            x: screenFrame.minX + inset,
-            y: screenFrame.minY + inset,
-            width: width,
-            height: height
-        )
-        let bottomRight = NSRect(
-            x: max(screenFrame.minX + inset, screenFrame.maxX - inset - width),
-            y: screenFrame.minY + inset,
-            width: width,
-            height: height
-        )
-        let topLeft = NSRect(
-            x: screenFrame.minX + inset,
-            y: max(screenFrame.minY + inset, screenFrame.maxY - inset - height),
-            width: width,
-            height: height
-        )
-        let topRight = NSRect(
-            x: max(screenFrame.minX + inset, screenFrame.maxX - inset - width),
-            y: max(screenFrame.minY + inset, screenFrame.maxY - inset - height),
-            width: width,
-            height: height
-        )
-        
-        return [
-            OverlayPositionGuideTarget(kind: .mouse, frame: bottomLeft),
-            OverlayPositionGuideTarget(kind: .mouse, frame: bottomRight),
-            OverlayPositionGuideTarget(kind: .mouse, frame: topLeft),
-            OverlayPositionGuideTarget(kind: .mouse, frame: topRight)
-        ]
-    }
-    
-    private func centerDistance(between first: NSRect, and second: NSRect) -> CGFloat {
-        hypot(first.midX - second.midX, first.midY - second.midY)
-    }
-    
-    private func originDistance(between first: NSPoint, and second: NSPoint) -> CGFloat {
-        hypot(first.x - second.x, first.y - second.y)
-    }
-    
-    private func defaultWindowPlacement(isKeyboard: Bool, windowSize: NSSize, screenFrame: NSRect) -> NSPoint {
-        if isKeyboard {
-            return NSPoint(
-                x: screenFrame.midX - (windowSize.width / 2),
-                y: screenFrame.midY - (windowSize.height / 2)
-            )
-        } else {
-            let inset: CGFloat = 16
-            let x = screenFrame.minX + inset
-            let y = screenFrame.minY + inset
-            return NSPoint(x: x, y: y)
-        }
     }
     
     func positionMouseWindow() {
@@ -618,57 +373,10 @@ final class OverlayWindowController {
         isApplyingProgrammaticSnap = true
         mouseWindow.setFrameOrigin(newOrigin)
         isApplyingProgrammaticSnap = false
-        mouseSnapLockOrigin = nil
-        mouseSnapSuppressionOrigin = nil
-        mouseSessionHasSnap = false
+        snappingManager.mouseSnapLockOrigin = nil
+        snappingManager.mouseSnapSuppressionOrigin = nil
+        snappingManager.mouseSessionHasSnap = false
         settings.mouseWindowPosition = newOrigin
-    }
-    
-    private func handleWindowDrag(phase: DragPhase, window: NSWindow) {
-        let currentGlobalMouse = NSEvent.mouseLocation
-        
-        switch phase {
-        case .began:
-            dragStartMouseLocation = currentGlobalMouse
-            dragStartWindowOrigin = window.frame.origin
-            virtualWindowOrigin = window.frame.origin
-            
-        case .changed:
-            let deltaX = currentGlobalMouse.x - dragStartMouseLocation.x
-            let deltaY = currentGlobalMouse.y - dragStartMouseLocation.y
-            virtualWindowOrigin = NSPoint(
-                x: dragStartWindowOrigin.x + deltaX,
-                y: dragStartWindowOrigin.y + deltaY
-            )
-            
-            let isKeyboard = (window === keyboardWindow)
-            let isSnapped = isKeyboard ? keyboardSessionHasSnap : mouseSessionHasSnap
-            let snapOrigin = isKeyboard ? keyboardSnapLockOrigin : mouseSnapLockOrigin
-            
-            if isSnapped, let snapPoint = snapOrigin {
-                let pullDistance = originDistance(between: virtualWindowOrigin, and: snapPoint)
-                let breakoutThreshold: CGFloat = isKeyboard ? keyboardSnapDistance : mouseSnapDistance
-                
-                if pullDistance > breakoutThreshold {
-                    // Break out of the snap
-                    if isKeyboard {
-                        keyboardSessionHasSnap = false
-                        keyboardSnapLockOrigin = nil
-                    } else {
-                        mouseSessionHasSnap = false
-                        mouseSnapLockOrigin = nil
-                    }
-                    window.setFrameOrigin(virtualWindowOrigin)
-                    refreshPositionGuide(for: window)
-                }
-            } else {
-                window.setFrameOrigin(virtualWindowOrigin)
-                refreshPositionGuide(for: window)
-            }
-            
-        case .ended:
-            break
-        }
     }
     
     //MARK: - Window Event Handlers
@@ -682,8 +390,8 @@ final class OverlayWindowController {
             settings.mouseWindowPosition = window.frame.origin
         }
         
-        refreshPositionGuide(for: window)
-        scheduleGuideAutoHide()
+        snappingManager.refreshPositionGuide(for: window)
+        snappingManager.scheduleGuideAutoHide()
     }
 
     @objc private func windowDidEndLiveResize(_ notification: Notification) {

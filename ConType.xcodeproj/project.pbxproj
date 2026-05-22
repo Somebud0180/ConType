@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		AA80F8232F8E78E80060DD45 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = AA80F8222F8E78E80060DD45 /* SkyLightWindow */; };
-		AACCD81C2FBF130000EB2221 /* OverlayPositionGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AACCD81B2FBF12FF00EB2221 /* OverlayPositionGuideView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,7 +31,6 @@
 		AA5962C92F8188640048A21D /* ConType.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConType.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA5962D82F8188690048A21D /* ConType Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ConType Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA5962E22F8188690048A21D /* ConType UI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ConType UI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AACCD81B2FBF12FF00EB2221 /* OverlayPositionGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPositionGuideView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -99,7 +97,6 @@
 				AA5962DB2F8188690048A21D /* ConType Tests */,
 				AA5962E52F8188690048A21D /* ConType UI Tests */,
 				AA5962CA2F8188640048A21D /* Products */,
-				AACCD81B2FBF12FF00EB2221 /* OverlayPositionGuideView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -261,7 +258,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AACCD81C2FBF130000EB2221 /* OverlayPositionGuideView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
