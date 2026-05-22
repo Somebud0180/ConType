@@ -33,16 +33,13 @@ private final class NonActivatingOverlayPanel: NSPanel {
 
 @MainActor
 final class OverlayWindowController {
+    // How far the user has to pull before freeing from snap
+    @State private var keyboardSnapDistance: CGFloat = 72
+    @State private var mouseSnapDistance: CGFloat = 44
+    
     private var hasShownKeyboard = false
     private var isApplyingProgrammaticResize = false
-    private var isApplyingProgrammaticSnap = false
     private var guideHideWorkItem: DispatchWorkItem?
-    private var keyboardSnapLockOrigin: NSPoint?
-    private var mouseSnapLockOrigin: NSPoint?
-    private var keyboardSnapSuppressionOrigin: NSPoint?
-    private var mouseSnapSuppressionOrigin: NSPoint?
-    private var keyboardSessionHasSnap = false
-    private var mouseSessionHasSnap = false
     private var cancellables = Set<AnyCancellable>()
     private var keyboardWindow: NSWindow?
     private var mouseWindow: NSWindow?
@@ -51,6 +48,15 @@ final class OverlayWindowController {
     private let keyboardViewModel: KeyboardOverlayViewModel
     private let positionGuideModel = OverlayPositionGuideModel()
     private let keyEmitter = KeyEmitter()
+    
+    // Snap/Drag variables
+    private var isApplyingProgrammaticSnap = false
+    private var keyboardSnapLockOrigin: NSPoint?
+    private var mouseSnapLockOrigin: NSPoint?
+    private var keyboardSnapSuppressionOrigin: NSPoint?
+    private var mouseSnapSuppressionOrigin: NSPoint?
+    private var keyboardSessionHasSnap = false
+    private var mouseSessionHasSnap = false
     private var dragStartMouseLocation: NSPoint = .zero
     private var dragStartWindowOrigin: NSPoint = .zero
     private var virtualWindowOrigin: NSPoint = .zero
@@ -209,7 +215,6 @@ final class OverlayWindowController {
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = false
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -328,7 +333,6 @@ final class OverlayWindowController {
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = false
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -630,7 +634,6 @@ final class OverlayWindowController {
             virtualWindowOrigin = window.frame.origin
             
         case .changed:
-            // Calculate the raw delta from the start of the drag
             let deltaX = currentGlobalMouse.x - dragStartMouseLocation.x
             let deltaY = currentGlobalMouse.y - dragStartMouseLocation.y
             virtualWindowOrigin = NSPoint(
@@ -643,9 +646,8 @@ final class OverlayWindowController {
             let snapOrigin = isKeyboard ? keyboardSnapLockOrigin : mouseSnapLockOrigin
             
             if isSnapped, let snapPoint = snapOrigin {
-                // How hard is the user pulling away from the snapped origin?
                 let pullDistance = originDistance(between: virtualWindowOrigin, and: snapPoint)
-                let breakoutThreshold: CGFloat = isKeyboard ? 156 : 108
+                let breakoutThreshold: CGFloat = isKeyboard ? keyboardSnapDistance : mouseSnapDistance
                 
                 if pullDistance > breakoutThreshold {
                     // Break out of the snap
@@ -659,15 +661,12 @@ final class OverlayWindowController {
                     window.setFrameOrigin(virtualWindowOrigin)
                     refreshPositionGuide(for: window)
                 }
-                // IF it is still snapped, intentionally DO NOT update window.setFrameOrigin
             } else {
-                // Not snapped, proceed with normally following the cursor seamlessly
                 window.setFrameOrigin(virtualWindowOrigin)
                 refreshPositionGuide(for: window)
             }
             
         case .ended:
-            // Optional final cleanup when they release the mouse
             break
         }
     }
