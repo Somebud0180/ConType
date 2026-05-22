@@ -1,9 +1,10 @@
 # ConType
 <div align="center">
-  <img width="80%" alt="ConType Banner" src="https://github.com/user-attachments/assets/30c546c1-0f44-4e64-b1aa-16b0e18a7925" />
+  <img width="90%" alt="ConType Banner"  src="https://github.com/user-attachments/assets/c16b6637-9e85-476e-add8-f46ea9e66655" />
   <h3 align="center">Make your controller control</h3>
 <!--  <a href="https://testflight.apple.com/join/cesGDw2f">Available on TestFlight</a> --> 
 </div>
+
 
 <br>Inspired by virtual keyboards in games and other operating systems, ConType brings a controller-based keyboard (+ mouse) to the desktop, specifically for Mac. Made with Swift and SwiftUI, designed to feel like a part of your Mac.
 
