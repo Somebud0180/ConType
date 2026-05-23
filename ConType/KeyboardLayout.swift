@@ -7,6 +7,7 @@
 
 import AppKit
 
+/// A model representing a virtual key on the keyboard, including its labels, key code, size, and role.
 struct VirtualKey: Identifiable, Hashable {
     let id = UUID()
     let baseLabel: String
@@ -32,6 +33,7 @@ struct VirtualKey: Identifiable, Hashable {
         self.usesRemainingSpace = usesRemainingSpace
     }
 
+    /// A computed property to determine if the key should respond to Caps Lock.
     var respondsToCapsLock: Bool {
         baseLabel.count == 1
             && baseLabel.unicodeScalars.allSatisfy(
@@ -39,6 +41,7 @@ struct VirtualKey: Identifiable, Hashable {
             )
     }
 
+    /// A computed property to determine if the key is alphanumeric (a letter or digit).
     var isAlphanumeric: Bool {
         baseLabel.count == 1
             && baseLabel.unicodeScalars.allSatisfy(
@@ -47,11 +50,13 @@ struct VirtualKey: Identifiable, Hashable {
     }
 }
 
+/// An enum representing the role of a virtual key, which can be either standard or a toggle modifier (like Shift or Control).
 enum VirtualKeyRole: Hashable {
     case standard
     case toggleModifier(ModifierToggleKey)
 }
 
+/// An enum representing the specific modifier keys that can be toggled, such as Control, Option, Command, Shift, and Caps Lock.
 enum ModifierToggleKey: Hashable {
     case control
     case option
@@ -60,6 +65,7 @@ enum ModifierToggleKey: Hashable {
     case capsLock
 }
 
+/// A struct representing a keyboard layout, which consists of a name and a 2D array of virtual keys organized into rows.
 struct KeyboardLayout: Identifiable, Hashable {
     let id = UUID()
     let name: String
@@ -71,7 +77,9 @@ struct KeyboardLayout: Identifiable, Hashable {
     ]
 }
 
+/// An extension of `KeyboardLayout` that provides predefined keyboard layouts, such as the standard QWERTY layout and an aligned QWERTY layout.
 extension KeyboardLayout {
+    /// The standard QWERTY keyboard layout, with keys arranged in the traditional staggered format.
     static let QWERTY = KeyboardLayout(
         name: "QWERTY",
         rows: [
@@ -188,6 +196,7 @@ extension KeyboardLayout {
         ]
     )
 
+    /// The standard QWERTY keyboard layout, but with all keys aligned in a grid format, by moving all non 1U keys to the right.
     static let alignedQWERTY = KeyboardLayout(
         name: "QWERTY (Aligned)",
         rows: [
