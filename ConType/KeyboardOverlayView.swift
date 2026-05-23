@@ -10,6 +10,9 @@ import ApplicationServices
 import AppKit
 import SwiftUI
 
+/// A SwiftUI view that renders an on-screen keyboard overlay. It displays keys according to the current keyboard layout and highlights active modifiers.
+/// The view also includes an optional guide bar that shows controller action bindings based on settings.
+/// User interactions with the keys trigger the corresponding virtual key events via the `onKeyPressed` closure.
 struct KeyboardOverlayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -107,8 +110,11 @@ struct KeyboardOverlayView: View {
         }
     }
     
-    @ViewBuilder
-    private func guideBar(metrics: KeyboardLayoutMetrics) -> some View {
+    /// Renders the guide bar that displays controller action bindings if enabled in settings.
+    /// It iterates through all possible controller actions and shows their corresponding hotkeys using glyphs or text.
+    /// - Parameter metrics: The layout metrics used to size and space the guide bar items appropriately.
+    /// - Returns: A view representing the guide bar with controller action bindings.
+    @ViewBuilder private func guideBar(metrics: KeyboardLayoutMetrics) -> some View {
         if settings.showGuideBar {
             let actionBindings = settings.controllerActionBindings
             HStack(spacing: 12) {
@@ -121,8 +127,14 @@ struct KeyboardOverlayView: View {
         }
     }
     
-    @ViewBuilder
-    private func guideBarItem(
+    /// Renders an individual item in the guide bar for a specific controller action.
+    /// It checks if the action has a keyboard binding and displays the action title along with the corresponding hotkey glyph.
+    /// - Parameters:
+    ///   - action: The controller action for which to render the guide bar item.
+    ///   - actionBindings: The current controller action bindings from settings, used to determine which hotkey (if any) is associated with the action.
+    ///   - metrics: The layout metrics used to size and space the guide bar item appropriately.
+    /// - Returns: A view representing the guide bar item for the specified controller action, or an empty view if the action does not have a keyboard binding.
+    @ViewBuilder private func guideBarItem(
         for action: ControllerActionBinding,
         actionBindings: ControllerActionBindings,
         metrics: KeyboardLayoutMetrics
@@ -140,6 +152,13 @@ struct KeyboardOverlayView: View {
         }
     }
     
+    /// Renders the label for a given key, including its base label, shifted label (if applicable), command cluster symbol (if it's a modifier), and controller shortcut glyph (if it has an associated controller action).
+    /// - Parameters:
+    ///   - key: The virtual key for which to render the label.
+    ///   - metrics: The layout metrics used to size and space the key label appropriately.
+    ///   - prefersShiftLegend: A boolean indicating whether the shifted legend should be visually emphasized over the base label.
+    ///   - controllerShortcutButton: An optional controller button that is bound to this key's action.
+    /// - Returns: A view representing the key label with all relevant legends and glyphs based on the key's properties and current settings.
     private func keyLabel(
         for key: VirtualKey,
         metrics: KeyboardLayoutMetrics,
@@ -160,8 +179,14 @@ struct KeyboardOverlayView: View {
         .padding(.horizontal, max(4, metrics.baseUnitWidth * 0.08))
     }
     
-    @ViewBuilder
-    private func keyLegend(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool, controllerShortcutButton: Bool) -> some View {
+    /// Renders the legends for a key, including the base label, shifted label (if applicable), command cluster symbol (for modifiers), and adjusts styling based on whether the shift legend should be emphasized or if the key has an associated controller shortcut.
+    /// - Parameters:
+    ///   - key: The virtual key for which to render the legends.
+    ///   - metrics: The layout metrics used to size and space the legends appropriately.
+    ///   - prefersShiftLegend: A boolean indicating whether the shifted legend should be visually emphasized over the base label.
+    ///   - controllerShortcutButton: A boolean indicating whether this key has an associated controller shortcut button, which affects the legend layout and styling.
+    /// - Returns: A view representing the key legends, including the base label, shifted label, command cluster symbol.
+    @ViewBuilder private func keyLegend(for key: VirtualKey, metrics: KeyboardLayoutMetrics, prefersShiftLegend: Bool, controllerShortcutButton: Bool) -> some View {
         if let symbol = commandClusterSymbol(for: key) {
             ZStack(alignment: .topTrailing) {
                 Text(symbol)
@@ -210,8 +235,13 @@ struct KeyboardOverlayView: View {
         }
     }
     
-    @ViewBuilder
-    private func controllerShortcutGlyph(for button: ControllerAssignableButton, metrics: KeyboardLayoutMetrics, forGuide: Bool = false) -> some View {
+    /// Renders the glyph for a controller shortcut associated with a key. It checks if there is a valid image asset for the controller button based on the current glyph style settings, and if so, it displays the image. If not, it falls back to displaying text representing the button.
+    /// - Parameters:
+    ///   - button: The controller button for which to render the shortcut glyph.
+    ///   - metrics: The layout metrics used to size the glyph appropriately based on whether it's being shown in the guide bar or on the key itself.
+    ///   - forGuide: A boolean indicating whether the glyph is being rendered for the guide bar (true) or for a key label (false).
+    /// - Returns: A view representing the controller shortcut glyph, either as an image or as styled text, with appropriate accessibility labels for screen readers.
+    @ViewBuilder private func controllerShortcutGlyph(for button: ControllerAssignableButton, metrics: KeyboardLayoutMetrics, forGuide: Bool = false) -> some View {
         let assetName = button.glyphAssetName(for: settings.controllerGlyphStyle)
         let size = forGuide ? metrics.guideBarHeight : metrics.controllerGlyphSize
         
@@ -239,6 +269,9 @@ struct KeyboardOverlayView: View {
         }
     }
     
+    /// Determines if a given virtual key has an associated controller shortcut button based on its role and key code. It checks for specific toggle modifiers (shift and caps lock) and standard keys (backspace, space, enter) to see if they are bound to controller actions in the settings, and returns the corresponding controller button if found.
+    /// - Parameter key: The virtual key for which to check for an associated controller shortcut button.
+    /// - Returns: An optional `ControllerAssignableButton` that represents the controller action bound to this key, or nil if there is no associated controller shortcut.
     private func controllerShortcutButton(for key: VirtualKey) -> ControllerAssignableButton? {
         switch key.role {
         case .toggleModifier(let modifier):
@@ -266,6 +299,12 @@ struct KeyboardOverlayView: View {
         }
     }
     
+    /// Calculates the widths for each key in a given row based on the keyboard layout metrics and the properties of the keys.
+    /// - Parameters:
+    ///   - row: An array of `VirtualKey` objects representing the keys in the row for which to calculate widths.
+    ///   - rowIndex: The index of the row within the overall keyboard layout, used for determining corner radii and other layout decisions.
+    ///   - metrics: The `KeyboardLayoutMetrics` struct containing various measurements and spacing values.
+    /// - Returns: A dictionary mapping each key's unique identifier (UUID) to its calculated width in points.
     private func widths(for row: [VirtualKey], rowIndex: Int, metrics: KeyboardLayoutMetrics) -> [UUID: CGFloat] {
         guard !row.isEmpty else { return [:] }
         
@@ -300,6 +339,12 @@ struct KeyboardOverlayView: View {
         return resolved
     }
     
+    /// Calculates the minimum width required for a given key to fit its labels and symbols without truncation, based on the keyboard layout metrics and the properties of the key.
+    /// It considers the base label, shifted label (if applicable), command cluster symbol (for modifiers), and controller shortcut glyph to determine the necessary width.
+    /// - Parameters:
+    ///   - key: The `VirtualKey` for which to calculate the minimum fitting width.
+    ///   - metrics: The `KeyboardLayoutMetrics` struct containing various measurements and spacing values.
+    /// - Returns: The minimum width in points required for the key to fit its content without truncation.
     private func minimumFittingWidth(for key: VirtualKey, metrics: KeyboardLayoutMetrics) -> CGFloat {
         let horizontalPadding = max(4, metrics.baseUnitWidth * 0.08)
         let baseFont = NSFont.systemFont(ofSize: metrics.activeLegendFontSize, weight: .medium)
@@ -326,15 +371,22 @@ struct KeyboardOverlayView: View {
         return ceil(needed)
     }
     
+    /// Calculates the width of a given text string when rendered with a specific font, used for determining the minimum fitting width for key labels and symbols.
+    /// - Parameters:
+    ///   - text: The string for which to calculate the rendered width.
+    ///   - font: The `NSFont` to use for calculating the text width, which should match the font used in the key labels for accurate measurements.
+    /// - Returns: The width in points that the text would occupy when rendered with the specified font.
     private func textWidth(_ text: String, font: NSFont) -> CGFloat {
         let attributes: [NSAttributedString.Key: Any] = [.font: font]
         return (text as NSString).size(withAttributes: attributes).width
     }
     
+    /// A computed property that determines the appropriate animation to use for key label changes based on the user's accessibility settings for reduced motion.
     private var keyAnimation: Animation {
         reduceMotion ? .linear(duration: 0.01) : .spring(response: 0.24, dampingFraction: 0.82)
     }
     
+    /// Determines if a given virtual key is part of the "command cluster" (control, option, command modifiers) based on its role.
     private func isCommandClusterKey(_ key: VirtualKey) -> Bool {
         guard case .toggleModifier(let modifier) = key.role else { return false }
         switch modifier {
@@ -345,6 +397,10 @@ struct KeyboardOverlayView: View {
         }
     }
     
+    /// Returns the appropriate symbol for a key if it is a toggle modifier that belongs to the command cluster (control, option, command).
+    /// This is used to render the symbols on modifier keys in the command cluster.
+    /// - Parameter key: The `VirtualKey` for which to determine the command cluster symbol.
+    /// - Returns: A string representing the symbol for the command cluster modifier, or nil if the key is not a toggle modifier in the command cluster.
     private func commandClusterSymbol(for key: VirtualKey) -> String? {
         guard case .toggleModifier(let modifier) = key.role else { return nil }
         switch modifier {
@@ -359,6 +415,15 @@ struct KeyboardOverlayView: View {
         }
     }
     
+    /// Calculates the corner radii for a key based on its position in the keyboard layout.
+    /// Keys that are located at the corners of the keyboard will have larger corner radii to create a more rounded appearance, while inner keys will have a standard corner radii.
+    /// - Parameters:
+    ///   - rowIndex: The index of the row in which the key is located, used to determine if it's in the top or bottom row for corner radius adjustments.
+    ///   - column: The index of the column in which the key is located, used to determine if it's in the leftmost or rightmost column for corner radius adjustments.
+    ///   - rowCount: The total number of rows in the keyboard layout, used to determine if the key is in the bottom row for corner radius adjustments.
+    ///   - columnCount: The total number of columns in the keyboard layout, used to determine if the key is in the rightmost column for corner radius adjustments.
+    ///   - metrics: The `KeyboardLayoutMetrics` struct containing the base and outer corner radius values to apply based on the key's position.
+    /// - Returns: A `RectangleCornerRadii` struct containing the calculated corner radii for the keys.
     private func cornerRadii(forRow rowIndex: Int, column: Int, rowCount: Int, columnCount: Int, metrics: KeyboardLayoutMetrics) -> RectangleCornerRadii {
         let base = metrics.keyCornerRadius
         let outer = metrics.outerKeyCornerRadius
@@ -385,6 +450,10 @@ struct KeyboardOverlayView: View {
         return radii
     }
     
+    /// Calculates various layout metrics for the keyboard overlay based on the available size and current settings.
+    /// This includes dimensions for keys, spacing, padding, font sizes, and corner radii that adapt to different screen sizes and user preferences.
+    /// - Parameter size: The available size for the keyboard overlay, used to calculate responsive layout metrics.
+    /// - Returns: A `KeyboardLayoutMetrics` struct containing all the calculated layout values to be used throughout the view for consistent sizing and spacing.
     private func layoutMetrics(in size: CGSize) -> KeyboardLayoutMetrics {
         let side = min(size.width, size.height)
         let innerPadding = max(10, min(20, side * 0.03))
@@ -433,6 +502,8 @@ struct KeyboardOverlayView: View {
         )
     }
     
+    /// A struct that encapsulates all the layout metrics for the keyboard overlay, calculated based on the available size and current settings.
+    /// This struct provides consistent values for key dimensions, spacing, font sizes, and corner radii used throughout the view to ensure a cohesive and responsive design.
     private struct KeyboardLayoutMetrics {
         let baseUnitWidth: CGFloat
         let guideBarHeight: CGFloat
