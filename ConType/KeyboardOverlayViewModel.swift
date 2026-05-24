@@ -9,6 +9,16 @@ import Combine
 import ApplicationServices
 import AppKit
 
+/// An enum containing the different movement directions of the keyboard overlay.
+/// - Contains:
+///     - Up
+///     - Down
+///     - Left
+///     - Right
+///     - Up-Left
+///     - Up-Right
+///     - Down-Left
+///     - Down-Right
 enum OverlayMoveDirection {
     case up
     case down
@@ -20,11 +30,16 @@ enum OverlayMoveDirection {
     case downRight
 }
 
+/// An enum containing the source of the movement in the keyboard overlay.
+/// - Contains:
+///     - Press
+///     - Hold Repeat
 enum OverlayMoveTrigger {
     case press
     case holdRepeat
 }
 
+/// A struct containing the properties of a key, such as its identifier, size, placement and origin.
 struct KeyReference: Equatable {
     let id: UUID
     let size: CGSize
@@ -33,11 +48,16 @@ struct KeyReference: Equatable {
     let xOrigin: CGFloat
 }
 
+/// An enum containing the two different modes for the movement bias.
+/// - Contains:
+///     - Preferring Closes
+///     - Two Overlaps
 enum SelectionBias {
     case overlapPreferringClosest // Prioritize overlap, then closest center
     case twoOverlaps              // Return up to two overlapping keys (caller needs to handle)
 }
 
+/// The view model for the keyboard overlay. Handles movement, key press, key activation, modifier handling and shift cycling.
 @MainActor
 final class KeyboardOverlayViewModel: ObservableObject {
     @Published var settings: AppSettings
@@ -67,7 +87,9 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-
+    
+    /// Sets the active keyboard layout of the overlay.
+    /// - Parameter layout: The `keyboardLayout` to load into the view
     func setKeyboardLayout(_ layout: KeyboardLayout) {
         self.keyboardLayout = layout
         selectedRow = 0
@@ -75,14 +97,20 @@ final class KeyboardOverlayViewModel: ObservableObject {
         activeModifierKeys.removeAll()
         keyRefs.removeAll()
     }
-
+    
+    /// A property that stores the selected key as `VirtualKey`
     var selectedKey: VirtualKey? {
         guard rows.indices.contains(selectedRow) else { return nil }
         let row = rows[selectedRow]
         guard row.indices.contains(selectedColumn) else { return nil }
         return row[selectedColumn]
     }
-
+    
+    /// Moves the highlighted key into the chosen direction. Handles diagonals, edge wrapping and key prioritization.
+    /// - Parameters:
+    ///   - direction: The `OverlayMoveDirection`, where the move is towards
+    ///   - trigger: The source of the movement, `OverlayMoveTrigger`
+    /// - Returns: `true` if movement is successful, else `false`
     @discardableResult
     func move(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger = .press) -> Bool {
         let previousRow = selectedRow
@@ -92,31 +120,44 @@ final class KeyboardOverlayViewModel: ObservableObject {
         switch direction {
         case .left:
             if selectedColumn > 0 {
+                /// If column is not the very left, move left.
                 selectedColumn -= 1
             } else if allowsWrap {
+                /// Else if `allowsWrap`, wrap around to the rightmost column.
                 selectedColumn = max(0, rows[selectedRow].count - 1)
             }
             
         case .right:
             let maxColumn = max(0, rows[selectedRow].count - 1)
             if selectedColumn < maxColumn {
+                /// If column is not the very right, move right.
                 selectedColumn += 1
             } else if allowsWrap {
+                /// Else if `allowsWrap`, wrap around to the leftmost column.
                 selectedColumn = 0
             }
             
         case .up:
             if selectedRow > 0 || allowsWrap {
+                /// If row is not the very top, target the row above. Else, wrap around and target the bottom row.
                 let targetRow = selectedRow > 0 ? selectedRow - 1 : rows.count - 1
+                
+                
+                /// Get the keys from the target row.
                 let candidates = keyRefs.filter{ $0.rowIndex == targetRow }
+                
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
                    let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .overlapPreferringClosest).first {
+                    /// Get current key, find the best candidate with `bestKeyFromCandidates` and select best key preferring closes to key origin.
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
+                    /// Else, move to target row without changing column.
                     selectedRow = targetRow
                 }
             }
+            
+            /// Ensure selected column is within bounds
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
             
         case .down:
@@ -139,6 +180,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
                    let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).first {
+                    /// Get current key, find the best candidate with `bestKeyFromCandidates` and select the key towards the left of the current.
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -154,6 +196,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
                 let candidates = keyRefs.filter { $0.rowIndex == targetRow }
                 if let currentRef = keyRefs.first(where: { $0.rowIndex == selectedRow && $0.columnIndex == selectedColumn }),
                    let best = bestKeyFromCandidates(candidates: candidates, currentKeyReference: currentRef, selectionBias: .twoOverlaps).last {
+                    /// Get current key, find the best candidate with `bestKeyFromCandidates` and select the key towards the right of the current.
                     selectedRow = best.rowIndex
                     selectedColumn = best.columnIndex
                 } else {
@@ -194,6 +237,7 @@ final class KeyboardOverlayViewModel: ObservableObject {
             selectedColumn = min(selectedColumn, rows[selectedRow].count - 1)
         }
         
+        /// Append current key into `lastKeys`.
         lastKeys.append(KeyReference(
             id: UUID(),
             size: .zero,
@@ -201,21 +245,35 @@ final class KeyboardOverlayViewModel: ObservableObject {
             columnIndex: selectedColumn,
             xOrigin: 0
         ))
+        
+        /// Limit to 5 saved keys at a time.
         lastKeys = Array(lastKeys.suffix(5))
+        
+        /// Return true if the key has changed
         return previousRow != selectedRow || previousColumn != selectedColumn
     }
-
+    
+    /// Updates the selected key variables based on the parameter.
+    /// - Parameters:
+    ///   - row: The row `Int` of the key to be selected
+    ///   - column: The column `Int` of the key to be selected
     func select(row: Int, column: Int) {
         guard rows.indices.contains(row), rows[row].indices.contains(column) else { return }
         selectedRow = row
         selectedColumn = column
     }
-
+    
+    /// Activates the selected key
+    /// - Parameter emitter: The key and accompanying flag to be activated
     func activateSelected(using emitter: (VirtualKey, CGEventFlags) -> Void) {
         guard let key = selectedKey else { return }
         activate(key, using: emitter)
     }
-
+    
+    /// Activates a key and handles modifier keys and emit.
+    /// - Parameters:
+    ///   - key: The `VirtualKey` to be activated
+    ///   - emitter: The key and accompanying flag to be activated
     func activate(_ key: VirtualKey, using emitter: (VirtualKey, CGEventFlags) -> Void) {
         switch key.role {
         case .toggleModifier(let modifier):
@@ -233,11 +291,16 @@ final class KeyboardOverlayViewModel: ObservableObject {
             }
         }
     }
-
+    
+    /// Checks if a modifier is active.
+    /// - Parameter modifier: The `ModifierToggleKey` to check status for
+    /// - Returns: `true` if modifier is active, else `false`
     func isModifierActive(_ modifier: ModifierToggleKey) -> Bool {
         activeModifierKeys.contains(modifier)
     }
-
+    
+    /// Handles shifting between lowercase, shift and caps lock if applicable
+    /// - Parameter cyclesToCapsLock: A `bool` deciding if the function should move from shift to caps lock, moves from shift to lowercase if false.
     func cycleShiftShortcut(cyclesToCapsLock: Bool) {
         let nextState: ShiftShortcutState
         switch shiftShortcutState {
@@ -250,7 +313,8 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
         applyShiftShortcutState(nextState)
     }
-
+    
+    /// Toggles the caps lock modifier
     func toggleCapsLockShortcut() {
         if activeModifierKeys.contains(.capsLock) {
             activeModifierKeys.remove(.capsLock)
@@ -258,7 +322,10 @@ final class KeyboardOverlayViewModel: ObservableObject {
             activeModifierKeys.insert(.capsLock)
         }
     }
-
+    
+    /// Checks if the keyboard is in a shifted mode and if the key should be shifted.
+    /// - Parameter key: The `VirtualKey` to check
+    /// - Returns: `true` if modifier is active, else `false` if key has no shifted label or no modifier is active.
     func prefersShiftLegend(for key: VirtualKey) -> Bool {
         guard key.shiftedLabel != nil else { return false }
 
@@ -268,7 +335,10 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
         return isShifted
     }
-
+    
+    /// Grabs the active modifiers from a set of `ModifierToggleKey` and turns them into `CGEventFlags`.
+    /// - Parameter modifiers: The set of modifiers to check for
+    /// - Returns: The set of `CGEventFlags` based on the active modifiers
     private func eventFlags(from modifiers: Set<ModifierToggleKey>) -> CGEventFlags {
         var flags: CGEventFlags = []
         if modifiers.contains(.control) { flags.insert(.maskControl) }
@@ -278,19 +348,23 @@ final class KeyboardOverlayViewModel: ObservableObject {
         if modifiers.contains(.capsLock) { flags.insert(.maskAlphaShift) }
         return flags
     }
-
+    
+    /// The different states of key shifts
     private enum ShiftShortcutState {
         case lowercase
         case shift
         case capsLock
     }
-
+    
+    /// A property that returns the active key shift state
     private var shiftShortcutState: ShiftShortcutState {
         if activeModifierKeys.contains(.capsLock) { return .capsLock }
         if activeModifierKeys.contains(.shift) { return .shift }
         return .lowercase
     }
-
+    
+    /// Resets active modifier keys and applies the passed key shift state.
+    /// - Parameter state: The `ShiftShortcutState` to activate.
     private func applyShiftShortcutState(_ state: ShiftShortcutState) {
         activeModifierKeys.subtract([.shift, .capsLock])
         switch state {
@@ -303,6 +377,15 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
     }
     
+    /// Determines the best key candidate based on multiple conditions;
+    /// The overlap of the candidate keys' width over the current key,
+    /// The bias over which key is selected,
+    /// Wether either of the overlapping keys was in the previous keys list.
+    /// - Parameters:
+    ///   - candidates: The set of keys to check
+    ///   - currentKeyReference: The current key to reference from
+    ///   - selectionBias: The `SelectionBias` to decide wether to return one key or two
+    /// - Returns: A `[KeyReference]` containing the overlapping key(s)
     func bestKeyFromCandidates(
         candidates: [KeyReference],
         currentKeyReference: KeyReference,
