@@ -13,7 +13,7 @@ final class KeyEmitter {
     /// - Parameters:
     ///   - key: The `VirtualKey` to be emitted
     ///   - modifiers: the `CGEventFlags` to apply
-    /// - Returns: `true` if emitted successfuly, else `false`
+    /// - Returns: `true` if event was posted, `false` if mising permissions or event failed
     @discardableResult
     func emit(_ key: VirtualKey, modifiers: CGEventFlags = []) -> Bool {
         emit(keyCode: key.keyCode, modifiers: modifiers)
@@ -23,7 +23,7 @@ final class KeyEmitter {
     /// - Parameters:
     ///   - keyCode: The `CGKeyCode` to be emitted
     ///   - modifiers: The `CGEventFlags` to be passed
-    /// - Returns: `true` if emitted successfuly, else `false`
+    /// - Returns: `true` if event was posted, `false` if mising permissions or event failed
     @discardableResult
     func emit(keyCode: CGKeyCode, modifiers: CGEventFlags = []) -> Bool {
         guard InputMonitoringPermission.isAuthorized() else { return false }
