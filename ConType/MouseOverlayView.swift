@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+/// The view struct of the mouse overlay.
+/// Contains a button that calls onPress() with a centered symbol and a liquid glass background
 struct MouseOverlayView: View {
     var onPress: () -> Void
     
