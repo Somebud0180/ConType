@@ -64,8 +64,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         viewModel.handleShortcutActivation()
     }
     
-    /// Handles window closure
-    /// - Parameter notification: The `Notification` from the window closure
+    /// NSWindowDelegate method that gets called when the window is about to close.
+    /// - Parameter notification: The notification object containing information about the window closing event. 
     func windowWillClose(_ notification: Notification) {
         viewModel.stop()
         onClose?()

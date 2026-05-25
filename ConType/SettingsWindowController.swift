@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 
+/// The controller for the settings window, manages the lifecycle of the window and serves as a bridge between the SwiftUI view and the app's logic.
 @MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
@@ -42,23 +43,30 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.onTriggerHaptics = onTriggerHaptics
     }
     
+    /// A computed property that checks if the settings window is currently visible by accessing the `isVisible` property of the window.
     var isVisible: Bool {
         window?.isVisible == true
     }
     
+    /// Shows the settings window. If the window doesn't exist yet, it creates it using `makeWindowIfNeeded()`, then makes it key and orders it to the front.
     func show() {
         let window = makeWindowIfNeeded()
         window.makeKeyAndOrderFront(nil)
     }
     
+    /// Closes the settings window by calling `performClose(nil)`.
     func close() {
         window?.performClose(nil)
     }
     
+    /// NSWindowDelegate method that gets called when the window is about to close.
+    /// - Parameter notification: The notification object containing information about the window closing event.
     func windowWillClose(_ notification: Notification) {
         onClose?()
     }
     
+    /// Creates the settings window if it doesn't exist, sets up the hosting controller with the settings view and configures the window properties.
+    /// - Returns: An `NSWindow` containing the settings view.
     private func makeWindowIfNeeded() -> NSWindow {
         if let window {
             return window
