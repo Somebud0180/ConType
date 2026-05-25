@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import Foundation
 import SwiftUI
 
 /// A class that manages the onboarding view. Handles permission check, initial presentation, flow progression, and completion.
@@ -91,6 +92,7 @@ final class OnboardingViewModel: ObservableObject {
             // Restart app
             settings.restartedFromPermissionScreen = true
             restartApplication()
+            return
         }
         
         _ = requestPermissionAuthorization()

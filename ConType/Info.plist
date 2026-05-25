@@ -19,7 +19,5 @@
 			<string>DirectionalGamepad</string>
 		</dict>
 	</array>
-	<key>LSMultipleInstancesProhibited</key>
-	<true/>
 </dict>
 </plist>
