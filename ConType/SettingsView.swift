@@ -10,6 +10,7 @@ import ApplicationServices
 import Combine
 import SwiftUI
 
+/// A view struct holding the settings view of the app, containing multiple tabs for different categories of settings and configurations. It observes the SettingsViewModel for data and actions, and provides UI for changing app settings, configuring controller bindings, and viewing app information.
 struct SettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
     private var settings: AppSettings { viewModel.settings }

@@ -9,11 +9,16 @@ import AppKit
 import SwiftUI
 import Combine
 
+/// A enum representing the conflict status of an input binding, used to determine if there are any conflicts and to provide appropriate user feedback in the UI.
+/// - `normal` - No conflict detected.
+/// - `warn(message: String)` - A potential conflict detected that may cause one binding to override another, with a warning message explaining the issue and possible resolutions.
+/// - `explicit(message: String)` - A direct conflict detected where two bindings are assigned to the same input, with a message indicating
 enum ConflictStatus {
     case normal
     case warn(message: String)
     case explicit(message: String)
     
+    /// A property indicating whether this conflict status represents a conflicting state.
     var isConflicting: Bool {
         switch self {
         case .normal: return false
@@ -21,6 +26,7 @@ enum ConflictStatus {
         }
     }
     
+    /// The assigned color for each conflict status.
     var color: Color {
         switch self {
         case .normal: return .clear
@@ -29,6 +35,7 @@ enum ConflictStatus {
         }
     }
     
+    /// An optional message associated with the conflict status.
     var message: String? {
         switch self {
         case .normal: return nil
@@ -37,6 +44,7 @@ enum ConflictStatus {
     }
 }
 
+/// ViewModel for the Settings view, responsible for managing all state and logic related to the settings UI, including handling user interactions for recording hotkeys, selecting controller bindings, managing axis input types, and providing feedback on potential input conflicts. It interacts with the `AppSettings` model to persist changes and uses callbacks to communicate with the view for actions that require user input or confirmation.
 @MainActor
 final class SettingsViewModel: ObservableObject {
     // Dependencies
@@ -128,10 +136,21 @@ final class SettingsViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    deinit {
+        if let keyboardKeyDownMonitor {
+            NSEvent.removeMonitor(keyboardKeyDownMonitor)
+        }
+        if let keyboardFlagsMonitor {
+            NSEvent.removeMonitor(keyboardFlagsMonitor)
+        }
+    }
+    
+    /// Triggers a callback to restart the onboarding flow.
     func restartOnboarding() {
         onRestartOnboarding()
     }
     
+    /// Resets settings to their default values, except for the "open on startup" setting. This method updates both the `AppSettings` model and the local state properties to ensure the UI reflects the changes immediately.
     func resetDefaults() {
         // Reset all settings except open on startup
         settings.restoreDefaults(onlyHotkeys: false)
@@ -149,16 +168,8 @@ final class SettingsViewModel: ObservableObject {
         invertScrollY = settings.invertScrollY
     }
     
-    deinit {
-        if let keyboardKeyDownMonitor {
-            NSEvent.removeMonitor(keyboardKeyDownMonitor)
-        }
-        if let keyboardFlagsMonitor {
-            NSEvent.removeMonitor(keyboardFlagsMonitor)
-        }
-    }
-    
-    // Computed helpers
+    // MARK: Computed Helpers
+    /// A computed property that generates the display text for the keyboard hotkey recording state.
     var keyboardLiveRecordingText: String {
         if let keyboardPreviewShortcut {
             return keyboardPreviewShortcut.displayText
@@ -172,6 +183,7 @@ final class SettingsViewModel: ObservableObject {
         return waitingKeyboardText
     }
     
+    /// A computed property that provides a description of the current keyboard movement style.
     var movementDescription: String {
         if settings.keyboardMovementStyle == KeyboardMovementMode.limited {
             return "In this style, the keyboard navigates like a D-pad."
@@ -183,7 +195,7 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - Keyboard hotkey recording
-    
+    /// Begins the process of recording a new keyboard hotkey by setting up local event monitors for key presses and modifier changes. It ensures that any ongoing recordings for controller bindings or action pickers are cancelled to avoid conflicts. The method updates the relevant state properties to reflect that recording is in progress and captures the user's input to update the settings accordingly.
     func beginKeyboardHotkeyRecording() {
         if !isRecordingKeyboardHotkey {
             if isRecordingControllerHotkey { endControllerToggleRecording() }
@@ -217,6 +229,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Ends the keyboard hotkey recording process by removing the local event monitors and resetting the relevant state properties. If the recording was cancelled (e.g., by pressing the Escape key), it ensures that any temporary state is cleared without updating the settings.
     func endKeyboardHotkeyRecording() {
         DispatchQueue.main.async {
             self.isRecordingKeyboardHotkey = false
@@ -235,6 +248,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// A computed property that provides a `Binding<Bool>` for the keyboard hotkey recording state. The setter of the binding ensures that starting or stopping the recording process is handled correctly based on the new value.
     private var keyboardRecordingPresentedBinding: Binding<Bool> {
         Binding(
             get: { self.isRecordingKeyboardHotkey },
@@ -249,6 +263,8 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - Controller toggle recording
+    /// Begins the process of recording a new controller toggle binding by triggering a callback to request input capture. It ensures that any ongoing recordings for keyboard hotkeys or controller action pickers are cancelled to avoid conflicts. The method updates the relevant state properties to reflect that recording is in progress and captures the user's input to update the settings accordingly.
+    /// - Parameter toggle: The specific `ControllerToggleBinding` that is being recorded
     func beginControllerToggleRecording(for toggle: ControllerToggleBinding) {
         if !isRecordingControllerHotkey {
             if isRecordingKeyboardHotkey { endKeyboardHotkeyRecording() }
@@ -265,6 +281,8 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Ends the controller toggle recording process by resetting the relevant state properties and triggering a callback to cancel any ongoing input capture. If the recording was cancelled, it ensures that any temporary state is cleared without updating the settings.
+    /// - Parameter cancelCapture: A boolean indicating whether to trigger the cancellation callback
     func endControllerToggleRecording(cancelCapture: Bool = true) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -278,7 +296,8 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - Controller action picker
-    
+    /// Begins the process of picking a new controller action button by triggering a callback to request input capture. It ensures that any ongoing recordings for keyboard hotkeys or controller toggle bindings are cancelled to avoid conflicts. The method updates the relevant state properties to reflect that the picker is active and captures the user's input to update the settings accordingly.
+    /// - Parameter action: The `ControllerActionBinding` that is being configured
     func beginControllerActionPicker(for action: ControllerActionBinding) {
         endControllerToggleRecording()
         endKeyboardHotkeyRecording()
@@ -287,6 +306,8 @@ final class SettingsViewModel: ObservableObject {
         armControllerActionButtonCapture(for: action)
     }
     
+    /// Arms the controller action button capture by triggering the appropriate callback to listen for controller input. It checks if the active picker is still the same action to avoid
+    /// - Parameter action: The `ControllerActionBinding` that is currently being configured
     private func armControllerActionButtonCapture(for action: ControllerActionBinding) {
         guard activeControllerActionPicker == action else { return }
         
@@ -300,6 +321,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Ends the controller action picker process by resetting the relevant state properties and triggering a callback to cancel any ongoing input capture. If the picker was active, it ensures that any temporary state is cleared without updating the settings.
     func endControllerActionPicker() {
         let wasActive = activeControllerActionPicker != nil
         activeControllerActionPicker = nil
@@ -309,6 +331,10 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Sets the controller action button for a specific action binding in the settings. This method updates the `controllerActionBindings` property of the settings and ensures that the view is updated to reflect the change.
+    /// - Parameters:
+    ///   - button: The `ControllerAssignableButton` that was captured for the action binding
+    ///   - action: The `ControllerActionBinding` that is being configured
     func setControllerActionButton(_ button: ControllerAssignableButton, for action: ControllerActionBinding) {
         DispatchQueue.main.async {
             var updated = self.settings.controllerActionBindings
@@ -320,6 +346,11 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - Utilities
+    /// Sets the axis action type for a given axis input based on user selection. This method handles both addition and removal of input types, ensuring that mutually exclusive types (like keyboard vs mouse inputs) are managed correctly. It updates the appropriate settings property for the specified axis input and triggers a view update to reflect the changes.
+    /// - Parameters:
+    ///   - inputType: The `AxisActionType` that the user has selected or deselected for the axis input
+    ///   - fromKeyboard: A `Bool` indicating whether the input type being set is a keyboard input type (true) or a mouse input type (false)
+    ///   - axisInput: The `AxisInput` (e.g., left stick, right stick, or pad) for which the axis action type is being configured
     func setAxisActionType(_ inputType: AxisActionType, fromKeyboard: Bool, for axisInput: AxisInput) {
         // Get current input types for the axis
         let currentInputTypes: [AxisActionType]
@@ -389,6 +420,11 @@ final class SettingsViewModel: ObservableObject {
         self.objectWillChange.send()
     }
     
+    /// Checks for potential conflicts in axis input bindings based on the current settings and the type of input being configured. This method evaluates whether the selected input types for a given axis input may conflict with each other (e.g., if both keyboard and mouse inputs are assigned to the same axis) and returns an appropriate `ConflictStatus` to indicate whether there is a conflict and what the user should do to resolve it.
+    /// - Parameters:
+    ///   - axis: The `AxisInput` for which to check for input conflicts
+    ///   - fromKeyboard: A `Bool` indicating whether the input type being checked is a keyboard input type (true) or a mouse input type (false), which affects how conflicts are evaluated and what messages are returned in the `ConflictStatus`.
+    /// - Returns: A `ConflictStatus` indicating whether there is a conflict with the current axis input bindings and providing a message to guide the user in resolving it if necessary.
     func warnAxisInputConflict(for axis: AxisInput, fromKeyboard: Bool) -> ConflictStatus {
         if !settings.enableMouseInKeyboard {
             return .normal
@@ -421,6 +457,9 @@ final class SettingsViewModel: ObservableObject {
         return .normal
     }
     
+    /// Checks for potential conflicts in controller button bindings across all actions based on the current settings. This method iterates through all controller action bindings and compares the assigned button for the specified action with the buttons assigned to other actions. If it detects that the same button is assigned to multiple actions.
+    /// - Parameter controllerButton: The `ControllerActionBinding` for which to check for button conflicts.
+    /// - Returns: A `ConflictStatus` indicating the conflict status and solution message.
     func warnControllerButtonConflict(for controllerButton: ControllerActionBinding) -> ConflictStatus {
         for action in ControllerActionBinding.allCases {
             let controllerActionBindings = settings.controllerActionBindings.button(for: controllerButton)
@@ -463,6 +502,9 @@ final class SettingsViewModel: ObservableObject {
         return .normal
     }
     
+    /// Generates a display string for the currently active modifier keys based on the provided `NSEvent.ModifierFlags`. This method checks for the presence of common modifier flags (Control, Option, Command, Shift) and constructs a user-friendly string representation of the active modifiers.
+    /// - Parameter modifiers: The `NSEvent.ModifierFlags` containing the active modifier keys to be displayed.
+    /// - Returns: A `String` representing the active modifier keys, formatted for display in the UI.
     func modifierDisplayText(from modifiers: NSEvent.ModifierFlags) -> String {
         var parts: [String] = []
         if modifiers.contains(.control) { parts.append("Control") }
@@ -472,10 +514,16 @@ final class SettingsViewModel: ObservableObject {
         return parts.joined(separator: " + ")
     }
     
+    /// Generates an ordered list of `ControllerAssignableButton` based on the provided set of pressed buttons. This method filters the complete list of assignable buttons to include only those that are currently pressed, while maintaining a consistent order for display purposes in the UI.
+    /// - Parameter pressedButtons: A `Set<ControllerAssignableButton>` representing the buttons that are currently pressed and should be included in the resulting list.
+    /// - Returns: An ordered array of `ControllerAssignableButton` that are currently pressed, filtered from the complete list of assignable buttons.
     func orderedButtons(from pressedButtons: Set<ControllerAssignableButton>) -> [ControllerAssignableButton] {
         ControllerAssignableButton.allCases.filter { pressedButtons.contains($0) }
     }
     
+    /// Generates a list of `ControllerGuideButton` to be displayed in the UI based on the detected controller's capabilities. If the detected controller does not have any specific guide buttons defined, it defaults to showing the menu button as a guide. This method ensures that the UI provides appropriate guidance for the user based on the controller they are using.
+    /// - Parameter detectedController: The `DetectedController` object containing information about the currently detected controller, including its supported guide buttons.
+    /// - Returns: An array of `ControllerGuideButton` that should be displayed in the UI as guides for the detected controller. If the controller has no specific guide buttons, it returns an array containing only the menu button.
     func displayedGuideButtons(for detectedController: DetectedController) -> [ControllerGuideButton] {
         if detectedController.guideButtons.isEmpty {
             return [.menu]
@@ -483,6 +531,11 @@ final class SettingsViewModel: ObservableObject {
         return detectedController.guideButtons
     }
     
+    /// Generates a SwiftUI `Button` view that serves as the trigger for the axis input picker popover. This button displays the currently selected input type for the specified axis input and provides visual feedback on potential conflicts with other input types. When tapped, it toggles the visibility of the axis input picker popover, allowing the user to select a different input type for that axis.
+    /// - Parameters:
+    ///   - input: The `AxisInput` (e.g., left stick, right stick, or pad) for which the input picker button is being generated. This parameter determines which axis input's current selection and conflict status will be displayed on the button.
+    ///   - forKeyboard: A `Bool` indicating whether the input picker button is for selecting a keyboard input type (true) or a mouse input type (false). This parameter affects how the selected input type is determined and how conflicts are evaluated and displayed on the button.
+    /// - Returns: A SwiftUI `Button` view that displays the current selection for the specified axis input and toggles the axis input picker popover when tapped.
     func axisInputPickerButton(for input: AxisInput, forKeyboard: Bool) -> some View {
         let selected = selectedAxisActionType(for: input, forKeyboard: forKeyboard)
         let conflictStatus = warnAxisInputConflict(for: input, fromKeyboard: forKeyboard)
@@ -518,7 +571,12 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
-    // Helpers for axis input picker
+    
+    /// Determines the currently selected `AxisActionType` for a given `AxisInput` based on the settings. This method checks the assigned input types for the specified axis input and returns the appropriate `AxisActionType` that should be displayed in the UI. It prioritizes certain input types over others to ensure that the most relevant selection is shown to the user, especially when multiple input types may be assigned to the same axis.
+    /// - Parameters:
+    ///   - input: The `AxisInput` for which to determine the selected `AxisActionType`
+    ///   - forKeyboard: A `Bool` indicating whether to check for keyboard input types (true) or mouse input types (false)
+    /// - Returns: The `AxisActionType` that is currently selected for the specified `AxisInput` based on the settings
     private func selectedAxisActionType(for input: AxisInput, forKeyboard: Bool) -> AxisActionType {
         let current: [AxisActionType]
         switch input {
@@ -538,6 +596,8 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Begins the axis input picker process for a specified `AxisInput` by resetting any ongoing recordings or pickers for controller bindings, keyboard hotkeys, and controller actions. This method sets the `activeAxisInputPicker` state to the specified input, which triggers the display of the axis input picker popover in the UI, allowing the user to select a new input type for that axis.
+    /// - Parameter input: The `AxisInput` for which to begin the input picker process
     private func beginAxisInputPicker(for input: AxisInput) {
         endControllerToggleRecording()
         endKeyboardHotkeyRecording()
@@ -545,6 +605,7 @@ final class SettingsViewModel: ObservableObject {
         activeAxisInputPicker = input
     }
     
+    /// Ends the axis input picker process by resetting the `activeAxisInputPicker` state to nil and triggering a callback to cancel any ongoing controller input capture. This method ensures that if the picker was active, any temporary state related to input selection is cleared and the UI is updated accordingly.
     private func endAxisInputPicker() {
         let wasActive = activeAxisInputPicker != nil
         activeAxisInputPicker = nil
@@ -553,6 +614,9 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Generates a `Binding<Bool>` for the presentation state of the axis input picker popover for a specific `AxisInput`. The getter of the binding checks if the currently active axis input picker matches the specified input, while the setter handles the logic for beginning or ending the axis input picker process based on the new value.
+    /// - Parameter input: The `AxisInput` for which to generate the binding for the input picker popover presentation state
+    /// - Returns: A `Binding<Bool>` that indicates whether the axis input picker popover for the specified `AxisInput` is currently presented, and handles the logic for showing or hiding the popover when the value changes.
     private func axisInputPickerPopoverBinding(for input: AxisInput) -> Binding<Bool> {
         Binding(
             get: { self.activeAxisInputPicker == input },
@@ -566,6 +630,12 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// Generates the content for the axis input picker popover, which allows the user to select a new input type for a specific `AxisInput`. This view displays the available input options based on whether the picker is for keyboard or mouse inputs, and provides visual feedback on the currently selected input type.
+    /// - Parameters:
+    ///   - input: The `AxisInput` for which the input picker popover content is being generated
+    ///   - selected: The currently selected `AxisActionType` for the specified `AxisInput`
+    ///   - forKeyboard: A `Bool` indicating whether the input picker is for selecting a keyboard input type (true) or a mouse input type (false).
+    /// - Returns: A SwiftUI view that represents the content of the axis input picker popover.
     @ViewBuilder
     private func axisInputPickerPopOver(for input: AxisInput, selected: AxisActionType, forKeyboard: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -615,6 +685,9 @@ final class SettingsViewModel: ObservableObject {
         .frame(width: 320)
     }
     
+    /// Generates a SwiftUI `Button` view that serves as the trigger for the controller action picker popover for a specific `ControllerActionBinding`. This button displays the currently assigned controller button for the specified action and provides visual feedback on potential conflicts with other action bindings. When tapped, it toggles the visibility of the controller action picker popover, allowing the user to select a different controller button for that action.
+    /// - Parameter action: The `ControllerActionBinding` for which the controller action picker button is being generated
+    /// - Returns: A SwiftUI `Button` view that displays the current controller button assigned to the specified action
     func controllerActionPickerButton(for action: ControllerActionBinding) -> some View {
         let selectedButton = settings.controllerActionBindings.button(for: action)
         let conflictStatus = warnControllerButtonConflict(for: action)
@@ -650,6 +723,11 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Generates the content for the controller action picker popover, which allows the user to select a new controller button for a specific `ControllerActionBinding`. This view displays a list of all available controller buttons, highlighting the currently selected button and allowing the user to choose a different one. It also provides instructions for how to select a button using the controller input.
+    /// - Parameters:
+    ///   - action: The `ControllerActionBinding` for which the controller action picker popover content is being generated
+    ///   - selected: The currently selected `ControllerAssignableButton` for the specified action
+    /// - Returns: A SwiftUI view that represents the content of the controller action picker popover
     @ViewBuilder
     func controllerActionPickerPopover(for action: ControllerActionBinding, selected: ControllerAssignableButton) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -702,6 +780,9 @@ final class SettingsViewModel: ObservableObject {
         .frame(width: 320)
     }
     
+    /// Generates a generic guide glyph button that can be used as a fallback when a specific guide button asset is not available for the detected controller. This button displays a default game controller icon and the text "Guide" to indicate its purpose as a guide button in the UI.
+    /// - Parameter size: A `CGFloat` value that specifies the size of the glyph badge to be displayed on the button
+    /// - Returns: A SwiftUI view that represents a generic guide glyph button
     func genericGuideGlyph(size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             assetName: "gamecontroller.circle.fill",
@@ -710,6 +791,11 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// Generates a SwiftUI view that displays the appropriate glyphs for a given `ControllerGuideButton` based on the current controller glyph style settings. If a specific asset is available for the button and glyph style, it uses the `ControllerGlyphBadge` to display it. Otherwise, it falls back to displaying a text representation of the button with styling to indicate that it is a guide button.
+    /// - Parameters:
+    ///   - button: The `ControllerGuideButton` for which to generate the glyph view
+    ///   - size: A `CGFloat` value that specifies the size of the glyph badge or text to be displayed for the guide button
+    /// - Returns: A SwiftUI view that represents the glyphs for the specified `ControllerGuideButton`
     @ViewBuilder
     func controllerGuideGlyphs(_ button: ControllerGuideButton, size: CGFloat = 20) -> some View {
         let title = button.displayTitle(for: settings.controllerGlyphStyle)
@@ -737,6 +823,11 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Generates a SwiftUI view that displays the glyph for a given `ControllerAssignableButton` based on the current controller glyph style settings. If a specific asset is available for the button and glyph style, it uses `ControllerGlyphBadge` to display it.
+    /// - Parameters:
+    ///   - button: The `ControllerAssignableButton` for which to generate the glyph view
+    ///   - size: The size of the glyph badge in `CGFloat`
+    /// - Returns: A SwiftUI view that represents the glyph for the specified `ControllerAssignableButton`
     private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
@@ -745,6 +836,9 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// Generates a `Binding<Bool>` for the presentation state of the controller action picker popover for a specific `ControllerActionBinding`. The getter of the binding checks if the currently active controller action picker matches the specified action, while the setter handles the logic for beginning or ending the controller action picker process based on the new value.
+    /// - Parameter action: The `ControllerActionBinding` for which to generate the binding for the controller action picker popover presentation state
+    /// - Returns: A `Binding<Bool>` that indicates whether the controller action picker popover for the specified `ControllerActionBinding` is currently presented and handles the logic for showing or hiding the popover when the value changes
     private func controllerActionPickerPresentedBinding(for action: ControllerActionBinding) -> Binding<Bool> {
         Binding(
             get: { self.activeControllerActionPicker == action },
@@ -758,6 +852,9 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// Generates a SwiftUI `Button` view that serves as the trigger for the controller toggle picker popover for a specific `ControllerToggleBinding`. This button displays the currently assigned controller button for the specified toggle action and provides visual feedback on potential conflicts with other toggle bindings. When tapped, it toggles the visibility of the controller toggle picker popover, allowing the user to select a different controller button for that toggle action.
+    /// - Parameter toggle: The `ControllerToggleBinding` for which the controller toggle picker button is being generated
+    /// - Returns: A SwiftUI `Button` view that displays the current controller button assigned to the specified toggle action
     func controllerTogglePickerButton(for toggle: ControllerToggleBinding) -> some View {
         let selectedButton = settings.controllerToggleBindings.binding(for: toggle)
         
@@ -785,6 +882,9 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Generates a `Binding<Bool>` for the presentation state of the controller toggle picker popover for a specific `ControllerToggleBinding`. The getter of the binding checks if the currently active controller toggle picker matches the specified toggle, while the setter handles the logic for beginning or ending the controller toggle recording process based on the new value.
+    /// - Parameter toggle: The `ControllerToggleBinding` for which to generate the binding for the controller toggle picker popover presentation state
+    /// - Returns: A `Binding<Bool>` that indicates whether the controller toggle picker popover for the specified `ControllerToggleBinding` is currently presented and handles the logic for showing or hiding the popover when the value changes
     private func controllerToggleRecordingPresentedBinding(for toggle: ControllerToggleBinding) -> Binding<Bool> {
         Binding(
             get: { self.activeControllerTogglePicker == toggle },
@@ -798,6 +898,9 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// Generates the content for the controller toggle picker popover, which allows the user to select a new controller button for a specific `ControllerToggleBinding`. This view displays instructions for how to select a button using the controller input, shows the currently pressed buttons on the controller, and provides an example of what the input should look like when properly recorded.
+    /// - Parameter toggle: The `ControllerToggleBinding` for which the controller toggle picker popover content is being generated
+    /// - Returns: A SwiftUI view that represents the content of the controller toggle picker popover
     @ViewBuilder
     private func controllerTogglePopover(for toggle: ControllerToggleBinding) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -842,6 +945,7 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - UI Variables
+    /// A button that serves as the trigger for the keyboard hotkey recording popover.
     var keyboardShortcutButton: some View {
         Button { [self] in
             beginKeyboardHotkeyRecording()
@@ -862,6 +966,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// A button that displays the currently assigned keyboard shortcut for a specific action and provides visual feedback on potential conflicts with other keyboard bindings.
     private var keyboardShortcutPopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Press Keyboard Shortcut")
@@ -891,6 +996,7 @@ final class SettingsViewModel: ObservableObject {
         .frame(width: 300)
     }
     
+    /// A view that displays the current positions of the left and right sticks on the controller, along with sliders to adjust the deadzone radius for each stick and a visual representation of the deadzone area. This view allows users to configure the stick deadzone settings while providing real-time feedback on how the stick inputs are being registered in relation to the configured deadzone.
     var stickDeadzoneConfig: some View {
         VStack(alignment: .leading) {
             Text("Left Stick")
@@ -941,6 +1047,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// A view that contains sliders and toggles for configuring mouse sensitivity, mouse smoothing, and axis inversion settings. This view allows users to adjust their mouse input preferences while providing real-time feedback on the current values of these settings.
     var mouseConfig: some View {
         Group {
             HStack {
@@ -991,6 +1098,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// A view that contains a slider for configuring the scroll speed setting, as well as toggles for inverting the scroll direction on the X and Y axes. This view allows users to adjust their scroll input preferences while providing real-time feedback on the current values of these settings.
     var scrollConfig: some View {
         Group {
             HStack {
@@ -1027,6 +1135,9 @@ final class SettingsViewModel: ObservableObject {
     }
     
     // MARK: - UI Structs
+    /// A container view that provides consistent styling for displaying the current input being recorded for controller toggles and keyboard hotkeys. This view uses a rounded rectangle background with a subtle stroke to create a distinct area for showing the live recording feedback, and it accepts any content view that represents the current input state.
+    /// - Parameter content: A view builder closure that generates the content to be displayed inside the recording display container
+    /// - Returns: A SwiftUI view that represents the styled container for displaying the current input being recorded for controller toggles and keyboard hotkeys
     @ViewBuilder
     func RecordingDisplayContainer<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         HStack {
@@ -1045,6 +1156,7 @@ final class SettingsViewModel: ObservableObject {
         )
     }
     
+    /// A view struct containing the controller glyph with a fallback mechanism.
     struct ControllerGlyphBadge: View {
         let assetName: String
         let fallbackText: String
@@ -1073,8 +1185,14 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
-    @ViewBuilder
-    func ControllerChordView(
+    /// Generates a SwiftUI view that displays the appropriate combination of controller glyphs for a given controller toggle input, including the guide button and any additional buttons that are currently pressed on the controller. If no buttons are currently pressed and the guide button is not active, it displays a waiting text message instead. This view provides real-time feedback on the current state of the controller inputs during the recording process for controller toggles.
+    /// - Parameters:
+    ///   - guidePressed: A `Bool` indicating whether the guide button is currently pressed on the controller
+    ///   - buttons: An array of `ControllerAssignableButton` values representing the additional buttons that are currently pressed on the controller
+    ///   - waitingText: A `String` value that specifies the text to be displayed when no buttons are currently pressed
+    ///   - controllerGlyphStyle: The `ControllerGlyphStyle` that should be used to determine which glyph assets to display
+    /// - Returns: A SwiftUI view that represents the combination of controller glyphs for the current state of the controller inputs during the recording process for controller toggles
+    @ViewBuilder func ControllerChordView(
         guidePressed: Bool,
         buttons: [ControllerAssignableButton],
         waitingText: String,
@@ -1124,8 +1242,13 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     
-    @ViewBuilder
-    func StickDeadzoneVisualizer(
+    /// Generates a visual representation of the joystick stick position and deadzone area for a given stick input. This view displays an outer circle representing the maximum range of the joystick, an inner circle representing the configured deadzone radius, and a dot indicating the current position of the stick. The color of the deadzone circle changes based on whether the stick is currently outside of the deadzone, providing real-time feedback on how the stick inputs are being registered in relation to the configured deadzone settings.
+    /// - Parameters:
+    ///   - stickPosition: The `CGVector` representing the current position of the joystick stick
+    ///   - deadzoneRadius: The `CGFloat` value representing the radius of the deadzone area for the stick
+    ///   - size: The `CGFloat` value representing the overall size of the visualizer view (default is 100)
+    /// - Returns: A SwiftUI view that visually represents the joystick stick position and deadzone area based on the provided parameters
+    @ViewBuilder func StickDeadzoneVisualizer(
         stickPosition: CGVector,
         deadzoneRadius: CGFloat,
         size: CGFloat = 100
@@ -1161,6 +1284,11 @@ final class SettingsViewModel: ObservableObject {
         .frame(width: size, height: size)
     }
     
+    /// Generates a SwiftUI view that contains a slider for adjusting the deadzone radius of a joystick stick, along with an `onChange` handler that updates the corresponding deadzone setting in the view model whenever the slider value changes. This view allows users to configure the stick deadzone settings while providing real-time feedback on how the changes affect the stick input registration.
+    /// - Parameters:
+    ///   - localDeadzone: A `Binding<CGFloat>` that represents the local state of the deadzone radius for the stick being configured
+    ///   - settingsDeadzone: A `Binding<CGFloat>` that represents the deadzone setting
+    /// - Returns: A SwiftUI view that contains a slider for adjusting the deadzone radius of a joystick stick and updates the corresponding setting in the view model when the value changes
     @ViewBuilder
     func stickSliders(localDeadzone: Binding<CGFloat>, settingsDeadzone: Binding<CGFloat>) -> some View {
         Slider(
