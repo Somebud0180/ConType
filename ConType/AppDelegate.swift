@@ -21,25 +21,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !otherInstances.isEmpty else { return }
         
         NSApp.activate(ignoringOtherApps: true)
-        let shouldCloseOtherInstance = presentDuplicateInstanceAlert()
-        guard shouldCloseOtherInstance else {
-            DispatchQueue.main.async {
-                NSApp.terminate(nil)
-            }
-            return
-        }
         
-        otherInstances.forEach { _ = $0.terminate() }
-    }
-    
-    private func presentDuplicateInstanceAlert() -> Bool {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Another instance of ConType is already running."
-        alert.informativeText = "Would you like to close the old instance and continue, or cancel this launch?"
-        alert.addButton(withTitle: "Close Other Instance")
-        alert.addButton(withTitle: "Cancel")
+        alert.informativeText = "If you want to relaunch ConType, quit the other instance first."
+        alert.addButton(withTitle: "Quit")
         
-        return alert.runModal() == .alertFirstButtonReturn
+        // If the user confirms, terminate the newly launched instance so they can relaunch after quitting the old one.
+        if alert.runModal() == .alertFirstButtonReturn {
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
+            }
+        }
     }
 }
