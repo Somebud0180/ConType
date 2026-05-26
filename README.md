@@ -2,7 +2,7 @@
 <div align="center">
   <img width="90%" alt="ConType Banner"  src="https://github.com/user-attachments/assets/c16b6637-9e85-476e-add8-f46ea9e66655" />
   <h3 align="center">Make your controller control</h3>
-  <a href="https://somebud0180.github.io/ConTypeWeb">Visit the website!</a>
+  <a href="https://raspi.snowy-dab.ts.net/">Visit the website!</a>
 <!--  <a href="https://testflight.apple.com/join/cesGDw2f">Available on TestFlight</a> --> 
 </div>
 
