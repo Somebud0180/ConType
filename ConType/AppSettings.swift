@@ -9,63 +9,6 @@ import AppKit
 import Combine
 import Foundation
 
-
-/// An enum representing the different types of input that can be mapped to controller axes.
-/// Contains:
-/// - Left Stick
-/// - Right Stick
-/// - D-pad
-enum AxisInput: String, Identifiable {
-    case leftStick
-    case rightStick
-    case pad
-    
-    var id: String { rawValue }
-    
-    var title: String {
-        switch self {
-        case .leftStick: return "Left Stick"
-        case .rightStick: return "Right Stick"
-        case .pad: return "D-pad"
-        }
-    }
-}
-
-/// An enum representing the different actions an axis input can do
-/// Contains:
-/// - Control Overlay Movement
-/// - Control Mouse Movement
-/// - Arrow Keys
-/// - Scroll Wheel
-/// - None
-enum AxisActionType: String, CaseIterable, Identifiable, Hashable {
-    case none
-    case overlayMovement
-    case mouseMovement
-    case arrowKeys
-    case scrollWheel
-    
-    /// The keyboard axis actions
-    static let keyboardOptions: [AxisActionType] = [.none, .overlayMovement, .arrowKeys]
-    
-    /// The mouse axis actions
-    static let mouseOptions: [AxisActionType] = [.none, .mouseMovement, .scrollWheel]
-    
-    /// Axis action identifier
-    var id: String { rawValue }
-    
-    /// Human readable title for the axis action
-    var title: String {
-        switch self {
-        case .none: return "None"
-        case .overlayMovement: return "Control Keyboard"
-        case .mouseMovement: return "Control Mouse"
-        case .arrowKeys: return "Arrow Keys"
-        case .scrollWheel: return "Scroll Wheel"
-        }
-    }
-}
-
 /// An enum representing the different visual styles for controller glyphs.
 /// Contains:
 /// - Generic (Xbox-style)
@@ -182,6 +125,82 @@ enum ControllerGuideButton: String, CaseIterable, Equatable {
 struct DetectedController: Equatable {
     var name: String
     var guideButtons: [ControllerGuideButton]
+}
+
+/// An enum representing the different types of input that can be mapped to controller axes.
+/// Contains:
+/// - Left Stick
+/// - Right Stick
+/// - D-pad
+enum AxisInput: String, Identifiable {
+    case leftStick
+    case rightStick
+    case pad
+    
+    /// Axis input identifier.
+    var id: String { rawValue }
+    
+    /// Human readable title for the axis input.
+    var title: String {
+        switch self {
+        case .leftStick: return "Left Stick"
+        case .rightStick: return "Right Stick"
+        case .pad: return "D-pad"
+        }
+    }
+    
+    /// The fallback text to be used when the glyph asset for the button is not available.
+    var fallbackText: String {
+        switch self {
+        case .leftStick: return "Left Stick"
+        case .rightStick: return "Right Stick"
+        case .pad: return "D-pad"
+        }
+    }
+    
+    /// The asset name for the given axis input.
+    var glyphAssetName: String {
+        switch self {
+        case .leftStick: return "LS"
+        case .rightStick: return "RS"
+        case .pad: return "DPad"
+        }
+    }
+}
+
+/// An enum representing the different actions an axis input can do
+/// Contains:
+/// - Control Overlay Movement
+/// - Control Mouse Movement
+/// - Arrow Keys
+/// - Scroll Wheel
+/// - None
+enum AxisActionType: String, CaseIterable, Identifiable, Hashable {
+    case none
+    case overlayMovement
+    case mouseMovement
+    case arrowKeys
+    case scrollWheel
+    
+    /// The keyboard axis actions
+    static let keyboardOptions: [AxisActionType] = [.none, .overlayMovement, .arrowKeys]
+    
+    /// The mouse axis actions
+    static let mouseOptions: [AxisActionType] = [.none, .mouseMovement, .scrollWheel]
+    
+    /// Axis action identifier
+    var id: String { rawValue }
+    
+    /// Human readable title for the axis action
+    var title: String {
+        switch self {
+        case .none: return "None"
+        case .overlayMovement: return "Control Keyboard"
+        case .mouseMovement: return "Control Mouse"
+        case .arrowKeys: return "Arrow Keys"
+        case .scrollWheel: return "Scroll Wheel"
+        }
+    }
 }
 
 /// An enum representing the different controller toggle bindings that can be configured in the app.

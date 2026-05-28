@@ -5,16 +5,14 @@
 //  Created by Ethan John Lagera on 5/27/26.
 //
 
+import AppKit
 import SwiftUI
 
 struct TutorialView: View {
-    let settings: AppSettings
+    @ObservedObject var viewModel: TutorialViewModel
+    private var settings: AppSettings { viewModel.settings }
     
-    @State var currentPage: Int = 0
-    
-    init(settings: AppSettings) {
-        self.settings = settings
-    }
+    @State var currentPage: Int = 3
     
     var body: some View {
         ZStack {
@@ -49,6 +47,7 @@ struct TutorialView: View {
                         Text("Before we begin the tutorial, would you like to look over the settings?")
                             .font(.title2)
                             .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
                         
                         Button("Open Settings") {
                             // Open Settings
@@ -73,8 +72,9 @@ struct TutorialView: View {
                         Text("Pick up your controller and press the following buttons.")
                             .font(.headline)
                             .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
                         
-                        keyboardShortcut()
+                        viewModel.keyboardShortcut()
                             .padding(4)
                             .background(
                                 .ultraThinMaterial,
@@ -84,6 +84,27 @@ struct TutorialView: View {
                         Text("You can change this in the settings")
                             .font(.footnote)
                             .foregroundStyle(.white)
+                    }
+                    .transition(.opacity)
+                    
+                case 3:
+                    VStack {
+                        Text("Great! Welcome to the keyboard overlay.")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                        
+                        Text("This is where ConType comes into action. Try moving around the keyboard with")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                        
+                        viewModel.keyboardAxisBindings()
+                            .padding(4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                .ultraThinMaterial,
+                                in: RoundedRectangle(cornerRadius: 12)
+                            )
                     }
                     .transition(.opacity)
                     
@@ -113,64 +134,12 @@ struct TutorialView: View {
             }
         }
     }
-    
-    func genericGuideGlyph(size: CGFloat = 20) -> some View {
-        ControllerGlyphBadge(
-            assetName: "gamecontroller.circle.fill",
-            fallbackText: "Guide",
-            size: size
-        )
-    }
-    
-    private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
-        ControllerGlyphBadge(
-            assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
-            fallbackText: button.fallbackGlyphText,
-            size: size
-        )
-    }
-    
-    func keyboardShortcut() -> some View {
-        let selectedButton = settings.controllerToggleBindings.binding(for: .keyboardToggle)
-        
-        return HStack(spacing: 8) {
-            genericGuideGlyph(size: 32)
-            Text("+")
-            buttonGlyph(selectedButton, size: 32)
-                .colorInvert()
-            Text(selectedButton.displayTitle(for: settings.controllerGlyphStyle))
-                .font(.system(.body, design: .monospaced))
-        }
-        .foregroundStyle(.white)
-        .frame(width: 220, alignment: .center)
-        .frame(minHeight: 44)
-    }
-}
-
-struct RoundGlassProminent: ViewModifier {
-    let padding: CGFloat
-    
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, padding)
-            .padding(.vertical, padding / 2)
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .glassEffect(
-                .regular
-                .interactive()
-                .tint(.accentColor),
-                in: Capsule()
-            )
-    }
-}
-
-extension View {
-    func roundGlassProminent(padding: CGFloat = 16) -> some View {
-        self.modifier(RoundGlassProminent(padding: padding))
-    }
 }
 
 #Preview {
-    TutorialView(settings: AppSettings())
+    let vm = TutorialViewModel(
+        settings: AppSettings()
+    )
+    
+    TutorialView(viewModel: vm)
 }
