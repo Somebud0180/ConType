@@ -38,7 +38,6 @@ final class AppCoordinator: ObservableObject {
     private let hasLaunchedBeforeDefaultsKey = "ConType.hasLaunchedBefore"
     private let launchAtLoginService = SMAppService.mainApp
     
-    private lazy var overlayController = OverlayWindowController(settings: settings)
     private lazy var settingsController = SettingsWindowController(
         settings: settings,
         joystick: joystick,
@@ -61,6 +60,8 @@ final class AppCoordinator: ObservableObject {
             self?.controllerInputManager.playRumbleIfSupported()
         }
     )
+    private lazy var tutorialController = TutorialWindowController(settings: settings)
+    private lazy var overlayController = OverlayWindowController(settings: settings)
     private lazy var onboardingController = OnboardingWindowController(settings: settings)
     private let hotkeyManager = KeyboardHotkeyManager()
     private let controllerInputManager = ControllerInputManager()
@@ -82,19 +83,28 @@ final class AppCoordinator: ObservableObject {
         
         hotkeyManager.onToggle = { [weak self] in
             Task { @MainActor in
-                self?.toggleOverlay(source: .keyboardShortcut)
+                guard let self, self.tutorialController.isVisible else { return }
+                self.toggleOverlay(source: .keyboardShortcut)
             }
         }
         
         controllerInputManager.onToggleKeyboard = { [weak self] in
             Task { @MainActor in
-                self?.toggleOverlay(source: .controllerShortcut, forMouse: false)
+                if ((self?.tutorialController.isVisible) != nil) {
+                    self?.tutorialController.onKeyboardOverlayActivated()
+                } else {
+                    self?.toggleOverlay(source: .controllerShortcut, forMouse: false)
+                }
             }
         }
         
         controllerInputManager.onToggleMouse = { [weak self] in
             Task { @MainActor in
-                self?.toggleOverlay(source: .controllerShortcut, forMouse: true)
+                if ((self?.tutorialController.isVisible) != nil) {
+                    self?.tutorialController.onMouseOverlayActivated()
+                } else {
+                    self?.toggleOverlay(source: .controllerShortcut, forMouse: true)
+                }
             }
         }
         
@@ -263,9 +273,21 @@ final class AppCoordinator: ObservableObject {
             }
         }
         
+        onboardingController.openTutorial = { [weak self] in
+            Task { @MainActor in
+                self?.tutorialController.show()
+            }
+        }
+        
         onboardingController.onAccessibilityTrustChanged = { [weak self] _ in
             Task { @MainActor in
                 self?.refreshHotkeyManagerState()
+            }
+        }
+        
+        tutorialController.onClose = { [weak self] in
+            Task { @MainActor in
+                self?.updateActivationPolicyForCurrentUIState()
             }
         }
         
@@ -610,7 +632,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Miscellaneous
     /// Updates the app's activation policy based on the current visibility of the settings and onboarding windows. If either is visible, the app should be in regular mode to allow interaction. If both are hidden, the app can switch to accessory mode to stay out of the way.
     private func updateActivationPolicyForCurrentUIState() {
-        if settingsController.isVisible || onboardingController.isVisible {
+        if settingsController.isVisible || onboardingController.isVisible || tutorialController.isVisible {
             setRegularMode()
         } else {
             setAccessoryMode()

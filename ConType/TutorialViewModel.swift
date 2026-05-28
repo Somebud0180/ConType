@@ -1,4 +1,3 @@
-
 //
 //  TutorialViewModel.swift
 //  ConType
@@ -20,11 +19,15 @@ final class TutorialViewModel: ObservableObject {
     // Callbacks (injected from controller)
     private let onTutorialCompleted: (() -> Void)?
     
+    // Keyboard overlay state
+    let keyboardOverlayViewModel: KeyboardOverlayViewModel
+    
     // Published UI state
     @Published var currentPage: Int = 0
     @Published var keyboardShortcutTriggered = false
-    @Published var firstMoveDetected = false
     @Published var mouseShortcutTriggered = false
+    @Published var firstMoveDetected = false
+    @Published var completedTyping = false
     
     init(
         settings: AppSettings,
@@ -32,6 +35,7 @@ final class TutorialViewModel: ObservableObject {
     ) {
         self.settings = settings
         self.onTutorialCompleted = onTutorialCompleted
+        self.keyboardOverlayViewModel = KeyboardOverlayViewModel(settings: settings)
         
         settings.objectWillChange
             .sink { [weak self] _ in
@@ -43,34 +47,68 @@ final class TutorialViewModel: ObservableObject {
     // MARK: - Input Event Handlers
     /// Called when the keyboard overlay activation is triggered.
     func handleKeyboardOverlayActivated() {
-        guard currentPage == 2 else { return }
         guard !keyboardShortcutTriggered else { return }
-        keyboardShortcutTriggered = true
-        
-        withAnimation(.easeInOut(duration: 0.3)) {
-            currentPage = 3
+        if currentPage == 2 {
+            keyboardShortcutTriggered = true
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 3
+            }
+        } else if currentPage == 3 && completedTyping {
+            keyboardShortcutTriggered = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 4
+            }
         }
     }
     
     /// Called when the mouse overlay activation is triggered.
     func handleMouseOverlayActivated() {
-        guard currentPage == 4 else { return }
         guard !mouseShortcutTriggered else { return }
-        mouseShortcutTriggered = true
+        if currentPage == 4 {
+            mouseShortcutTriggered = true
+        }
+    }
+    
+    func handleDismissOverlayViaGuideButton() {
+        guard settings.dismissWithGuideButton else { return }
+        if currentPage == 3 && completedTyping {
+            keyboardShortcutTriggered = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 4
+            }
+        }
     }
     
     /// Called when movement is triggered with a direction and trigger type.
+    /// Forwards movement to the keyboard overlay view model and marks first move as detected.
     /// - Parameters:
     ///   - direction: The `OverlayMoveDirection` indicating the movement direction.
     ///   - trigger: The `OverlayMoveTrigger` indicating how the movement was triggered.
     func handleMove(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger) {
         guard currentPage == 3 else { return }
-        guard !firstMoveDetected else { return }
-        firstMoveDetected = true
+        keyboardOverlayViewModel.move(direction, trigger: trigger)
+        if !firstMoveDetected {
+            firstMoveDetected = true
+        }
     }
     
-    /// Advances to the next tutorial page.
+    func onKeyPressed(_ key: VirtualKey, _ flags: CGEventFlags) {
+        guard currentPage == 3 else { return }
+        guard !firstMoveDetected else { return }
+        // Swallow input
+        
+    }
+    
+    /// Resets the keyboard overlay view model state (selection, modifiers).
+    func resetKeyboardOverlay() {
+        keyboardOverlayViewModel.setKeyboardLayout(settings.keyboardLayout)
+    }
+    
+    /// Advances to the next tutorial page and resets overlay state if leaving page 3.
     func nextPage() {
+        if currentPage == 3 {
+            resetKeyboardOverlay()
+        }
         currentPage += 1
     }
     
@@ -209,4 +247,3 @@ extension View {
     
     TutorialView(viewModel: vm, settings: AppSettings())
 }
-

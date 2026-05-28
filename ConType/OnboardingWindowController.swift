@@ -12,8 +12,8 @@ import SwiftUI
 @MainActor
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
-    var onCompletion: (() -> Void)?
     var openSettings: (() -> Void)?
+    var openTutorial: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)? {
         didSet {
             viewModel.onAccessibilityTrustChanged = onAccessibilityTrustChanged
@@ -30,13 +30,16 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         super.init()
 
         viewModel.onComplete = { [weak self] in
-            self?.onCompletion?()
             self?.close()
         }
         
         viewModel.openSettings = { [weak self] in
-            self?.onCompletion?()
             self?.openSettings?()
+            self?.close()
+        }
+        
+        viewModel.openTutorial = { [weak self] in
+            self?.openTutorial?()
             self?.close()
         }
     }

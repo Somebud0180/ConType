@@ -24,6 +24,7 @@ final class OnboardingViewModel: ObservableObject {
     
     var onComplete: (() -> Void)?
     var openSettings: (() -> Void)?
+    var openTutorial: (() -> Void)?
     var onAccessibilityTrustChanged: ((Bool) -> Void)?
     
     var isAwaitingActivation: Bool {

@@ -14,16 +14,13 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
     
     private let settings: AppSettings
-    private let onTutorialCompleted: (() -> Void)?
     private var viewModel: TutorialViewModel?
     private var window: NSWindow?
     
     init(
         settings: AppSettings,
-        onTutorialCompleted: (() -> Void)? = nil
     ) {
         self.settings = settings
-        self.onTutorialCompleted = onTutorialCompleted
     }
     
     /// A computed property that checks if the tutorial window is currently visible by accessing the `isVisible` property of the window.
@@ -59,11 +56,18 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         viewModel?.handleMouseOverlayActivated()
     }
     
+    func dismissOverlayViaGuideButtonIfNeeded() {
+        viewModel?.handleDismissOverlayViaGuideButton()
+    }
+    
     /// Forwards a movement event with direction and trigger to the tutorial view model.
     /// - Parameters:
     ///   - direction: The `OverlayMoveDirection` indicating the movement direction.
     ///   - trigger: The `OverlayMoveTrigger` indicating how the movement was triggered.
-    func onMove(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger) {
+    @discardableResult func moveSelection(
+        _ direction: OverlayMoveDirection,
+        trigger: OverlayMoveTrigger = .press
+    ) {
         viewModel?.handleMove(direction, trigger: trigger)
     }
     
@@ -76,10 +80,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         let screen = NSScreen.main ?? window?.screen ?? NSScreen.screens.first
         let frame = screen?.visibleFrame
         
-        let viewModel = TutorialViewModel(
-            settings: settings,
-            onTutorialCompleted: onTutorialCompleted
-        )
+        let viewModel = TutorialViewModel(settings: settings)
         self.viewModel = viewModel
         
         let hostingController = NSHostingController(
