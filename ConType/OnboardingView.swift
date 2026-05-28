@@ -288,10 +288,15 @@ struct OnboardingView: View {
                 Button {
                     viewModel.openTutorial?()
                 } label: {
-                    Text("Yes, begin tutorial")
-                        .foregroundStyle(.white)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack {
+                        Text("Yes, begin tutorial")
+                            .font(.headline)
+                        
+                        Text("(You will need your controller for this)")
+                            .font(.subheadline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .buttonStyle(.borderless)
                 .glassEffect(
