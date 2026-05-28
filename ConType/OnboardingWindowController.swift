@@ -80,12 +80,21 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         if let window {
             return window
         }
+        
+        let screen = NSScreen.main ?? window?.screen ?? NSScreen.screens.first
+        let frame = screen?.visibleFrame
 
         let hostingController = NSHostingController(
             rootView: OnboardingView(settings: settings, viewModel: viewModel)
         )
+        
+        let origin = NSPoint(
+            x: (frame?.midX ?? 960) - (360 / 2),
+            y: (frame?.midY ?? 540) - (400 / 2)
+        )
+        
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 400),
+            contentRect: NSRect(x: origin.x, y: origin.y, width: 360, height: 400),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

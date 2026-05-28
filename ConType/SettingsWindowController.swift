@@ -71,6 +71,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         if let window {
             return window
         }
+        
         let screen = NSScreen.main ?? window?.screen ?? NSScreen.screens.first
         let frame = screen?.visibleFrame
         

@@ -38,6 +38,7 @@ struct TutorialView: View {
                         }
                         .roundGlassProminent()
                     }
+                    .padding(.top)
                     .transition(.opacity)
                     
                     
@@ -60,6 +61,7 @@ struct TutorialView: View {
                         }
                         .roundGlassProminent()
                     }
+                    .padding(.top)
                     .transition(.opacity)
                     
                 case 2:
@@ -84,12 +86,15 @@ struct TutorialView: View {
                             .font(.footnote)
                             .foregroundStyle(.white)
                     }
+                    .padding(.top)
                     .transition(.opacity)
                     
                 case 3:
                     VStack {
                         let maxWidth = min(proxy.size.width * 0.9, 1440)
-                        let maxHeight = min(proxy.size.height * 0.7, 540)
+                        let maxHeight = min(proxy.size.height * 0.6, 540)
+                        
+                        Spacer()
                         
                         Text("Great! Welcome to the keyboard overlay.")
                             .font(.title2)
@@ -108,6 +113,8 @@ struct TutorialView: View {
                                 in: RoundedRectangle(cornerRadius: 12)
                             )
                         
+                        Spacer()
+                        
                         KeyboardOverlayView(
                             viewModel: viewModel.keyboardOverlayViewModel,
                             onKeyPressed: { key, flags in
@@ -116,7 +123,10 @@ struct TutorialView: View {
                         )
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                         .aspectRatio(8/3, contentMode: .fit)
+                        
+                        Spacer()
                     }
+                    .padding(.top)
                     .transition(.opacity)
                     
                 default:
@@ -132,6 +142,7 @@ struct TutorialView: View {
                         }
                         .roundGlassProminent()
                     }
+                    .padding(.top)
                     .transition(.opacity)
                 }
             }

@@ -90,7 +90,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         
         let dimension = NSSize(
             width: (frame?.width ?? 1920) / 2,
-            height: (frame?.height ?? 1080) / 2
+            height: max(frame?.height ?? 1080, 1080) / 2
         )
         
         let origin = NSPoint(
@@ -125,11 +125,9 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        window.minSize = NSSize(width: 960, height: 540)
+        window.contentMinSize = NSSize(width: 960, height: 540)
         
-        // Ensure the window is centered on the chosen screen and brought forward.
         window.center()
-        // Order front here so the window is visible even if callers forget to call `show()`.
         window.makeKeyAndOrderFront(nil)
         
         self.window = window
