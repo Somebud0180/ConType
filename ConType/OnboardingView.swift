@@ -174,6 +174,8 @@ struct OnboardingView: View {
                 configStep
             case 3:
                 infoStep
+            case 4:
+                tutorialStep
             default:
                 readyStep
             }
@@ -275,6 +277,52 @@ struct OnboardingView: View {
         }
     }
     
+    private var tutorialStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Spacer(minLength: 0)
+            
+            Text("Would you like to go through the tutorial?")
+                .font(.largeTitle.weight(.semibold))
+            
+            VStack {
+                Button {
+                    viewModel.openTutorial?()
+                } label: {
+                    Text("Yes, begin tutorial")
+                        .foregroundStyle(.white)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .buttonStyle(.borderless)
+                .glassEffect(
+                    .regular
+                        .interactive()
+                        .tint(.accentColor),
+                    in: RoundedRectangle(cornerRadius: 10))
+                
+                Button {
+                    viewModel.advanceStep()
+                } label: {
+                    Text("No, skip tutorial")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .buttonStyle(.borderless)
+                .glassEffect(
+                    .regular
+                        .interactive(),
+                    in: RoundedRectangle(cornerRadius: 10))
+            }
+            
+            Text("The tutorial will close this window and continue in another window.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+            
+            Spacer(minLength: 0)
+        }
+    }
+    
     /// Contains the instructions/shortcut for toggling the keyboard and mouse overlay.
     private var readyStep: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -335,6 +383,7 @@ struct OnboardingView: View {
             switch viewModel.step {
             case 0, 2, 3:
                 Button("Next") {
+                    guard viewModel.step != 4 else { return }
                     viewModel.advanceStep()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -344,6 +393,8 @@ struct OnboardingView: View {
                     viewModel.handlePermissionButton()
                 }
                 .keyboardShortcut(.defaultAction)
+            case 4:
+                EmptyView()
             default:
                 Button("Open Settings") {
                     viewModel.openSettings?()
