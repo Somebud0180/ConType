@@ -20,6 +20,7 @@ struct TutorialView: View {
                     .antialiased(true)
                     .interpolation(.high)
                     .scaledToFill()
+                    .ignoresSafeArea()
                 
                 switch viewModel.currentPage {
                 case 0:
@@ -135,9 +136,6 @@ struct TutorialView: View {
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
-        }
-        .mask {
-            RoundedRectangle(cornerRadius: 24)
         }
     }
 }

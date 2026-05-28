@@ -105,21 +105,32 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
                 width: dimension.width,
                 height: dimension.height
             ),
-            styleMask: [.borderless, .resizable, .fullScreen, .fullSizeContentView],
+            styleMask: [.titled, .resizable, .fullSizeContentView, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         
-        window.contentViewController = hostingController
-        window.isOpaque = false
-        window.backgroundColor = .clear
+        // Attach the hosting controller's view directly to the window's contentView
+        // and ensure it resizes with the window. Using `contentViewController` is
+        // fine, but explicitly setting the `contentView` and autoresizing helps
+        // avoid cases where the view isn't laid out or visible depending on
+        // window/styleMask interactions.
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = true
+        hostingController.view.autoresizingMask = [.width, .height]
+        hostingController.view.frame = NSRect(origin: .zero, size: dimension)
+        window.contentView = hostingController.view
+        
         window.hasShadow = true
         window.delegate = self
-        window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.minSize = NSSize(width: 960, height: 540)
+        
+        // Ensure the window is centered on the chosen screen and brought forward.
+        window.center()
+        // Order front here so the window is visible even if callers forget to call `show()`.
+        window.makeKeyAndOrderFront(nil)
         
         self.window = window
         return window
