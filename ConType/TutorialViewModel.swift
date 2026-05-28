@@ -141,7 +141,6 @@ final class TutorialViewModel: ObservableObject {
             genericGuideGlyph(size: 32)
             Text("+")
             buttonGlyph(selectedButton, size: 32)
-                .colorInvert()
             Text(selectedButton.displayTitle(for: settings.controllerGlyphStyle))
                 .font(.system(.body, design: .monospaced))
         }
@@ -183,7 +182,6 @@ final class TutorialViewModel: ObservableObject {
             return AnyView(
                 HStack(spacing: 8) {
                     axisGlyph(bindingAxes[0], size: 32)
-                        .colorInvert()
                 }
                     .foregroundStyle(.white)
                     .frame(minHeight: 44)
@@ -196,7 +194,7 @@ final class TutorialViewModel: ObservableObject {
             if index > 0 {
                 content.append(AnyView(Text("or")))
             }
-            content.append(AnyView(axisGlyph(axis, size: 32).colorInvert()))
+            content.append(AnyView(axisGlyph(axis, size: 32)))
         }
         
         return AnyView(

@@ -90,37 +90,49 @@ final class AppCoordinator: ObservableObject {
         
         controllerInputManager.onToggleKeyboard = { [weak self] in
             Task { @MainActor in
-                if ((self?.tutorialController.isVisible) != nil) {
-                    self?.tutorialController.onKeyboardOverlayActivated()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.onKeyboardOverlayActivated()
                 } else {
-                    self?.toggleOverlay(source: .controllerShortcut, forMouse: false)
+                    self.toggleOverlay(source: .controllerShortcut, forMouse: false)
                 }
             }
         }
         
         controllerInputManager.onToggleMouse = { [weak self] in
             Task { @MainActor in
-                if ((self?.tutorialController.isVisible) != nil) {
-                    self?.tutorialController.onMouseOverlayActivated()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.onMouseOverlayActivated()
                 } else {
-                    self?.toggleOverlay(source: .controllerShortcut, forMouse: true)
+                    self.toggleOverlay(source: .controllerShortcut, forMouse: true)
                 }
             }
         }
         
         controllerInputManager.onDismissWithGuideButton = { [weak self] in
             Task { @MainActor in
-                self?.dismissOverlayViaGuideButtonIfNeeded()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.dismissOverlayViaGuideButtonIfNeeded()
+                } else {
+                    
+                    self.dismissOverlayViaGuideButtonIfNeeded()
+                }
             }
         }
         
         controllerInputManager.onMove = { [weak self] direction, trigger in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                let didMove = self.overlayController.moveSelection(direction, trigger: trigger)
-                if didMove {
-                    self.controllerInputManager.playRumbleIfSupported()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.moveSelection(direction, trigger: trigger)
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
+                    let didMove = self.overlayController.moveSelection(direction, trigger: trigger)
+                    if didMove {
+                        self.controllerInputManager.playRumbleIfSupported()
+                    }
                 }
             }
         }

@@ -77,6 +77,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         if let window {
             return window
         }
+        
         let screen = NSScreen.main ?? window?.screen ?? NSScreen.screens.first
         let frame = screen?.visibleFrame
         
@@ -98,16 +99,25 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         )
         
         let window = NSWindow(
-            contentRect: NSRect(x: origin.x, y: origin.y, width: dimension.width, height: dimension.height),
-            styleMask: [.borderless, .closable, .miniaturizable, .resizable, .fullScreen],
+            contentRect: NSRect(
+                x: origin.x,
+                y: origin.y,
+                width: dimension.width,
+                height: dimension.height
+            ),
+            styleMask: [.borderless, .resizable, .fullScreen, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
         window.contentViewController = hostingController
-        window.title = "Tutorial"
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
         window.delegate = self
         window.isReleasedWhenClosed = false
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.minSize = NSSize(width: 960, height: 540)
         
