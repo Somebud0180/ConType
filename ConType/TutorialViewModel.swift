@@ -122,7 +122,8 @@ final class TutorialViewModel: ObservableObject {
         ControllerGlyphBadge(
             assetName: "gamecontroller.circle.fill",
             fallbackText: "Guide",
-            size: size
+            size: size,
+            colorMultiply: .white
         )
     }
     
@@ -130,7 +131,8 @@ final class TutorialViewModel: ObservableObject {
         ControllerGlyphBadge(
             assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
             fallbackText: button.fallbackGlyphText,
-            size: size
+            size: size,
+            colorMultiply: .white
         )
     }
     
@@ -153,7 +155,8 @@ final class TutorialViewModel: ObservableObject {
         ControllerGlyphBadge(
             assetName: axis.glyphAssetName,
             fallbackText: axis.fallbackText,
-            size: size
+            size: size,
+            colorMultiply: .white
         )
     }
     

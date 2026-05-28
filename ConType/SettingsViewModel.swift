@@ -49,6 +49,7 @@ struct ControllerGlyphBadge: View {
     let assetName: String
     let fallbackText: String
     var size: CGFloat = 20
+    var colorMultiply: Color = .primary
     
     var body: some View {
         let finalName = assetName.isEmpty ? "questionmark.circle.fill" : assetName
@@ -60,7 +61,7 @@ struct ControllerGlyphBadge: View {
                     .resizable()
                     .renderingMode(.original)
                     .scaledToFit()
-                    .colorMultiply(Color.primary)
+                    .colorMultiply(colorMultiply)
             } else {
                 Image(systemName: finalName)
                     .resizable()
