@@ -178,10 +178,10 @@ final class TutorialViewModel: ObservableObject {
                 pseudoTextField.removeLast()
             }
             return
-        } else if key.keyCode == 57 {
+        } else if key.keyCode == 49 { // Space
             pseudoTextField.append(" ")
             return
-        } else if key.keyCode == 48 || key.keyCode == 36 {
+        } else if key.keyCode == 48 || key.keyCode == 36 { // Tab & Return
             return
         }
         
