@@ -259,14 +259,19 @@ final class TutorialViewModel: ObservableObject {
     
     func guideButtons() -> some View {
         let guideButtons = displayedGuideButtons()
-        let glyphStyle = settings.controllerGlyphStyle
         
         return HStack(spacing: 8) {
-            ForEach(
-                Array(guideButtons.enumerated()),
-                id: \.offset
-            ) { _, guideButton in
-                self.controllerGuideGlyphs(guideButton)
+            Group {
+                if settings.detectedController != nil {
+                    ForEach(
+                        Array(guideButtons.enumerated()),
+                        id: \.offset
+                    ) { _, guideButton in
+                        self.controllerGuideGlyphs(guideButton)
+                    }
+                } else {
+                    Text("Controller disconnected. Please reconnect them.")
+                }
             }
             .foregroundStyle(.white)
             .frame(minHeight: 44)

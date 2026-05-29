@@ -223,6 +223,7 @@ struct TutorialView: View {
                                                 .clear,
                                                 in: RoundedRectangle(cornerRadius: 12)
                                             )
+                                            .animation(.spring(.bouncy, blendDuration: 0.3), value: settings.detectedController)
                                     } else {
                                         Text("To proceeed, dismiss the keyboard by pressing the following shortcut buttons again.")
                                             .font(.headline)
