@@ -139,9 +139,13 @@ final class AppCoordinator: ObservableObject {
         
         controllerInputManager.onMouseMove = { [weak self] delta in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                NSApp.deactivate()
-                self.mouseEmitter.moveCursor(by: delta)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.moveMouse(by: delta)
+                } else if self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible {
+                    NSApp.deactivate()
+                    self.mouseEmitter.moveCursor(by: delta)
+                }
             }
         }
         
@@ -155,49 +159,72 @@ final class AppCoordinator: ObservableObject {
         
         controllerInputManager.onSelect = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateSelectedKey()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateSelectedKey()
+                } else if self.overlayController.isKeyboardVisible {                NSApp.deactivate()
+                    self.overlayController.activateSelectedKey()
+                }
             }
         }
         
         controllerInputManager.onBackspace = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateBackspaceKey()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateBackspaceKey()
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
+                    self.overlayController.activateBackspaceKey()
+                }
             }
         }
         
         controllerInputManager.onSpace = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateSpaceKey()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateSpaceKey()
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate ()
+                    self.overlayController.activateSpaceKey()
+                }
             }
         }
         
         controllerInputManager.onEnter = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateEnterKey()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateEnterKey()
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
+                    self.overlayController.activateEnterKey()
+                }
             }
         }
         
         controllerInputManager.onShift = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateShiftShortcut(cyclesToCapsLock: self.settings.shiftShortcutCyclesToCapsLock)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateShiftShortcut(cyclesToCapsLock: self.settings.shiftShortcutCyclesToCapsLock)
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
+                    self.overlayController.activateShiftShortcut(cyclesToCapsLock: self.settings.shiftShortcutCyclesToCapsLock)
+                }
             }
         }
         
         controllerInputManager.onCapsLock = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible else { return }
-                NSApp.deactivate()
-                self.overlayController.activateCapsLockShortcut()
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateCapsLockShortcut()
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
+                    self.overlayController.activateCapsLockShortcut()
+                }
             }
         }
         

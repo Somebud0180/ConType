@@ -20,7 +20,7 @@ final class TutorialViewModel: ObservableObject {
     private let onTutorialCompleted: (() -> Void)?
     
     // Keyboard overlay state
-    let keyboardOverlayViewModel: KeyboardOverlayViewModel
+    let keyboardViewModel: KeyboardOverlayViewModel
     
     // Published UI state
     @Published var currentPage: Int = 0
@@ -28,6 +28,7 @@ final class TutorialViewModel: ObservableObject {
     @Published var mouseShortcutTriggered = false
     @Published var firstMoveDetected = false
     @Published var completedTyping = false
+    @Published var pseudoTextField = ""
     
     init(
         settings: AppSettings,
@@ -35,7 +36,7 @@ final class TutorialViewModel: ObservableObject {
     ) {
         self.settings = settings
         self.onTutorialCompleted = onTutorialCompleted
-        self.keyboardOverlayViewModel = KeyboardOverlayViewModel(settings: settings)
+        self.keyboardViewModel = KeyboardOverlayViewModel(settings: settings)
         
         settings.objectWillChange
             .sink { [weak self] _ in
@@ -79,6 +80,8 @@ final class TutorialViewModel: ObservableObject {
         }
     }
     
+    
+    
     /// Called when movement is triggered with a direction and trigger type.
     /// Forwards movement to the keyboard overlay view model and marks first move as detected.
     /// - Parameters:
@@ -86,22 +89,67 @@ final class TutorialViewModel: ObservableObject {
     ///   - trigger: The `OverlayMoveTrigger` indicating how the movement was triggered.
     func handleMove(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger) {
         guard currentPage == 3 else { return }
-        keyboardOverlayViewModel.move(direction, trigger: trigger)
+        keyboardViewModel.move(direction, trigger: trigger)
         if !firstMoveDetected {
             firstMoveDetected = true
         }
     }
     
+    func handleMouseMove(by delta: CGVector) {
+        guard currentPage == 4 else { return }
+        // Mouse
+    }
+    
+    func activateSelectedKey() {
+        let keys = keyboardViewModel.activateSelected()
+        onKeyPressed(keys.0, keys.1)
+    }
+    
+    func activateBackspaceKey() {
+        if pseudoTextField.isEmpty { return }
+        pseudoTextField.removeLast()
+    }
+    
+    func activateSpaceKey() {
+        pseudoTextField.append(" ")
+    }
+    
+    func activateEnterKey() {
+        // Activate enter key
+    }
+    
+    func activateShiftShortcut(cyclesToCapsLock: Bool) {
+        keyboardViewModel.cycleShiftShortcut(cyclesToCapsLock: cyclesToCapsLock)
+    }
+    
+    func activateCapsLockShortcut() {
+        keyboardViewModel.toggleCapsLockShortcut()
+    }
+    
     func onKeyPressed(_ key: VirtualKey, _ flags: CGEventFlags) {
         guard currentPage == 3 else { return }
         guard !firstMoveDetected else { return }
-        // Swallow input
+        guard key.keyCode != 0 else { return }
         
+        if key.keyCode == 51 { // Backspace
+            if !pseudoTextField.isEmpty {
+                pseudoTextField.removeLast()
+            }
+            return
+        } else if key.keyCode == 48 || key.keyCode == 36 {
+            return
+        }
+        
+        let hasShiftedLabel = key.shiftedLabel != nil && key.shiftedLabel != key.baseLabel
+        let isShifted = flags.contains(.maskShift)
+        
+        let newChar = isShifted && hasShiftedLabel ? key.shiftedLabel! : key.baseLabel
+        pseudoTextField.append(newChar)
     }
     
     /// Resets the keyboard overlay view model state (selection, modifiers).
     func resetKeyboardOverlay() {
-        keyboardOverlayViewModel.setKeyboardLayout(settings.keyboardLayout)
+        keyboardViewModel.setKeyboardLayout(settings.keyboardLayout)
     }
     
     /// Advances to the next tutorial page and resets overlay state if leaving page 3.
@@ -136,8 +184,8 @@ final class TutorialViewModel: ObservableObject {
         )
     }
     
-    func keyboardShortcut() -> some View {
-        let selectedButton = settings.controllerToggleBindings.binding(for: .keyboardToggle)
+    func controllerShortcut(for mode: ControllerToggleBinding) -> some View {
+        let selectedButton = settings.controllerToggleBindings.binding(for: mode)
         
         return HStack(spacing: 8) {
             genericGuideGlyph(size: 32)

@@ -14,6 +14,9 @@ struct TutorialView: View {
     
     var body: some View {
         GeometryReader { proxy in
+            let maxKeyboardWidth = min(proxy.size.width * 0.9, 1440)
+            let maxKeyboardHeight = min(proxy.size.height * 0.6, 540)
+            
             ZStack {
                 Image("Wallpaper")
                     .resizable()
@@ -75,7 +78,7 @@ struct TutorialView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
                         
-                        viewModel.keyboardShortcut()
+                        viewModel.controllerShortcut(for: .keyboardToggle)
                             .padding(4)
                             .glassEffect(
                                 .clear,
@@ -91,40 +94,89 @@ struct TutorialView: View {
                     
                 case 3:
                     VStack {
-                        let maxWidth = min(proxy.size.width * 0.9, 1440)
-                        let maxHeight = min(proxy.size.height * 0.6, 540)
                         
                         Spacer()
                         
-                        Text("Great! Welcome to the keyboard overlay.")
+                        if !viewModel.firstMoveDetected {
+                            Group {
+                                Text("Great! Welcome to the keyboard overlay.")
+                                    .font(.title2)
+                                
+                                Text("This is where ConType comes into action. Try moving around the keyboard with")
+                                    .font(.headline)
+                                    .padding(.horizontal, 8)
+                                
+                                viewModel.keyboardAxisBindings()
+                                    .padding(4)
+                                    .padding(.horizontal, 8)
+                                    .glassEffect(
+                                        .clear,
+                                        in: RoundedRectangle(cornerRadius: 12)
+                                    )
+                            }
+                            .transition(.opacity.combined(with: .slide))
+                            .foregroundStyle(.white)
+                        } else if viewModel.firstMoveDetected && !viewModel.completedTyping {
+                            Group {
+                                Text("Good job! Now let's try typing. Type the following words to continue.")
+                                    .font(.title2)
+                                    .padding(.horizontal, 8)
+                                
+                                Text("Hello World!")
+                                    .font(.title)
+                                    .padding(8)
+                                    .padding(.horizontal, 12)
+                                    .glassEffect(
+                                        .clear,
+                                        in: RoundedRectangle(cornerRadius: 12)
+                                    )
+                                
+                                Text("Look at the controller button in shift key, try pressing it and see what happens!")
+                                    .font(.footnote)
+                                    .frame(maxWidth: proxy.size.width * 0.5)
+                                
+                            }
+                            .transition(.opacity.combined(with: .slide))
+                            .foregroundStyle(.white)
+                        }
+                        
+                        Spacer()
+                        
+                        KeyboardOverlayView(
+                            viewModel: viewModel.keyboardViewModel,
+                            onKeyPressed: { key, flags in
+                                viewModel.onKeyPressed(key, flags)
+                            }
+                        )
+                        .frame(maxWidth: maxKeyboardWidth, maxHeight: maxKeyboardHeight)
+                        .aspectRatio(8/3, contentMode: .fit)
+                        
+                        Spacer()
+                    }
+                    .padding(.top)
+                    .transition(.opacity)
+                    
+                case 4:
+                    VStack {
+                        Text("Now let's try opening the mouse overlay.")
                             .font(.title2)
                             .foregroundStyle(.white)
                         
-                        Text("This is where ConType comes into action. Try moving around the keyboard with")
+                        Text("Press the following buttons.")
                             .font(.headline)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
                         
-                        viewModel.keyboardAxisBindings()
+                        viewModel.controllerShortcut(for: .mouseToggle)
                             .padding(4)
-                            .padding(.horizontal, 8)
                             .glassEffect(
                                 .clear,
                                 in: RoundedRectangle(cornerRadius: 12)
                             )
                         
-                        Spacer()
-                        
-                        KeyboardOverlayView(
-                            viewModel: viewModel.keyboardOverlayViewModel,
-                            onKeyPressed: { key, flags in
-                                // Handle key press locally - swallow input during tutorial
-                            }
-                        )
-                        .frame(maxWidth: maxWidth, maxHeight: maxHeight)
-                        .aspectRatio(8/3, contentMode: .fit)
-                        
-                        Spacer()
+                        Text("You can change this in the settings")
+                            .font(.footnote)
+                            .foregroundStyle(.white)
                     }
                     .padding(.top)
                     .transition(.opacity)

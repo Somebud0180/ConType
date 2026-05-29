@@ -64,11 +64,39 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
     /// - Parameters:
     ///   - direction: The `OverlayMoveDirection` indicating the movement direction.
     ///   - trigger: The `OverlayMoveTrigger` indicating how the movement was triggered.
-    @discardableResult func moveSelection(
+    func moveSelection(
         _ direction: OverlayMoveDirection,
         trigger: OverlayMoveTrigger = .press
     ) {
         viewModel?.handleMove(direction, trigger: trigger)
+    }
+    
+    func moveMouse(by delta: CGVector) {
+        viewModel?.handleMouseMove(by: delta)
+    }
+    
+    func activateSelectedKey() {
+        viewModel?.activateSelectedKey()
+    }
+    
+    func activateBackspaceKey() {
+        viewModel?.activateBackspaceKey()
+    }
+    
+    func activateSpaceKey() {
+        viewModel?.activateSpaceKey()
+    }
+    
+    func activateEnterKey() {
+        viewModel?.activateEnterKey()
+    }
+    
+    func activateShiftShortcut(cyclesToCapsLock: Bool) {
+        viewModel?.activateShiftShortcut(cyclesToCapsLock: cyclesToCapsLock)
+    }
+    
+    func activateCapsLockShortcut() {
+        viewModel?.activateCapsLockShortcut()
     }
     
     /// Creates the tutorial window if it doesn't exist, sets up the hosting controller with the tutorial view and configures the window properties.

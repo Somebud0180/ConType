@@ -292,6 +292,40 @@ final class KeyboardOverlayViewModel: ObservableObject {
         }
     }
     
+    /// Activates the selected key
+    /// - Parameter emitter: The key and accompanying flag to be activated
+    func activateSelected() -> (VirtualKey, CGEventFlags) {
+        guard let key = selectedKey else {
+            return (VirtualKey(baseLabel: "", shiftedLabel: nil, keyCode: 0, role: .standard), [])
+        }
+        
+        return activate(key)
+    }
+    
+    /// Activates a key and handles modifier keys and emit.
+    /// - Parameters:
+    ///   - key: The `VirtualKey` to be activated
+    ///   - emitter: The key and accompanying flag to be activated
+    func activate(_ key: VirtualKey) -> (VirtualKey, CGEventFlags) {
+        switch key.role {
+        case .toggleModifier(let modifier):
+            if activeModifierKeys.contains(modifier) {
+                activeModifierKeys.remove(modifier)
+            } else {
+                activeModifierKeys.insert(modifier)
+            }
+        case .standard:
+            let flags = eventFlags(from: activeModifierKeys)
+            if key.isAlphanumeric {
+                activeModifierKeys.remove(.shift)
+            }
+            
+            return (key, flags)
+        }
+        
+        return (VirtualKey(baseLabel: "", shiftedLabel: nil, keyCode: 0, role: .standard), [])
+    }
+    
     /// Checks if a modifier is active.
     /// - Parameter modifier: The `ModifierToggleKey` to check status for
     /// - Returns: `true` if modifier is active, else `false`
