@@ -177,6 +177,9 @@ final class TutorialViewModel: ObservableObject {
                 pseudoTextField.removeLast()
             }
             return
+        } else if key.keyCode == 57 {
+            pseudoTextField.append(" ")
+            return
         } else if key.keyCode == 48 || key.keyCode == 36 {
             return
         }
