@@ -9,6 +9,22 @@ import AppKit
 import SwiftUI
 import Combine
 
+struct BlinkingCaret: View {
+    @State private var isVisible = true
+    
+    var body: some View {
+        Text("|")
+            .font(.largeTitle)
+            .foregroundStyle(.white)
+            .opacity(isVisible ? 1 : 0)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                    isVisible.toggle()
+                }
+            }
+    }
+}
+
 /// ViewModel for the Tutorial view, responsible for managing tutorial state and responding to controller input events.
 @MainActor
 final class TutorialViewModel: ObservableObject {
@@ -29,6 +45,8 @@ final class TutorialViewModel: ObservableObject {
     @Published var firstMoveDetected = false
     @Published var completedTyping = false
     @Published var pseudoTextField = ""
+    @Published var animateCaret = false
+    
     
     init(
         settings: AppSettings,
@@ -45,19 +63,41 @@ final class TutorialViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    func pseudoTextFieldView() -> some View {
+        HStack(spacing: 1) {
+            Text(pseudoTextField.isEmpty ? "Start Typing!" : pseudoTextField)
+                .font(.largeTitle)
+                .foregroundStyle(.white)
+                .opacity(pseudoTextField.isEmpty ? 0.8 : 1)
+            
+            if !pseudoTextField.isEmpty {
+                BlinkingCaret()
+                    .offset(y: -1)
+            }
+        }
+        .padding(8)
+        .padding(.horizontal, 12)
+        .frame(minWidth: pseudoTextField.isEmpty ? 0 : 512, alignment: .leading)
+        .glassEffect(
+            .clear,
+            in: Capsule()
+        )
+        .animation(.spring(.bouncy, blendDuration: 0.3), value: pseudoTextField)
+    }
+    
     // MARK: - Input Event Handlers
     /// Called when the keyboard overlay activation is triggered.
     func handleKeyboardOverlayActivated() {
         guard !keyboardShortcutTriggered else { return }
-        if currentPage == 2 {
+        if currentPage == 3 {
             keyboardShortcutTriggered = true
             withAnimation(.easeInOut(duration: 0.3)) {
-                currentPage = 3
+                currentPage = 4
             }
-        } else if currentPage == 3 && completedTyping {
+        } else if currentPage == 4 && completedTyping {
             keyboardShortcutTriggered = false
             withAnimation(.easeInOut(duration: 0.3)) {
-                currentPage = 4
+                currentPage = 5
             }
         }
     }
@@ -72,15 +112,13 @@ final class TutorialViewModel: ObservableObject {
     
     func handleDismissOverlayViaGuideButton() {
         guard settings.dismissWithGuideButton else { return }
-        if currentPage == 3 && completedTyping {
+        if currentPage == 4 && completedTyping {
             keyboardShortcutTriggered = false
             withAnimation(.easeInOut(duration: 0.3)) {
-                currentPage = 4
+                currentPage = 5
             }
         }
     }
-    
-    
     
     /// Called when movement is triggered with a direction and trigger type.
     /// Forwards movement to the keyboard overlay view model and marks first move as detected.
@@ -88,21 +126,24 @@ final class TutorialViewModel: ObservableObject {
     ///   - direction: The `OverlayMoveDirection` indicating the movement direction.
     ///   - trigger: The `OverlayMoveTrigger` indicating how the movement was triggered.
     func handleMove(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger) {
-        guard currentPage == 3 else { return }
+        guard currentPage == 4 else { return }
         keyboardViewModel.move(direction, trigger: trigger)
         if !firstMoveDetected {
-            firstMoveDetected = true
+            withAnimation(.easeInOut(duration: 0.3)) {
+                firstMoveDetected = true
+            }
         }
     }
     
     func handleMouseMove(by delta: CGVector) {
-        guard currentPage == 4 else { return }
+        guard currentPage == 5 else { return }
         // Mouse
     }
     
     func activateSelectedKey() {
         let keys = keyboardViewModel.activateSelected()
         onKeyPressed(keys.0, keys.1)
+        debugPrint("Pressing key: \(keys.1), flags: \(keys.1)")
     }
     
     func activateBackspaceKey() {
@@ -127,8 +168,8 @@ final class TutorialViewModel: ObservableObject {
     }
     
     func onKeyPressed(_ key: VirtualKey, _ flags: CGEventFlags) {
-        guard currentPage == 3 else { return }
-        guard !firstMoveDetected else { return }
+        guard currentPage == 4 else { return }
+        guard firstMoveDetected else { return }
         guard key.keyCode != 0 else { return }
         
         if key.keyCode == 51 { // Backspace
@@ -140,10 +181,11 @@ final class TutorialViewModel: ObservableObject {
             return
         }
         
-        let hasShiftedLabel = key.shiftedLabel != nil && key.shiftedLabel != key.baseLabel
+        let hasShiftedLabel = key.shiftedLabel != nil
         let isShifted = flags.contains(.maskShift)
         
         let newChar = isShifted && hasShiftedLabel ? key.shiftedLabel! : key.baseLabel
+        
         pseudoTextField.append(newChar)
     }
     
@@ -154,7 +196,7 @@ final class TutorialViewModel: ObservableObject {
     
     /// Advances to the next tutorial page and resets overlay state if leaving page 3.
     func nextPage() {
-        if currentPage == 3 {
+        if currentPage == 4 {
             resetKeyboardOverlay()
         }
         currentPage += 1
@@ -166,6 +208,14 @@ final class TutorialViewModel: ObservableObject {
     }
     
     // MARK: - Glyph Helpers
+    func displayedGuideButtons() -> [ControllerGuideButton] {
+        guard let detectedController = settings.detectedController else { return [] }
+        if detectedController.guideButtons.isEmpty {
+            return [.menu]
+        }
+        return detectedController.guideButtons
+    }
+    
     func genericGuideGlyph(size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             assetName: "gamecontroller.circle.fill",
@@ -173,6 +223,50 @@ final class TutorialViewModel: ObservableObject {
             size: size,
             colorMultiply: .white
         )
+    }
+    
+    @ViewBuilder
+    func controllerGuideGlyphs(_ button: ControllerGuideButton, size: CGFloat = 32) -> some View {
+        let title = button.displayTitle(for: settings.controllerGlyphStyle)
+        if let assetName = button.glyphAssetName(for: settings.controllerGlyphStyle) {
+            ControllerGlyphBadge(
+                assetName: assetName,
+                fallbackText: title,
+                size: size,
+                colorMultiply: .white
+            )
+        } else {
+            Text(title)
+                .font(.system(size: max(10, size * 0.45), weight: .semibold, design: .monospaced))
+                .lineLimit(1)
+                .padding(.horizontal, max(4, size * 0.24))
+                .frame(height: size)
+                .background(
+                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: max(4, size * 0.28), style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                )
+                .accessibilityLabel(Text(title))
+        }
+    }
+    
+    func guideButtons() -> some View {
+        let guideButtons = displayedGuideButtons()
+        let glyphStyle = settings.controllerGlyphStyle
+        
+        return HStack(spacing: 8) {
+            ForEach(
+                Array(guideButtons.enumerated()),
+                id: \.offset
+            ) { _, guideButton in
+                self.controllerGuideGlyphs(guideButton)
+            }
+            .foregroundStyle(.white)
+            .frame(minHeight: 44)
+        }
     }
     
     private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
