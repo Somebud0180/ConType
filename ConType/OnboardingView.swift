@@ -111,6 +111,7 @@ final class OnboardingViewModel: ObservableObject {
     /// Performs callback for handling completion.
     func complete() {
         onComplete?()
+        step = 0
     }
     
     /// Begins the background checking of wether the permission has been granted.
@@ -289,6 +290,7 @@ struct OnboardingView: View {
             VStack {
                 Button {
                     viewModel.openTutorial?()
+                    viewModel.complete()
                 } label: {
                     VStack {
                         Text("Yes, begin tutorial")
@@ -405,6 +407,7 @@ struct OnboardingView: View {
             default:
                 Button("Open Settings") {
                     viewModel.openSettings?()
+                    viewModel.complete()
                 }
                 
                 Button("Finish") {

@@ -35,12 +35,10 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         
         viewModel.openSettings = { [weak self] in
             self?.openSettings?()
-            self?.close()
         }
         
         viewModel.openTutorial = { [weak self] in
             self?.openTutorial?()
-            self?.close()
         }
     }
 
