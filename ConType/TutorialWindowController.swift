@@ -155,9 +155,6 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         window.isMovableByWindowBackground = true
         window.contentMinSize = NSSize(width: 960, height: 540)
         
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        
         self.window = window
         return window
     }

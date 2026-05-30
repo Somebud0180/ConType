@@ -164,29 +164,31 @@ struct OnboardingView: View {
     @ObservedObject var viewModel: OnboardingViewModel
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch viewModel.step {
-            case 0:
-                welcomeStep
-            case 1:
-                permissionStep
-            case 2:
-                configStep
-            case 3:
-                infoStep
-            case 4:
-                tutorialStep
-            default:
-                readyStep
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 0) {
+                switch viewModel.step {
+                case 0:
+                    welcomeStep
+                case 1:
+                    permissionStep
+                case 2:
+                    configStep
+                case 3:
+                    infoStep
+                case 4:
+                    tutorialStep
+                default:
+                    readyStep
+                }
+                
+                Spacer(minLength: 20)
+                
+                actionRow
             }
-            
-            Spacer(minLength: 20)
-            
-            actionRow
+            .padding(24)
+            .animation(.easeInOut(duration: 0.5), value: viewModel.step)
         }
-        .padding(24)
-        .frame(width: 360, height: 400)
-        .animation(.easeInOut(duration: 0.5), value: viewModel.step)
+        .frame(width: 400, height: 480)
     }
     
     /// Contains the app icon and name and introduction.

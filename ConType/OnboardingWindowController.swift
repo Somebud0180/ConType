@@ -53,7 +53,6 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     func show(startAtWelcome: Bool) {
         let window = makeWindowIfNeeded()
         viewModel.prepareForPresentation(startAtWelcome: startAtWelcome)
-        window.center()
         window.makeKeyAndOrderFront(nil)
     }
     
@@ -89,23 +88,27 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         )
         
         let origin = NSPoint(
-            x: (frame?.midX ?? 960) - (360 / 2),
-            y: (frame?.midY ?? 540) - (400 / 2)
+            x: (frame?.midX ?? 960) - (400 / 2),
+            y: (frame?.midY ?? 540) - (480 / 2)
         )
         
+        debugPrint("Origin: \(origin), Screen Frame: \(frame?.debugDescription ?? "nil")")
+        
         let window = NSWindow(
-            contentRect: NSRect(x: origin.x, y: origin.y, width: 360, height: 400),
+            contentRect: NSRect(x: origin.x, y: origin.y, width: 400, height: 480),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         
+        debugPrint("Widow Origin: \(window.frame.origin), Window Size: \(window.frame.size)")
+        
         window.contentViewController = hostingController
         window.title = "Welcome to ConType"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 360, height: 400)
-        window.maxSize = NSSize(width: 540, height: 600)
+        window.minSize = NSSize(width: 400, height: 480)
+        window.maxSize = NSSize(width: 400, height: 480)
 
         self.window = window
         return window
