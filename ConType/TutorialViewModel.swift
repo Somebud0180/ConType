@@ -34,15 +34,35 @@ final class TutorialViewModel: ObservableObject {
     
     var onComplete: (() -> Void)?
     var openSettings: (() -> Void)?
+    var updateCoordinatorVisibilty: (() -> Void)?
     
     @Published private(set) var currentPage: Int = 0
-    @Published var keyboardShortcutTriggered = false
-    @Published var mouseShortcutTriggered = false
-    @Published var firstMoveDetected = false
+    
+    // State for keyboard interaction
+    @Published var keyboardOverlayVisible = false {
+        didSet {
+            updateCoordinatorVisibilty?()
+        }
+    }
+    @Published var keyboardMoved = false
     @Published var completedTyping = false
     @Published var pseudoTextField = ""
     @Published var animateCaret = false
+    @Published var caretOffset = 0
     
+    // State for mouse interaction
+    @Published var mouseOverlayVisible = false {
+        didSet {
+            updateCoordinatorVisibilty?()
+        }
+    }
+    @Published var mouseMoved = false
+    @Published var completedMousing = false
+    @Published var mousePosition = CGPoint.zero
+    @Published var mouseDown = false
+    @Published var viewProxy: GeometryProxy?
+    @Published var mouseButtonFrame: CGRect = .zero
+    @Published var mouseButtonFrameDown = false
     
     init(
         settings: AppSettings
@@ -83,14 +103,13 @@ final class TutorialViewModel: ObservableObject {
     // MARK: - Input Event Handlers
     /// Called when the keyboard overlay activation is triggered.
     func handleKeyboardOverlayActivated() {
-        guard !keyboardShortcutTriggered else { return }
-        if currentPage == 3 {
-            keyboardShortcutTriggered = true
+        if currentPage == 3 && !keyboardOverlayVisible {
+            keyboardOverlayVisible = true
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentPage = 4
             }
         } else if currentPage == 4 && completedTyping {
-            keyboardShortcutTriggered = false
+            keyboardOverlayVisible = false
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentPage = 5
             }
@@ -99,18 +118,30 @@ final class TutorialViewModel: ObservableObject {
     
     /// Called when the mouse overlay activation is triggered.
     func handleMouseOverlayActivated() {
-        guard !mouseShortcutTriggered else { return }
-        if currentPage == 4 {
-            mouseShortcutTriggered = true
+        if currentPage == 5 && !mouseOverlayVisible {
+            mouseOverlayVisible = true
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 6
+            }
+        } else if currentPage == 6 && completedMousing {
+            keyboardOverlayVisible = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 7
+            }
         }
     }
     
     func handleDismissOverlayViaGuideButton() {
         guard settings.dismissWithGuideButton else { return }
         if currentPage == 4 && completedTyping {
-            keyboardShortcutTriggered = false
+            keyboardOverlayVisible = false
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentPage = 5
+            }
+        } else if currentPage == 6 && completedMousing {
+            keyboardOverlayVisible = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentPage = 7
             }
         }
     }
@@ -123,16 +154,11 @@ final class TutorialViewModel: ObservableObject {
     func handleMove(_ direction: OverlayMoveDirection, trigger: OverlayMoveTrigger) {
         guard currentPage == 4 else { return }
         keyboardViewModel.move(direction, trigger: trigger)
-        if !firstMoveDetected {
+        if !keyboardMoved {
             withAnimation(.easeInOut(duration: 0.3)) {
-                firstMoveDetected = true
+                keyboardMoved = true
             }
         }
-    }
-    
-    func handleMouseMove(by delta: CGVector) {
-        guard currentPage == 5 else { return }
-        // Mouse
     }
     
     func activateSelectedKey() {
@@ -164,7 +190,7 @@ final class TutorialViewModel: ObservableObject {
     
     func onKeyPressed(_ key: VirtualKey, _ flags: CGEventFlags) {
         guard currentPage == 4 else { return }
-        guard firstMoveDetected else { return }
+        guard keyboardMoved else { return }
         guard key.keyCode != 0 else { return }
         
         if key.keyCode == 51 { // Backspace
@@ -190,6 +216,66 @@ final class TutorialViewModel: ObservableObject {
     /// Resets the keyboard overlay view model state (selection, modifiers).
     func resetKeyboardOverlay() {
         keyboardViewModel.setKeyboardLayout(settings.keyboardLayout)
+    }
+    
+    func onMouseOverlayPressed() {
+        // Do nothing for now
+    }
+    
+    func handleMouseMove(by delta: CGVector) {
+        guard currentPage == 6, let proxy = viewProxy else { return }
+        let newX = mousePosition.x + delta.dx
+        let newY = mousePosition.y + delta.dy
+        let clampedX = min(max(newX, 0), proxy.size.width)
+        let clampedY = min(max(newY, 0), proxy.size.height)
+        
+        if !mouseMoved {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                mouseMoved = true
+            }
+        }
+        
+        mousePosition = CGPoint(x: clampedX, y: clampedY)
+        
+        if mouseButtonFrameDown && !mouseButtonFrame.contains(mousePosition) {
+            mouseButtonFrameDown = false
+        }
+    }
+    
+    func handleMouseClick(isDown: Bool) {
+        guard currentPage == 6 else { return }
+        mouseDown = isDown
+        
+        debugPrint("Mouse click \(isDown ? "down" : "up") at position: \(mousePosition), button frame: \(mouseButtonFrame)")
+        
+        if isDown && mouseButtonFrame.contains(mousePosition) {
+            mouseButtonFrameDown = true
+        } else if !isDown && mouseButtonFrameDown && mouseButtonFrame.contains(mousePosition) {
+            mouseButtonFrameDown = false
+            completedMousing = true
+        } else {
+            mouseButtonFrameDown = false
+        }
+    }
+    
+    func reclampMouse() {
+        guard let proxy = viewProxy else { return }
+        let clampedX = min(max(mousePosition.x, 0), proxy.size.width)
+        let clampedY = min(max(mousePosition.y, 0), proxy.size.height)
+        mousePosition = CGPoint(x: clampedX, y: clampedY)
+    }
+    
+    func mouseCursorLayer(_ proxy: GeometryProxy, mousePos: CGPoint) -> some View {
+        return VStack {
+            Image(systemName: "pointer.arrow")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 15, height: 18)
+                .position(mousePos)
+                .opacity(self.mouseOverlayVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: self.mouseOverlayVisible)
+        }
     }
     
     /// Advances to the next tutorial page and resets overlay state if leaving page 3.
@@ -272,7 +358,12 @@ final class TutorialViewModel: ObservableObject {
         }
     }
     
-    private func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
+    func assignedButtonGlyph(for action: ControllerActionBinding) -> some View {
+        let button = settings.controllerActionBindings.button(for: action)
+        return buttonGlyph(button)
+    }
+    
+    func buttonGlyph(_ button: ControllerAssignableButton, size: CGFloat = 20) -> some View {
         ControllerGlyphBadge(
             assetName: button.glyphAssetName(for: settings.controllerGlyphStyle),
             fallbackText: button.fallbackGlyphText,
@@ -305,23 +396,36 @@ final class TutorialViewModel: ObservableObject {
         )
     }
     
-    func keyboardAxisBindings() -> some View {
+    func axisBindings(for action: AxisActionType) -> some View {
         // Collect axes assigned to overlay movement
         var bindingAxes: [AxisInput] = []
         
-        if settings.leftStickInputType.contains(.overlayMovement) {
+        var actionString: String {
+            switch action {
+            case .overlayMovement: return "keyboard"
+            case .mouseMovement: return "mouse"
+            case .arrowKeys: return "arrow key"
+            case .scrollWheel: return "scroll"
+            default: return "this"
+            }
+        }
+        
+        if settings.leftStickInputType.contains(action) {
             bindingAxes.append(.leftStick)
         }
-        if settings.rightStickInputType.contains(.overlayMovement) {
+        if settings.rightStickInputType.contains(action) {
             bindingAxes.append(.rightStick)
         }
-        if settings.padInputType.contains(.overlayMovement) {
+        if settings.padInputType.contains(action) {
             bindingAxes.append(.pad)
         }
         
         if bindingAxes.isEmpty {
             return AnyView(
-                Text("It seems like you have no input assigned to keyboard movement, open settings to configure.")
+                Button("It seems like you have no input assigned to \(actionString) movement, click here to open settings and configure.") {
+                    self.openSettings?()
+                }
+                    .buttonStyle(.plain)
                     .foregroundStyle(.white)
             )
         }
@@ -354,6 +458,27 @@ final class TutorialViewModel: ObservableObject {
                 .foregroundStyle(.white)
                 .frame(minHeight: 44)
         )
+    }
+    
+    func mouseClickButtons() -> some View {
+        return HStack(spacing: 8) {
+            VStack {
+                assignedButtonGlyph(for: .mouseLeftClick)
+                
+                Text("Left Click")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+            }
+            VStack {
+                assignedButtonGlyph(for: .mouseRightClick)
+                
+                Text("Right Click")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(minHeight: 44)
     }
 }
 

@@ -28,11 +28,12 @@ struct TutorialView: View {
                 switch viewModel.currentPage {
                 case 0:
                     VStack {
-                        Text("Welcome to ConType!")
+                        Label("Welcome to ConType!", systemImage: "flag.pattern.checkered")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundStyle(.white)
                             .shadow(radius: 10)
+                            .transition(.symbolEffect)
                         
                         Button("Continue") {
                             withAnimation(.easeInOut(duration: 0.3)) {
@@ -47,10 +48,11 @@ struct TutorialView: View {
                     
                 case 1:
                     VStack {
-                        Text("Before we begin the tutorial, would you like to look over the settings?")
+                        Label("Before we begin the tutorial, would you like to look over the settings?", systemImage: "gear")
                             .font(.title2)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
+                            .transition(.symbolEffect)
                         
                         Button("Open Settings") {
                             viewModel.openSettings?()
@@ -69,15 +71,16 @@ struct TutorialView: View {
                     
                 case 2:
                     VStack {
-                        Text("About your controller.")
+                        Label("About your controller.", systemImage: "gamecontroller.fill")
                             .font(.title2)
                             .foregroundStyle(.white)
+                            .transition(.symbolEffect)
                         if viewModel.displayedGuideButtons().count < 1 {
                             Text("Oops, please connect your controller to proceed.")
                                 .font(.headline)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 8)
-                        }  else {
+                        } else {
                             Group {
                                 if viewModel.displayedGuideButtons().count == 1 {
                                     Text("Below is what we call your controller's guide Button. This powers the shortcuts of the app.")
@@ -85,9 +88,10 @@ struct TutorialView: View {
                                     Text("Below are what we call the controller's guide Buttons. These power the shortcuts of the app.")
                                 }
                             }
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 8)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 500)
                             
                             viewModel.guideButtons()
                                 .padding(4)
@@ -109,8 +113,8 @@ struct TutorialView: View {
                             }
                             .font(.headline)
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .frame(maxWidth: 512)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 500)
                             
                             viewModel.genericGuideGlyph(size: 32)
                                 .padding(4)
@@ -135,9 +139,10 @@ struct TutorialView: View {
                     
                 case 3:
                     VStack {
-                        Text("Let's try opening the keyboard.")
+                        Label("Let's try opening the keyboard.", systemImage: "keyboard.badge.eye.fill")
                             .font(.title2)
                             .foregroundStyle(.white)
+                            .transition(.symbolEffect)
                         
                         Text("Pick up your controller and press the following buttons.")
                             .font(.headline)
@@ -163,16 +168,17 @@ struct TutorialView: View {
                         
                         Spacer()
                         
-                        if !viewModel.firstMoveDetected {
+                        if !viewModel.keyboardMoved {
                             Group {
-                                Text("Great! Welcome to the keyboard overlay.")
+                                Label("Great! Welcome to the keyboard overlay.", systemImage: "keyboard.fill")
                                     .font(.title2)
+                                    .transition(.symbolEffect)
                                 
                                 Text("This is where ConType comes into action. Try moving around the keyboard with")
                                     .font(.headline)
                                     .padding(.horizontal, 8)
                                 
-                                viewModel.keyboardAxisBindings()
+                                viewModel.axisBindings(for: .overlayMovement)
                                     .padding(4)
                                     .padding(.horizontal, 8)
                                     .glassEffect(
@@ -184,12 +190,13 @@ struct TutorialView: View {
                             .foregroundStyle(.white)
                             
                             Spacer()
-                        } else if viewModel.firstMoveDetected {
+                        } else {
                             Group {
                                 if !viewModel.completedTyping {
-                                    Text("Good job! Now let's try typing. Type the following words to continue.")
+                                    Label("Good job! Now let's try typing. Type the following words to continue.", systemImage: "checkmark.circle.fill")
                                         .font(.title2)
                                         .padding(.horizontal, 8)
+                                        .transition(.symbolEffect)
                                     
                                     Text("Hello ConType!")
                                         .font(.title2)
@@ -200,10 +207,9 @@ struct TutorialView: View {
                                             .clear,
                                             in: RoundedRectangle(cornerRadius: 12)
                                         )
-                                } else if viewModel.firstMoveDetected && viewModel.completedTyping {
-                                    Text("Well done!")
+                                } else if viewModel.keyboardMoved && viewModel.completedTyping {
+                                    Label("Time to close the overlay.", systemImage: "x.circle.fill")
                                         .font(.title2)
-                                        .padding(.horizontal, 8)
                                     
                                     if settings.dismissWithGuideButton {
                                         Group {
@@ -229,7 +235,7 @@ struct TutorialView: View {
                                             .font(.headline)
                                             .padding(.horizontal, 8)
                                         
-                                        viewModel.keyboardAxisBindings()
+                                        viewModel.axisBindings(for: .overlayMovement)
                                             .padding(4)
                                             .padding(.horizontal, 8)
                                             .glassEffect(
@@ -247,7 +253,7 @@ struct TutorialView: View {
                                         .foregroundStyle(.white)
                                         .transition(.opacity)
                                         .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 12)
+                                        .frame(maxWidth: 500)
                                 }
                             }
                             .transition(.opacity.combined(with: .slide))
@@ -275,9 +281,10 @@ struct TutorialView: View {
                     
                 case 5:
                     VStack {
-                        Text("Now let's try opening the mouse overlay.")
+                        Label("Now let's try opening the mouse overlay.", systemImage: "pointer.arrow.square.fill")
                             .font(.title2)
                             .foregroundStyle(.white)
+                            .transition(.symbolEffect)
                         
                         Text("Press the following buttons.")
                             .font(.headline)
@@ -298,16 +305,130 @@ struct TutorialView: View {
                     .padding(.top)
                     .transition(.opacity)
                     
-                default:
-                    // Press (Guide Button) or (Shortcut) to end tutorial
+                case 6:
+                    ZStack(alignment: .bottomLeading) {
+                        VStack {
+                            Group {
+                                if !viewModel.mouseMoved {
+                                    Label("Welcome to the mouse overlay.", systemImage: "pointer.arrow.rays")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                        .transition(.symbolEffect)
+                                    
+                                    Text("When the bubble is on-screen, it means ConType is in mouse mode. In this mode, ConType only simulates mouse inputs. Try moving the mouse around with.")
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                        .multilineTextAlignment(.center)
+                                        .frame(maxWidth: 500)
+                                    
+                                    viewModel.axisBindings(for: .mouseMovement)
+                                        .padding(4)
+                                        .padding(.horizontal, 8)
+                                        .glassEffect(
+                                            .clear,
+                                            in: RoundedRectangle(cornerRadius: 12)
+                                        )
+                                } else if !viewModel.completedMousing {
+                                    Label("Great job!", systemImage: "checkmark.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                        .transition(.symbolEffect)
+                                    
+                                    Text("Now try clicking the container below. Use the button indicated inside the container to click.")
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                        .multilineTextAlignment(.center)
+                                        .frame(maxWidth: 500)
+                                    
+                                    viewModel.mouseClickButtons()
+                                        .padding(4)
+                                        .padding(.horizontal, 8)
+                                        .glassEffect(
+                                            .clear
+                                            .tint(
+                                                viewModel.mouseButtonFrameDown
+                                                ? .gray
+                                                : nil
+                                            ),
+                                            in: RoundedRectangle(cornerRadius: 12)
+                                        )
+                                        .background(
+                                            GeometryReader { targetProxy in
+                                                Color.clear
+                                                    .onAppear {
+                                                        viewModel.mouseButtonFrame = targetProxy.frame(in: .named("TutorialLocalSpace"))
+                                                    }
+                                                    .onChange(of: targetProxy.frame(in: .named("TutorialLocalSpace"))) { oldFrame, newFrame in
+                                                        viewModel.mouseButtonFrame = newFrame
+                                                    }
+                                            }
+                                        )
+                                } else {
+                                    Label("Time to close the overlay.", systemImage: "x.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                        .transition(.symbolEffect)
+                                    
+                                    if settings.dismissWithGuideButton {
+                                        Group {
+                                            if viewModel.displayedGuideButtons().count == 1 {
+                                                Text("To proceeed, dismiss the mouse overlay by pressing the button below")
+                                            } else {
+                                                Text("To proceeed, dismiss the mouse overlay by pressing one of the buttons below")
+                                            }
+                                        }
+                                        .font(.headline)
+                                        .padding(.horizontal, 8)
+                                        
+                                        viewModel.guideButtons()
+                                            .padding(4)
+                                            .padding(.horizontal, 8)
+                                            .glassEffect(
+                                                .clear,
+                                                in: RoundedRectangle(cornerRadius: 12)
+                                            )
+                                            .animation(.spring(.bouncy, blendDuration: 0.3), value: settings.detectedController)
+                                    } else {
+                                        Text("To proceeed, dismiss the mouse overlay by pressing the following shortcut buttons again.")
+                                            .font(.headline)
+                                            .padding(.horizontal, 8)
+                                        
+                                        viewModel.axisBindings(for: .mouseMovement)
+                                            .padding(4)
+                                            .padding(.horizontal, 8)
+                                            .glassEffect(
+                                                .clear,
+                                                in: RoundedRectangle(cornerRadius: 12)
+                                            )
+                                    }
+                                }
+                            }
+                            .transition(.opacity)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        
+                        MouseOverlayView(onPress: viewModel.onMouseOverlayPressed)
+                            .padding(16)
+                        
+                        viewModel.mouseCursorLayer(proxy, mousePos: viewModel.mousePosition)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .onAppear {
+                                viewModel.mousePosition = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                            }
+                    }
+                    .padding(.top)
+                    .transition(.opacity)
+                    .coordinateSpace(name: "TutorialLocalSpace")
                     
+                default:
                     VStack {
-                        Text("This is the end of the tutorial. Enjoy using ConType!")
+                        Label("This is the end of the tutorial. Enjoy using ConType!", systemImage: "flag.pattern.checkered")
                             .font(.title2)
                             .foregroundStyle(.white)
+                            .transition(.symbolEffect)
                         
                         Button("Close") {
-                            // Close window
+                            viewModel.onComplete?()
                         }
                         .roundGlassProminent()
                     }
@@ -316,10 +437,18 @@ struct TutorialView: View {
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .onAppear {
+                viewModel.viewProxy = proxy
+            }
+            .onChange(of: proxy.size) {
+                viewModel.viewProxy = proxy
+                viewModel.reclampMouse()
+            }
         }
     }
 }
 
 #Preview {
     TutorialView(viewModel: TutorialViewModel(settings: AppSettings()), settings: AppSettings())
+        .frame(width: 960, height: 540)
 }

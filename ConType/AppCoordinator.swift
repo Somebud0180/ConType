@@ -161,7 +161,8 @@ final class AppCoordinator: ObservableObject {
                 guard let self else { return }
                 if self.tutorialController.isVisible {
                     self.tutorialController.activateSelectedKey()
-                } else if self.overlayController.isKeyboardVisible {                NSApp.deactivate()
+                } else if self.overlayController.isKeyboardVisible {
+                    NSApp.deactivate()
                     self.overlayController.activateSelectedKey()
                 }
             }
@@ -229,33 +230,49 @@ final class AppCoordinator: ObservableObject {
         
         controllerInputManager.onLeftClickDown = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                NSApp.deactivate()
-                self.mouseEmitter.emit(button: .left, eventType: .leftMouseDown)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateMouseButton(.leftMouseDown)
+                } else if self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible {
+                    NSApp.deactivate()
+                    self.mouseEmitter.emit(button: .left, eventType: .leftMouseDown)
+                }
             }
         }
         
         controllerInputManager.onRightClickDown = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                NSApp.deactivate()
-                self.mouseEmitter.emit(button: .right, eventType: .rightMouseDown)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateMouseButton(.rightMouseDown)
+                } else if self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible {
+                    NSApp.deactivate()
+                    self.mouseEmitter.emit(button: .right, eventType: .rightMouseDown)
+                }
             }
         }
         
         controllerInputManager.onLeftClickUp = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                NSApp.deactivate()
-                self.mouseEmitter.emit(button: .left, eventType: .leftMouseUp)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateMouseButton(.leftMouseUp)
+                } else if self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible {
+                    NSApp.deactivate()
+                    self.mouseEmitter.emit(button: .left, eventType: .leftMouseUp)
+                }
             }
         }
         
         controllerInputManager.onRightClickUp = { [weak self] in
             Task { @MainActor in
-                guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                NSApp.deactivate()
-                self.mouseEmitter.emit(button: .right, eventType: .rightMouseUp)
+                guard let self else { return }
+                if self.tutorialController.isVisible {
+                    self.tutorialController.activateMouseButton(.rightMouseUp)
+                } else if self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible {
+                    NSApp.deactivate()
+                    self.mouseEmitter.emit(button: .right, eventType: .rightMouseUp)
+                }
             }
         }
         
@@ -314,6 +331,7 @@ final class AppCoordinator: ObservableObject {
         onboardingController.openTutorial = { [weak self] in
             Task { @MainActor in
                 self?.tutorialController.show()
+                self?.refreshControllerOverlayVisibility()
             }
         }
         
@@ -332,6 +350,12 @@ final class AppCoordinator: ObservableObject {
         tutorialController.openSettings = { [weak self] in
             Task { @MainActor in
                 self?.settingsController.show()
+            }
+        }
+        
+        tutorialController.updateCoordinatorVisibility = { [weak self] in
+            Task { @MainActor in
+                self?.refreshControllerOverlayVisibility()
             }
         }
         
@@ -524,6 +548,8 @@ final class AppCoordinator: ObservableObject {
     ///   - source:  The source of the toggle action. Utilizes `ToggleSource` enum.
     ///   - forMouse: Indicates wether this shortcut activation is intended to toggle the mouse overlay.
     private func toggleOverlay(source: ToggleSource, forMouse: Bool = false) {
+        guard !tutorialController.isVisible  else { return }
+        
         refreshHotkeyManagerState()
         
         if source.isShortcutActivation {
@@ -591,8 +617,9 @@ final class AppCoordinator: ObservableObject {
     
     /// Refreshes the visibility state of the keyboard and mouse overlays in the controller input manager based on the current visibility of the overlays in the overlay controller.
     private func refreshControllerOverlayVisibility() {
-        controllerInputManager.isKeyboardOverlayVisible = overlayController.isKeyboardVisible
-        controllerInputManager.isMouseOverlayVisible = overlayController.isMouseVisible
+        let tutorialVisible = tutorialController.isVisible
+        controllerInputManager.isKeyboardOverlayVisible = tutorialVisible ? tutorialController.isKeboardVisible : overlayController.isKeyboardVisible
+        controllerInputManager.isMouseOverlayVisible = tutorialVisible ? tutorialController.isMouseVisible : overlayController.isMouseVisible
     }
     
     // MARK: - Onboarding Handling

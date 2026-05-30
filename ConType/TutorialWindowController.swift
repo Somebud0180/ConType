@@ -13,6 +13,7 @@ import SwiftUI
 final class TutorialWindowController: NSObject, NSWindowDelegate {
     var onClose: (() -> Void)?
     var openSettings: (() -> Void)?
+    var updateCoordinatorVisibility: (() -> Void)?
     
     private let settings: AppSettings
     private var viewModel: TutorialViewModel
@@ -29,6 +30,10 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         
         viewModel.openSettings = { [weak self] in
             self?.openSettings?()
+        }
+        
+        viewModel.updateCoordinatorVisibilty = { [weak self] in
+            self?.updateCoordinatorVisibility?()
         }
     }
     
@@ -55,6 +60,14 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
     }
     
     // MARK: - Tutorial Input Callbacks
+    var isKeboardVisible: Bool {
+        viewModel.keyboardOverlayVisible
+    }
+    
+    var isMouseVisible: Bool {
+        viewModel.mouseOverlayVisible
+    }
+    
     /// Forwards a keyboard overlay activation event to the tutorial view model.
     func onKeyboardOverlayActivated() {
         viewModel.handleKeyboardOverlayActivated()
@@ -107,6 +120,15 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
     func activateCapsLockShortcut() {
         viewModel.activateCapsLockShortcut()
     }
+    
+    func activateMouseButton(_ eventType: CGEventType) {
+        if eventType == .leftMouseDown || eventType == .rightMouseDown {
+            viewModel.handleMouseClick(isDown: true)
+        } else if eventType == .leftMouseUp || eventType == .rightMouseUp {
+            viewModel.handleMouseClick(isDown: false)
+        }
+    }
+        
     
     /// Creates the tutorial window if it doesn't exist, sets up the hosting controller with the tutorial view and configures the window properties.
     /// - Returns: An `NSWindow` containing the tutorial view.
