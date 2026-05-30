@@ -202,7 +202,7 @@ final class TutorialViewModel: ObservableObject {
     
     /// Completes the tutorial and invokes the completion callback.
     func completeTutorial() {
-        onTutorialCompleted?()
+        onComplete?()
     }
     
     // MARK: - Glyph Helpers
