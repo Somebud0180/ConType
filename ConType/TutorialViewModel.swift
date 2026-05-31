@@ -123,7 +123,7 @@ final class TutorialViewModel: ObservableObject {
     
     /// Hamdles activation of the mouse overlay, advancing tutorial pages based on current page and interaction completion state.
     func handleMouseOverlayActivated() {
-        if currentPage == 5 && !mouseOverlayVisible {
+        if currentPage == 5 {
             mouseOverlayVisible = true
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentPage = 6
