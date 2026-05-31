@@ -95,16 +95,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             y: (frame?.midY ?? 540) - (520 / 2)
         )
         
-        debugPrint("Origin: \(origin), Screen Frame: \(frame?.debugDescription ?? "nil")")
-        
         let window = NSWindow(
             contentRect: NSRect(x: origin.x, y: origin.y, width: 560, height: 520),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        
-        debugPrint("Widow Origin: \(window.frame.origin), Window Size: \(window.frame.size)")
         
         window.contentViewController = hostingController
         window.title = "Settings"

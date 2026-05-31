@@ -32,7 +32,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
             self?.openSettings?()
         }
         
-        viewModel.updateCoordinatorVisibilty = { [weak self] in
+        viewModel.updateCoordinatorVisibility = { [weak self] in
             self?.updateCoordinatorVisibility?()
         }
     }

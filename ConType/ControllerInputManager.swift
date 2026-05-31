@@ -1344,7 +1344,7 @@ final class ControllerInputManager: NSObject {
     /// - Parameter direction: The `OverlayMoveDirection` for which to send the arrow key emulation, which determines which arrow keys are emitted.
     private func sendArrowMove(_ direction: OverlayMoveDirection) {
         debugLog("Arrow Move: \(direction)")
-        if !isOverlayVisible || isMouseOverlayVisible {
+        if !isKeyboardOverlayVisible || isMouseOverlayVisible {
             return
         }
         
@@ -1352,27 +1352,27 @@ final class ControllerInputManager: NSObject {
             switch direction {
             case .left, .upLeft, .downLeft: onArrowMoveLeft?()
             case .right, .upRight, .downRight: onArrowMoveRight?()
-            default: break
+            default: return
             }
-        } else {
-            switch direction {
-            case .up: keyEmitter.emit(keyCode: 126)
-            case .down: keyEmitter.emit(keyCode: 125)
-            case .left: keyEmitter.emit(keyCode: 123)
-            case .right: keyEmitter.emit(keyCode: 124)
-            case .upLeft:
-                keyEmitter.emit(keyCode: 126)
-                keyEmitter.emit(keyCode: 123)
-            case .upRight:
-                keyEmitter.emit(keyCode: 126)
-                keyEmitter.emit(keyCode: 124)
-            case .downLeft:
-                keyEmitter.emit(keyCode: 125)
-                keyEmitter.emit(keyCode: 123)
-            case .downRight:
-                keyEmitter.emit(keyCode: 125)
-                keyEmitter.emit(keyCode: 124)
-            }
+        }
+        
+        switch direction {
+        case .up: keyEmitter.emit(keyCode: 126)
+        case .down: keyEmitter.emit(keyCode: 125)
+        case .left: keyEmitter.emit(keyCode: 123)
+        case .right: keyEmitter.emit(keyCode: 124)
+        case .upLeft:
+            keyEmitter.emit(keyCode: 126)
+            keyEmitter.emit(keyCode: 123)
+        case .upRight:
+            keyEmitter.emit(keyCode: 126)
+            keyEmitter.emit(keyCode: 124)
+        case .downLeft:
+            keyEmitter.emit(keyCode: 125)
+            keyEmitter.emit(keyCode: 123)
+        case .downRight:
+            keyEmitter.emit(keyCode: 125)
+            keyEmitter.emit(keyCode: 124)
         }
     }
     

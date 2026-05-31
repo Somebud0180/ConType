@@ -18,6 +18,7 @@ struct BlinkingCaret: View {
             .font(.largeTitle)
             .foregroundStyle(.white)
             .opacity(isVisible ? 1 : 0)
+            .padding(.horizontal, -2)
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
                     isVisible.toggle()
@@ -35,35 +36,36 @@ final class TutorialViewModel: ObservableObject {
     
     var onComplete: (() -> Void)?
     var openSettings: (() -> Void)?
-    var updateCoordinatorVisibilty: (() -> Void)?
+    var updateCoordinatorVisibility: (() -> Void)?
     
-    @Published private(set) var currentPage: Int = 0
+    @Published private(set) var currentPage: Int = 3
+    @Published var viewProxy: GeometryProxy?
     
     // State for keyboard interaction
-    @Published var keyboardOverlayVisible = false {
+    @Published var keyboardOverlayVisible: Bool = false {
         didSet {
-            updateCoordinatorVisibilty?()
+            updateCoordinatorVisibility?()
         }
     }
-    @Published var keyboardMoved = false
-    @Published var completedTyping = false
-    @Published var pseudoTextField = ""
-    @Published var animateCaret = false
-    @Published var caretOffset = 0
+    @Published var keyboardMoved: Bool = false
+    @Published var completedTyping: Bool = false
+    @Published var pseudoTextField: String = ""
+    @Published var pseudoTextFieldReference: String = ""
+    @Published var animateCaret: Bool = false
+    @Published var caretOffset: CGFloat = 0
     
     // State for mouse interaction
-    @Published var mouseOverlayVisible = true {
+    @Published var mouseOverlayVisible = false {
         didSet {
-            updateCoordinatorVisibilty?()
+            updateCoordinatorVisibility?()
         }
     }
-    @Published var mouseMoved = false
-    @Published var completedMousing = false
-    @Published var mousePosition = CGPoint.zero
-    @Published var mouseDown = false
-    @Published var viewProxy: GeometryProxy?
+    @Published var mouseMoved: Bool = false
+    @Published var completedMousing: Bool = false
+    @Published var mousePosition: CGPoint = CGPoint.zero
+    @Published var mouseDown: Bool = false
     @Published var mouseButtonFrame: CGRect = .zero
-    @Published var mouseButtonFrameDown = false
+    @Published var mouseButtonFrameDown: Bool = false
     
     init(
         settings: AppSettings
@@ -82,16 +84,30 @@ final class TutorialViewModel: ObservableObject {
     /// The text field animates its width based on the content and applies a glass effect.
     /// - Returns: A view representing the pseudo text field
     func pseudoTextFieldView() -> some View {
-        HStack(spacing: 1) {
-            Text(pseudoTextField.isEmpty ? "Start Typing!" : pseudoTextField)
-                .lineLimit(1)
-                .font(.largeTitle)
-                .foregroundStyle(.white)
-                .opacity(pseudoTextField.isEmpty ? 0.8 : 1)
+        ZStack(alignment: .leading) {
+            HStack(spacing: 0) {
+                Text(pseudoTextField.isEmpty ? "Start Typing!" : pseudoTextField)
+                    .lineLimit(1)
+                    .font(.largeTitle)
+                    .foregroundStyle(.white)
+                    .opacity(pseudoTextField.isEmpty ? 0.8 : 1)
+                
+                if !pseudoTextField.isEmpty {
+                    BlinkingCaret()
+                        .opacity(0)
+                }
+            }
             
             if !pseudoTextField.isEmpty {
-                BlinkingCaret()
-                    .offset(y: -1)
+                HStack(spacing: 0) {
+                    Text(pseudoTextFieldReference)
+                        .lineLimit(1)
+                        .font(.largeTitle)
+                        .opacity(0)
+                    
+                    BlinkingCaret()
+                        .offset(y: -1)
+                }
             }
         }
         .padding(8)
@@ -107,7 +123,7 @@ final class TutorialViewModel: ObservableObject {
     // MARK: - Input Event Handlers
     /// Handles activation of the keyboard overlay, advancing tutorial pages based on current page and interaction completion state.
     func handleKeyboardOverlayActivated() {
-        if currentPage == 3 && !keyboardOverlayVisible {
+        if currentPage == 3 {
             keyboardOverlayVisible = true
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentPage = 4
@@ -175,13 +191,23 @@ final class TutorialViewModel: ObservableObject {
     
     /// Activates the backspace key, removing the last character from the pseudo text field if it's not empty.
     func activateBackspaceKey() {
-        if pseudoTextField.isEmpty { return }
-        pseudoTextField.removeLast()
+        if pseudoTextField.isEmpty || pseudoTextFieldReference.isEmpty { return }
+        debugPrint("Offset: \(caretOffset), pseudoTextField: \(pseudoTextField), pseudoTextFieldReference: \(pseudoTextFieldReference)")
+        if caretOffset < 0 {
+            pseudoTextField.remove(at: pseudoTextField.index(pseudoTextField.endIndex, offsetBy: Int(caretOffset) - 1))
+        } else {
+            pseudoTextField.removeLast()
+        }
+        pseudoTextFieldReference.removeLast()
+        clampCaretOffset()
     }
     
     /// Handles activating the space key, appending a space character to the pseudo text field.
     func activateSpaceKey() {
-        pseudoTextField.append(" ")
+        debugPrint("Offset: \(caretOffset), pseudoTextField: \(pseudoTextField), pseudoTextFieldReference: \(pseudoTextFieldReference)")
+        pseudoTextField.insert(contentsOf: " ", at: pseudoTextField.index(pseudoTextField.endIndex, offsetBy: Int(caretOffset)))
+        pseudoTextFieldReference.append(" ")
+        clampCaretOffset()
     }
     
     /// Handles activating the tab key. Does nothing.
@@ -200,11 +226,13 @@ final class TutorialViewModel: ObservableObject {
         keyboardViewModel.toggleCapsLockShortcut()
     }
     
-        /// Adjusts the caret position to the left, ensuring it does not go beyond the start of the text in the pseudo text field.
+    /// Adjusts the caret position to the left, ensuring it does not go beyond the start of the text in the pseudo text field.
     func moveCaretLeft() {
         guard currentPage == 4 else { return }
-        if caretOffset > -pseudoTextField.count {
+        if caretOffset > CGFloat(-pseudoTextField.count) {
             caretOffset -= 1
+            pseudoTextFieldReference.removeLast()
+            debugPrint("Caret offset after moving left: \(caretOffset)")
         }
     }
     
@@ -213,7 +241,25 @@ final class TutorialViewModel: ObservableObject {
         guard currentPage == 4 else { return }
         if caretOffset < 0 {
             caretOffset += 1
+            
+            /// Special handling for offset 0. Causes `index out of bounds` if using the general logic.
+            if caretOffset < 0 {
+                pseudoTextFieldReference.append(pseudoTextField[pseudoTextField.index(pseudoTextField.endIndex, offsetBy: Int(caretOffset))])
+            } else {
+                pseudoTextFieldReference = pseudoTextField
+            }
+            
+            debugPrint("Caret offset after moving right: \(caretOffset)")
         }
+    }
+    
+    func clampCaretOffset() {
+        caretOffset = min(max(caretOffset, CGFloat(-pseudoTextField.count)), 0)
+    }
+    
+    func getCaretOffset() -> CGFloat {
+        let charWidth: CGFloat = 24
+        return CGFloat(caretOffset) * charWidth
     }
     
     /// Handles a key press event from the keyboard overlay, updating the pseudo text field based on the key code and modifier flags.
@@ -228,6 +274,7 @@ final class TutorialViewModel: ObservableObject {
         if key.keyCode == 51 { // Backspace
             if !pseudoTextField.isEmpty {
                 pseudoTextField.removeLast()
+                clampCaretOffset()
             }
             return
         } else if key.keyCode == 49 { // Space
@@ -242,7 +289,12 @@ final class TutorialViewModel: ObservableObject {
         
         let newChar = isShifted && hasShiftedLabel ? key.shiftedLabel! : key.baseLabel
         
-        pseudoTextField.append(newChar)
+        /// Insert the new character at the caret position in the pseudo text field.
+        pseudoTextField.insert(contentsOf: newChar, at: pseudoTextField.index(pseudoTextField.endIndex, offsetBy: Int(caretOffset)))
+        
+        pseudoTextFieldReference.append(newChar)
+        
+        clampCaretOffset()
     }
     
     /// Resets the keyboard overlay view model state (selection, modifiers).

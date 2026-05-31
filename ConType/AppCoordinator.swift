@@ -115,6 +115,7 @@ final class AppCoordinator: ObservableObject {
                 guard let self else { return }
                 if self.tutorialController.isVisible {
                     self.tutorialController.dismissOverlayViaGuideButtonIfNeeded()
+                    self.refreshControllerOverlayVisibility()
                 } else {
                     self.dismissOverlayViaGuideButtonIfNeeded()
                 }
@@ -279,7 +280,6 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.onEnlarge = { [weak self] in
             Task { @MainActor in
                 guard let self, self.overlayController.isKeyboardVisible || self.overlayController.isMouseVisible else { return }
-                debugPrint("Keyboard Visibility: \(self.overlayController.isKeyboardVisible), Mouse Visibility: \(self.overlayController.isMouseVisible)")
                 self.overlayController.enlargeWindow()
             }
         }
@@ -346,7 +346,6 @@ final class AppCoordinator: ObservableObject {
             Task { @MainActor in
                 self?.tutorialController.show()
                 self?.refreshControllerOverlayVisibility()
-                self?.controllerInputManager.isTutorialVisible = true
             }
         }
         
@@ -359,7 +358,7 @@ final class AppCoordinator: ObservableObject {
         tutorialController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.updateActivationPolicyForCurrentUIState()
-                self?.controllerInputManager.isTutorialVisible = false
+                self?.refreshControllerOverlayVisibility()
             }
         }
         
@@ -634,6 +633,7 @@ final class AppCoordinator: ObservableObject {
     /// Refreshes the visibility state of the keyboard and mouse overlays in the controller input manager based on the current visibility of the overlays in the overlay controller.
     private func refreshControllerOverlayVisibility() {
         let tutorialVisible = tutorialController.isVisible
+        controllerInputManager.isTutorialVisible = tutorialVisible
         controllerInputManager.isKeyboardOverlayVisible = tutorialVisible ? tutorialController.isKeboardVisible : overlayController.isKeyboardVisible
         controllerInputManager.isMouseOverlayVisible = tutorialVisible ? tutorialController.isMouseVisible : overlayController.isMouseVisible
     }
