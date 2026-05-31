@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 
+/// A view that serves as the tutorial interface for ConType. Contains guides for using the keyboard and mouse overlay.
 struct TutorialView: View {
     @ObservedObject var viewModel: TutorialViewModel
     let settings: AppSettings

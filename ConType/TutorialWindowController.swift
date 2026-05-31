@@ -60,10 +60,12 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
     }
     
     // MARK: - Tutorial Input Callbacks
+    /// A computed property that checks if the keyboard overlay is currently visible by accessing the `keyboardOverlayVisible` property of the tutorial view model.
     var isKeboardVisible: Bool {
         viewModel.keyboardOverlayVisible
     }
     
+    /// A computed property that checks if the mouse overlay is currently visible by accessing the `mouseOverlayVisible` property of the tutorial view model.
     var isMouseVisible: Bool {
         viewModel.mouseOverlayVisible
     }
@@ -78,6 +80,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         viewModel.handleMouseOverlayActivated()
     }
     
+    /// Forwards a keyboard overlay dismissal event triggered by the guide button to the tutorial view model.
     func dismissOverlayViaGuideButtonIfNeeded() {
         viewModel.handleDismissOverlayViaGuideButton()
     }
@@ -93,34 +96,46 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         viewModel.handleMove(direction, trigger: trigger)
     }
     
+    /// Forwards a mouse movement event with a delta vector to the tutorial view model.
+    /// - Parameter delta: A `CGVector` representing the change in mouse position.
     func moveMouse(by delta: CGVector) {
         viewModel.handleMouseMove(by: delta)
     }
     
+    /// Forwards a scroll event with a delta vector to the tutorial view model.
     func activateSelectedKey() {
         viewModel.activateSelectedKey()
     }
     
+    
+    /// Forwards a backspace key activation event to the tutorial view model.
     func activateBackspaceKey() {
         viewModel.activateBackspaceKey()
     }
     
+    /// Forwards a space key activation event to the tutorial view model.
     func activateSpaceKey() {
         viewModel.activateSpaceKey()
     }
     
+    /// Forwards an enter key activation event to the tutorial view model.
     func activateEnterKey() {
         viewModel.activateEnterKey()
     }
     
+    /// Forwards a shift key activation event to the tutorial view model, with an optional parameter to indicate if it should cycle to caps lock.
+    /// - Parameter cyclesToCapsLock: A `Bool` indicating whether the shift key activation should cycle to caps lock.
     func activateShiftShortcut(cyclesToCapsLock: Bool) {
         viewModel.activateShiftShortcut(cyclesToCapsLock: cyclesToCapsLock)
     }
     
+    /// Forwards a caps lock key activation event to the tutorial view model.
     func activateCapsLockShortcut() {
         viewModel.activateCapsLockShortcut()
     }
     
+    /// Forwards a mouse button activation event to the tutorial view model, indicating whether it's a mouse down or mouse up event based on the `CGEventType`.
+    /// - Parameter eventType: The `CGEventType` indicating the type of mouse event (e.g., left mouse down, right mouse up).
     func activateMouseButton(_ eventType: CGEventType) {
         if eventType == .leftMouseDown || eventType == .rightMouseDown {
             viewModel.handleMouseClick(isDown: true)
