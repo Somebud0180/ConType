@@ -52,7 +52,7 @@ final class TutorialViewModel: ObservableObject {
     @Published var caretOffset = 0
     
     // State for mouse interaction
-    @Published var mouseOverlayVisible = false {
+    @Published var mouseOverlayVisible = true {
         didSet {
             updateCoordinatorVisibilty?()
         }
@@ -308,6 +308,11 @@ final class TutorialViewModel: ObservableObject {
     /// Advances to the next tutorial page.
     func nextPage() {
         currentPage += 1
+    }
+    
+    /// Returns to the previous tutorial page.
+    func previousPage() {
+        currentPage = max(currentPage - 1, 0)
     }
     
     /// Invokes the completion callback and resets all states to their initial values.

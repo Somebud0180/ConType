@@ -26,6 +26,33 @@ struct TutorialView: View {
                     .scaledToFill()
                     .ignoresSafeArea()
                 
+                VStack {
+                    if viewModel.currentPage > 0 && viewModel.currentPage < 4 {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                viewModel.previousPage()
+                            }
+                        } label: {
+                            Label("Back", systemImage: "chevron.left")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(height: 24)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
+                        .glassEffect(
+                            .regular
+                            .interactive()
+                            .tint(.accentColor.opacity(0.5)),
+                            in: Capsule()
+                        )
+                    }
+                }
+                .padding(.top)
+                .padding(8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                
                 switch viewModel.currentPage {
                 case 0:
                     VStack {
@@ -310,6 +337,9 @@ struct TutorialView: View {
                     ZStack(alignment: .bottomLeading) {
                         VStack {
                             Group {
+                                MouseOverlayView(onPress: viewModel.onMouseOverlayPressed)
+                                    .padding(12)
+                                
                                 if !viewModel.mouseMoved {
                                     Label("Welcome to the mouse overlay.", systemImage: "pointer.arrow.rays")
                                         .font(.title2)
@@ -407,9 +437,6 @@ struct TutorialView: View {
                             .transition(.opacity)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        
-                        MouseOverlayView(onPress: viewModel.onMouseOverlayPressed)
-                            .padding(16)
                         
                         viewModel.mouseCursorLayer(proxy, mousePos: viewModel.mousePosition)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
