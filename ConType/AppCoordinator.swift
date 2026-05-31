@@ -291,6 +291,20 @@ final class AppCoordinator: ObservableObject {
             }
         }
         
+        controllerInputManager.onArrowMoveLeft = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.tutorialController.isVisible else { return }
+                self.tutorialController.moveCaretLeft()
+            }
+        }
+        
+        controllerInputManager.onArrowMoveRight = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.tutorialController.isVisible else { return }
+                self.tutorialController.moveCaretRight()
+            }
+        }
+        
         controllerInputManager.onGlyphStyleChanged = { [weak self] style in
             Task { @MainActor in
                 self?.settings.controllerGlyphStyle = style
@@ -332,6 +346,7 @@ final class AppCoordinator: ObservableObject {
             Task { @MainActor in
                 self?.tutorialController.show()
                 self?.refreshControllerOverlayVisibility()
+                self?.controllerInputManager.isTutorialVisible = true
             }
         }
         
@@ -344,6 +359,7 @@ final class AppCoordinator: ObservableObject {
         tutorialController.onClose = { [weak self] in
             Task { @MainActor in
                 self?.updateActivationPolicyForCurrentUIState()
+                self?.controllerInputManager.isTutorialVisible = false
             }
         }
         

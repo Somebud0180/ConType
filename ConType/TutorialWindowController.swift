@@ -134,6 +134,14 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         viewModel.activateCapsLockShortcut()
     }
     
+    func moveCaretLeft() {
+        viewModel.moveCaretLeft()
+    }
+    
+    func moveCaretRight() {
+        viewModel.moveCaretRight()
+    }
+    
     /// Forwards a mouse button activation event to the tutorial view model, indicating whether it's a mouse down or mouse up event based on the `CGEventType`.
     /// - Parameter eventType: The `CGEventType` indicating the type of mouse event (e.g., left mouse down, right mouse up).
     func activateMouseButton(_ eventType: CGEventType) {

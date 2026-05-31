@@ -200,6 +200,22 @@ final class TutorialViewModel: ObservableObject {
         keyboardViewModel.toggleCapsLockShortcut()
     }
     
+        /// Adjusts the caret position to the left, ensuring it does not go beyond the start of the text in the pseudo text field.
+    func moveCaretLeft() {
+        guard currentPage == 4 else { return }
+        if caretOffset > -pseudoTextField.count {
+            caretOffset -= 1
+        }
+    }
+    
+    /// Adjusts the caret position to the right, ensuring it does not go beyond the end of the text in the pseudo text field.
+    func moveCaretRight() {
+        guard currentPage == 4 else { return }
+        if caretOffset < 0 {
+            caretOffset += 1
+        }
+    }
+    
     /// Handles a key press event from the keyboard overlay, updating the pseudo text field based on the key code and modifier flags.
     /// - Parameters:
     ///   - key: The `VirtualKey` that was pressed, containing information about the key code and labels

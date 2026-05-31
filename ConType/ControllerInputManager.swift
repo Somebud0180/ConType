@@ -78,6 +78,8 @@ final class ControllerInputManager: NSObject {
     var onRightClickUp: (() -> Void)?
     var onEnlarge: (() -> Void)?
     var onShrink: (() -> Void)?
+    var onArrowMoveLeft: (() -> Void)?
+    var onArrowMoveRight: (() -> Void)?
     var onGlyphStyleChanged: ((ControllerGlyphStyle) -> Void)?
     var onCaptureStateChanged: ((ControllerCaptureState) -> Void)?
     var onDetectedControllerChanged: ((DetectedController?) -> Void)?
@@ -140,6 +142,7 @@ final class ControllerInputManager: NSObject {
     
     // MARK: - User preferences
     var dismissWithGuideButton = true
+    var isTutorialVisible = false
     var isOverlayVisible = false
     var keyboardMovementStyle: KeyboardMovementMode = .limited
     var leftStickDeadzone: CGFloat = 0.20
@@ -1345,23 +1348,31 @@ final class ControllerInputManager: NSObject {
             return
         }
         
-        switch direction {
-        case .up: keyEmitter.emit(keyCode: 126)
-        case .down: keyEmitter.emit(keyCode: 125)
-        case .left: keyEmitter.emit(keyCode: 123)
-        case .right: keyEmitter.emit(keyCode: 124)
-        case .upLeft:
-            keyEmitter.emit(keyCode: 126)
-            keyEmitter.emit(keyCode: 123)
-        case .upRight:
-            keyEmitter.emit(keyCode: 126)
-            keyEmitter.emit(keyCode: 124)
-        case .downLeft:
-            keyEmitter.emit(keyCode: 125)
-            keyEmitter.emit(keyCode: 123)
-        case .downRight:
-            keyEmitter.emit(keyCode: 125)
-            keyEmitter.emit(keyCode: 124)
+        if isTutorialVisible {
+            switch direction {
+            case .left, .upLeft, .downLeft: onArrowMoveLeft?()
+            case .right, .upRight, .downRight: onArrowMoveRight?()
+            default: break
+            }
+        } else {
+            switch direction {
+            case .up: keyEmitter.emit(keyCode: 126)
+            case .down: keyEmitter.emit(keyCode: 125)
+            case .left: keyEmitter.emit(keyCode: 123)
+            case .right: keyEmitter.emit(keyCode: 124)
+            case .upLeft:
+                keyEmitter.emit(keyCode: 126)
+                keyEmitter.emit(keyCode: 123)
+            case .upRight:
+                keyEmitter.emit(keyCode: 126)
+                keyEmitter.emit(keyCode: 124)
+            case .downLeft:
+                keyEmitter.emit(keyCode: 125)
+                keyEmitter.emit(keyCode: 123)
+            case .downRight:
+                keyEmitter.emit(keyCode: 125)
+                keyEmitter.emit(keyCode: 124)
+            }
         }
     }
     
