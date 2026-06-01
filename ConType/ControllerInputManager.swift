@@ -128,12 +128,14 @@ final class ControllerInputManager: NSObject {
 
             let openResult = IOHIDManagerOpen(managerRef, IOOptionBits(kIOHIDOptionsTypeNone))
             if openResult != kIOReturnSuccess {
-                manager.debugLog("IOHID manager open failed: \(openResult)")
+                let hex = String(format: "%08X", openResult)
+                manager.debugLog("IOHID manager open failed: \(hex)")
             }
         }
         
         func updateSeizureState(shouldSeize: Bool) {
             for state in deviceStates.values {
+                manager.debugLog("Will seize input: \(shouldSeize)")
                 IOHIDDeviceClose(state.device, IOOptionBits(kIOHIDOptionsTypeNone))
                 
                 let options = shouldSeize ? IOOptionBits(kIOHIDOptionsTypeSeizeDevice) : IOOptionBits(kIOHIDOptionsTypeNone)
@@ -461,6 +463,7 @@ final class ControllerInputManager: NSObject {
     private func updateBackendIfNeeded(force: Bool = false) {
         let needsUpdate = force || activeBackendMode != inputBackendMode || backend == nil
         guard needsUpdate else { return }
+        debugLog("Updating backend to: \(inputBackendMode)")
 
         backend?.stop()
         backend = makeBackend(for: inputBackendMode)

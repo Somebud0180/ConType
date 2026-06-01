@@ -105,6 +105,13 @@ struct SettingsView: View {
                                     set: { viewModel.settings.openAppOnStartup = $0 }
                                 )
                             )
+                            
+                            Toggle(
+                                "IOHID",
+                                isOn: Binding(
+                                    get: { viewModel.settings.controllerInputBackendMode == .hybridIOHID },
+                                    set: { viewModel.settings.controllerInputBackendMode = $0 ? .hybridIOHID : .gameController })
+                                )
                         }
                         
                         Section("Overlay") {
