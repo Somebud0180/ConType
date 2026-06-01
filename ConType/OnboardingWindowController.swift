@@ -83,6 +83,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
         let hostingController = NSHostingController(
             rootView: OnboardingView(settings: settings, viewModel: viewModel)
+                .preferredColorScheme(settings.preferredColorScheme.colorScheme)
+                .frame(width: 400, height: 480)
         )
         
         hostingController.sizingOptions = [.minSize, .maxSize]

@@ -189,7 +189,6 @@ struct OnboardingView: View {
             .padding(24)
             .animation(.easeInOut(duration: 0.5), value: viewModel.step)
         }
-        .frame(width: 400, height: 480)
     }
     
     /// Contains the app icon and name and introduction.

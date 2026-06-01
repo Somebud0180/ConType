@@ -105,6 +105,18 @@ struct SettingsView: View {
                                     set: { viewModel.settings.openAppOnStartup = $0 }
                                 )
                             )
+                            
+                            Picker(
+                                "App Theme",
+                                selection: Binding(
+                                    get: { viewModel.settings.preferredColorScheme },
+                                    set: { viewModel.settings.preferredColorScheme = $0 }
+                                )
+                            ) {
+                                ForEach(PreferredColorScheme.allCases) { theme in
+                                    Text(theme.title).tag(theme)
+                                }
+                            }
                         }
                         
                         Section("Overlay") {
@@ -261,9 +273,7 @@ struct SettingsView: View {
                             "Keyboard Layout",
                             selection: Binding(
                                 get: { viewModel.settings.keyboardLayout },
-                                set: {
-                                    viewModel.settings.keyboardLayout = $0
-                                }
+                                set: { viewModel.settings.keyboardLayout = $0 }
                             )
                         ) {
                             ForEach(KeyboardLayout.all) { layout in

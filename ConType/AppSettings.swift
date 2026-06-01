@@ -6,8 +6,35 @@
 //
 
 import AppKit
+import SwiftUI
 import Combine
 import Foundation
+
+enum PreferredColorScheme: String, CaseIterable, Identifiable {
+    case system
+    case dark
+    case light
+    
+    /// Color scheme identifier.
+    var id: String { rawValue }
+    
+    /// Human readable title for the color scheme
+    var title: String {
+        switch self {
+        case .system: "System"
+        case .dark: "Dark Mode"
+        case .light: "Light Mode"
+        }
+    }
+    
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .dark: ColorScheme.dark
+        case .light: ColorScheme.light
+        }
+    }
+}
 
 /// An enum representing the different visual styles for controller glyphs.
 /// Contains:
@@ -713,6 +740,9 @@ final class AppSettings: ObservableObject {
     
     
     // MARK: - Preferences
+    /// The preffered app theme (System, Dark, Light).
+    @Published var preferredColorScheme: PreferredColorScheme = .system
+    
     /// A boolean value indicating whether mouse input is enabled while the keyboard overlay is active.
     @Published var enableMouseInKeyboard: Bool = true
     
@@ -815,6 +845,7 @@ final class AppSettings: ObservableObject {
             $keyboardHotkey.map { _ in () }.eraseToAnyPublisher(),
             $controllerToggleBindings.map { _ in () }.eraseToAnyPublisher(),
             $controllerActionBindings.map { _ in () }.eraseToAnyPublisher(),
+            $preferredColorScheme.map { _ in () }.eraseToAnyPublisher(),
             $enableMouseInKeyboard.map { _ in () }.eraseToAnyPublisher(),
             $prioritizeMouseOverKeyboard.map { _ in () }.eraseToAnyPublisher(),
             $keyboardLayout.map { _ in () }.eraseToAnyPublisher(),
@@ -873,6 +904,7 @@ final class AppSettings: ObservableObject {
             keyboardHotkey: keyboardHotkey,
             controllerToggleBindings: controllerToggleBindings,
             controllerActionBindings: controllerActionBindings,
+            preferredColorScheme: preferredColorScheme,
             enableMouseInKeyboard: enableMouseInKeyboard,
             prioritizeMouseOverKeyboard: prioritizeMouseOverKeyboard,
             keyboardLayoutName: keyboardLayout.name,
@@ -918,6 +950,7 @@ final class AppSettings: ObservableObject {
             self.keyboardHotkey = codable.keyboardHotkey
             self.controllerToggleBindings = codable.controllerToggleBindings
             self.controllerActionBindings = codable.controllerActionBindings
+            self.preferredColorScheme = codable.preferredColorScheme
             self.enableMouseInKeyboard = codable.enableMouseInKeyboard
             self.prioritizeMouseOverKeyboard = codable.prioritizeMouseOverKeyboard
             
@@ -969,6 +1002,7 @@ final class AppSettings: ObservableObject {
             self.keyboardHotkey = Shortcut(key: "k", modifiers: [.command])
             self.controllerToggleBindings = .default
             self.controllerActionBindings = .default
+            self.preferredColorScheme = .system
             self.enableMouseInKeyboard = true
             self.prioritizeMouseOverKeyboard = false
             self.keyboardLayout = .QWERTY
@@ -1019,6 +1053,8 @@ extension Shortcut: Codable {
         self.init(key: key, modifiers: NSEvent.ModifierFlags(rawValue: modifiersRaw))
     }
 }
+
+extension PreferredColorScheme: Codable {}
 
 extension ControllerToggleBinding: Codable {}
 
@@ -1113,6 +1149,7 @@ private struct AppSettingsCodable: Codable {
     var keyboardHotkey: Shortcut
     var controllerToggleBindings: ControllerToggleBindings
     var controllerActionBindings: ControllerActionBindings
+    var preferredColorScheme: PreferredColorScheme
     var enableMouseInKeyboard: Bool
     var prioritizeMouseOverKeyboard: Bool
     var keyboardLayoutName: String

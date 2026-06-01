@@ -165,6 +165,7 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         
         let hostingController = NSHostingController(
             rootView: TutorialView(viewModel: viewModel, settings: settings)
+                .preferredColorScheme(settings.preferredColorScheme.colorScheme)
                 .frame(minWidth: 960, minHeight: 540)
         )
         

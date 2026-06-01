@@ -229,6 +229,7 @@ final class OverlayWindowController {
         ) { [weak self] key, modifiers in
             self?.keyEmitter.emit(key, modifiers: modifiers)
         }
+            .preferredColorScheme(settings.preferredColorScheme.colorScheme)
             .frame(minWidth: 640, maxWidth: 1440, minHeight: 240, maxHeight: 540)
         
         let windowDimensions = settings.keyboardWindowSize.windowDimensions(customSize: settings.keyboardCustomDimensions)
@@ -356,6 +357,7 @@ final class OverlayWindowController {
             self?.settings.inMouseMode = false
             self?.show()
         }
+            .preferredColorScheme(settings.preferredColorScheme.colorScheme)
             .frame(minWidth: 64, maxWidth: 64, minHeight: 64, maxHeight: 64)
         
         let hostingController = NSHostingController(rootView: contentView)
