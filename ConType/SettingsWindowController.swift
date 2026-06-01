@@ -88,7 +88,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         
         let hostingController = NSHostingController(
             rootView: SettingsView(viewModel: viewModel)
+                .frame(minWidth: 560, maxWidth: 560, minHeight: 240, idealHeight: 520, maxHeight: 600)
         )
+    
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = true
+        hostingController.view.autoresizingMask = .height
         
         let origin = NSPoint(
             x: (frame?.midX ?? 960) - (560 / 2),
@@ -97,17 +101,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         
         let window = NSWindow(
             contentRect: NSRect(x: origin.x, y: origin.y, width: 560, height: 520),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .resizable, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         
-        window.contentViewController = hostingController
+        window.contentView = hostingController.view
         window.title = "Settings"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 560, height: 240)
-        window.maxSize = NSSize(width: 560, height: 600)
+        window.collectionBehavior = [.managed,  .moveToActiveSpace, .fullScreenNone, .participatesInCycle]
         
         self.window = window
         return window

@@ -461,8 +461,6 @@ struct SettingsView: View {
                 viewModel.endControllerToggleRecording()
                 viewModel.endControllerActionPicker()
             }
-            .frame(width: 560, height: 520)
-            // Confirmation dialogs for reset actions
             .confirmationDialog(
                 "Reset Hotkeys?",
                 isPresented: $showResetHotkeysDialog,

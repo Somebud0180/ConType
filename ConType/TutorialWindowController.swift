@@ -201,7 +201,6 @@ final class TutorialWindowController: NSObject, NSWindowDelegate {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        window.contentMinSize = NSSize(width: 960, height: 540)
         
         self.window = window
         return window
