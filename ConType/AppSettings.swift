@@ -168,6 +168,23 @@ enum AxisInput: String, Identifiable {
     }
 }
 
+/// Selects which controller input backend to use for controller event sourcing.
+enum ControllerInputBackendMode: String, CaseIterable, Identifiable, Codable {
+    case gameController
+    case hybridIOHID
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .gameController:
+            return "GameController"
+        case .hybridIOHID:
+            return "Hybrid IOHID"
+        }
+    }
+}
+
 /// An enum representing the different actions an axis input can do
 /// Contains:
 /// - Control Overlay Movement
@@ -736,6 +753,9 @@ final class AppSettings: ObservableObject {
     
     /// A boolean value indicating whether the keyboard overlay can be dismissed by pressing the guide button alone.
     @Published var dismissWithGuideButton = true
+
+    /// The controller input backend to use for sourcing controller events.
+    @Published var controllerInputBackendMode: ControllerInputBackendMode = .hybridIOHID
     
     /// A boolean value indicating whether the app should open automatically on startup.
     @Published var openAppOnStartup = false
@@ -823,6 +843,7 @@ final class AppSettings: ObservableObject {
             $padInputType.map { _ in () }.eraseToAnyPublisher(),
             $shiftShortcutCyclesToCapsLock.map { _ in () }.eraseToAnyPublisher(),
             $dismissWithGuideButton.map { _ in () }.eraseToAnyPublisher(),
+            $controllerInputBackendMode.map { _ in () }.eraseToAnyPublisher(),
             $openAppOnStartup.map { _ in () }.eraseToAnyPublisher(),
             $keyboardMovementStyle.map { _ in () }.eraseToAnyPublisher(),
             $leftStickDeadzone.map { _ in () }.eraseToAnyPublisher(),
@@ -881,6 +902,7 @@ final class AppSettings: ObservableObject {
             padInputType: padInputType,
             shiftShortcutCyclesToCapsLock: shiftShortcutCyclesToCapsLock,
             dismissWithGuideButton: dismissWithGuideButton,
+            controllerInputBackendMode: controllerInputBackendMode,
             openAppOnStartup: openAppOnStartup,
             keyboardMovementStyle: keyboardMovementStyle,
             leftStickDeadzone: leftStickDeadzone,
@@ -931,6 +953,7 @@ final class AppSettings: ObservableObject {
             self.padInputType = codable.padInputType
             self.shiftShortcutCyclesToCapsLock = codable.shiftShortcutCyclesToCapsLock
             self.dismissWithGuideButton = codable.dismissWithGuideButton
+            self.controllerInputBackendMode = codable.controllerInputBackendMode ?? .gameController
             self.openAppOnStartup = codable.openAppOnStartup
             self.keyboardMovementStyle = codable.keyboardMovementStyle
             self.leftStickDeadzone = codable.leftStickDeadzone
@@ -977,6 +1000,7 @@ final class AppSettings: ObservableObject {
             self.padInputType = [.overlayMovement]
             self.shiftShortcutCyclesToCapsLock = true
             self.dismissWithGuideButton = true
+            self.controllerInputBackendMode = .gameController
             self.keyboardMovementStyle = .limited
             self.leftStickDeadzone = 0.4
             self.rightStickDeadzone = 0.4
@@ -1121,6 +1145,7 @@ private struct AppSettingsCodable: Codable {
     var padInputType: [AxisActionType]
     var shiftShortcutCyclesToCapsLock: Bool
     var dismissWithGuideButton: Bool
+    var controllerInputBackendMode: ControllerInputBackendMode?
     var openAppOnStartup: Bool
     var keyboardMovementStyle: KeyboardMovementMode
     var leftStickDeadzone: CGFloat

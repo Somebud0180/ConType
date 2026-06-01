@@ -9,6 +9,8 @@ import Foundation
 import GameController
 import Combine
 import CoreHaptics
+import IOKit
+import IOKit.hid
 
 /// An enum representing the type of input for an axis (stick or d-pad).
 /// Contains:
@@ -57,6 +59,177 @@ final class JoystickInputModel: ObservableObject {
 
 /// The primary class responsible for interfacing with GCController, handling input events, applying user-configured settings, and exposing high-level input actions through closures. This class manages the lifecycle of controller connections, haptics, and input processing logic.
 final class ControllerInputManager: NSObject {
+    private protocol ControllerInputBackend: AnyObject {
+        func start()
+        func stop()
+    }
+
+    private final class GameControllerBackend: ControllerInputBackend {
+        private unowned let manager: ControllerInputManager
+
+        init(manager: ControllerInputManager) {
+            self.manager = manager
+        }
+
+        func start() {
+            manager.startGameControllerBackend()
+        }
+
+        func stop() {
+            manager.stopGameControllerBackend()
+        }
+    }
+
+    private final class IOHIDBackend: ControllerInputBackend {
+        private struct DeviceState {
+            let device: IOHIDDevice
+            var lastHatValue: Int?
+        }
+
+        private unowned let manager: ControllerInputManager
+        private let queue = DispatchQueue(label: "iohid.controller.backend")
+        private var hidManager: IOHIDManager?
+        private var deviceStates: [ObjectIdentifier: DeviceState] = [:]
+        private var isRunning = false
+
+        init(manager: ControllerInputManager) {
+            self.manager = manager
+        }
+
+        func start() {
+            guard !isRunning else { return }
+            isRunning = true
+            manager.startGameControllerBackend()
+            startHIDManager()
+        }
+
+        func stop() {
+            guard isRunning else { return }
+            stopHIDManager()
+            manager.stopGameControllerBackend()
+            isRunning = false
+        }
+
+        private func startHIDManager() {
+            let managerRef = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+            hidManager = managerRef
+
+            let matching = [
+                makeMatchingDict(page: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_GamePad),
+                makeMatchingDict(page: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_Joystick),
+                makeMatchingDict(page: kHIDPage_GenericDesktop, usage: kHIDUsage_GD_MultiAxisController)
+            ] as CFArray
+
+            IOHIDManagerSetDeviceMatchingMultiple(managerRef, matching)
+            IOHIDManagerRegisterDeviceMatchingCallback(managerRef, Self.deviceMatchingCallback, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
+            IOHIDManagerRegisterDeviceRemovalCallback(managerRef, Self.deviceRemovalCallback, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
+            IOHIDManagerRegisterInputValueCallback(managerRef, Self.inputValueCallback, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
+            IOHIDManagerSetDispatchQueue(managerRef, queue)
+
+            let openResult = IOHIDManagerOpen(managerRef, IOOptionBits(kIOHIDOptionsTypeNone))
+            if openResult != kIOReturnSuccess {
+                manager.debugLog("IOHID manager open failed: \(openResult)")
+            }
+        }
+        
+        func updateSeizureState(shouldSeize: Bool) {
+            for state in deviceStates.values {
+                IOHIDDeviceClose(state.device, IOOptionBits(kIOHIDOptionsTypeNone))
+                
+                let options = shouldSeize ? IOOptionBits(kIOHIDOptionsTypeSeizeDevice) : IOOptionBits(kIOHIDOptionsTypeNone)
+                let result = IOHIDDeviceOpen(state.device, options)
+                
+                if result != kIOReturnSuccess {
+                    manager.debugLog("Failed to \(shouldSeize ? "seize" : "release") HID device: \(result)")
+                }
+            }
+        }
+
+        private func stopHIDManager() {
+            deviceStates.values.forEach { state in
+                IOHIDDeviceClose(state.device, IOOptionBits(kIOHIDOptionsTypeNone))
+            }
+            deviceStates.removeAll()
+
+            if let managerRef = hidManager {
+                IOHIDManagerSetDispatchQueue(managerRef, DispatchQueue.main)
+                IOHIDManagerClose(managerRef, IOOptionBits(kIOHIDOptionsTypeNone))
+            }
+            hidManager = nil
+        }
+
+        private func handleDeviceMatched(_ device: IOHIDDevice) {
+            let identifier = ObjectIdentifier(device)
+            deviceStates[identifier] = DeviceState(device: device, lastHatValue: nil)
+            
+            // Start as non-exclusive
+            IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+            
+            DispatchQueue.main.async { [weak manager] in
+                manager?.updateDetectedControllerFromHIDDevice(device)
+            }
+        }
+
+        private func handleDeviceRemoved(_ device: IOHIDDevice) {
+            let identifier = ObjectIdentifier(device)
+            deviceStates.removeValue(forKey: identifier)
+            IOHIDDeviceClose(device, IOOptionBits(kIOHIDOptionsTypeNone))
+
+            DispatchQueue.main.async { [weak manager] in
+                manager?.refreshConnectedControllerGlyphStyle()
+            }
+        }
+
+        private func handleInputValue(_ value: IOHIDValue) {
+            let element = IOHIDValueGetElement(value)
+            
+            let device = IOHIDElementGetDevice(element)
+            
+            DispatchQueue.main.async { [weak manager] in
+                manager?.handleIOHIDValue(value, device: device)
+            }
+        }
+
+        private func makeMatchingDict(page: Int, usage: Int) -> CFDictionary {
+            [
+                kIOHIDDeviceUsagePageKey: page,
+                kIOHIDDeviceUsageKey: usage
+            ] as CFDictionary
+        }
+
+        private static let deviceMatchingCallback: IOHIDDeviceCallback = { context, _, _, device in
+            guard let context else { return }
+            let backend = Unmanaged<IOHIDBackend>.fromOpaque(context).takeUnretainedValue()
+            backend.handleDeviceMatched(device)
+        }
+
+        private static let deviceRemovalCallback: IOHIDDeviceCallback = { context, _, _, device in
+            guard let context else { return }
+            let backend = Unmanaged<IOHIDBackend>.fromOpaque(context).takeUnretainedValue()
+            backend.handleDeviceRemoved(device)
+        }
+
+        private static let inputValueCallback: IOHIDValueCallback = { context, _, _, value in
+            guard let context else { return }
+            let backend = Unmanaged<IOHIDBackend>.fromOpaque(context).takeUnretainedValue()
+            backend.handleInputValue(value)
+        }
+    }
+
+    var inputBackendMode: ControllerInputBackendMode = .gameController {
+        didSet {
+            updateBackendIfNeeded()
+        }
+    }
+
+    private var activeBackendMode: ControllerInputBackendMode?
+    private var backend: ControllerInputBackend?
+    private var isBackendStarted = false
+
+    private var shouldBindGameControllerInputs: Bool {
+        inputBackendMode == .gameController
+    }
+
     // MARK: - Closures for input events and state changes
     var onLeftStickChanged: ((CGVector) -> Void)?
     var onRightStickChanged: ((CGVector) -> Void)?
@@ -108,6 +281,7 @@ final class ControllerInputManager: NSObject {
     var isKeyboardOverlayVisible = false {
         didSet {
             guard isKeyboardOverlayVisible != oldValue else { return }
+            updateHIDSeizureIfNeeded()
             resetAnalogStateForContextChange()
         }
     }
@@ -115,6 +289,7 @@ final class ControllerInputManager: NSObject {
     var isMouseOverlayVisible = false {
         didSet {
             guard isMouseOverlayVisible != oldValue else { return }
+            updateHIDSeizureIfNeeded()
             resetAnalogStateForContextChange()
         }
     }
@@ -192,6 +367,12 @@ final class ControllerInputManager: NSObject {
         .rightStick: AxisInputState(),
         .pad: AxisInputState()
     ]
+    private var iohidAxisValues: [AxisInput: CGVector] = [
+        .leftStick: .zero,
+        .rightStick: .zero,
+        .pad: .zero
+    ]
+    private let iohidGuideButtonUsages: Set<Int> = [13, 14]
     private var analogTimers: [AxisInput: Timer?] = [
         .leftStick: nil,
         .rightStick: nil,
@@ -256,39 +437,118 @@ final class ControllerInputManager: NSObject {
         pendingAssignableButtonCapture = nil
     }
     
-    /// Initializes the controller input manager, sets up notifications for controller connections, and configures any currently connected controllers.
+    /// Initializes the controller input manager and starts the selected backend.
     func start() {
+        updateBackendIfNeeded(force: true)
+        backend?.start()
+        isBackendStarted = true
+    }
+
+    /// Stops the currently active backend.
+    func stop() {
+        backend?.stop()
+        isBackendStarted = false
+    }
+    
+    private func updateHIDSeizureIfNeeded() {
+        guard let iohidBackend = backend as? IOHIDBackend else { return }
+        let shouldSeize = isKeyboardOverlayVisible || isMouseOverlayVisible
+        
+        // Call the seizure update on the backend
+        iohidBackend.updateSeizureState(shouldSeize: shouldSeize)
+    }
+    
+    private func updateBackendIfNeeded(force: Bool = false) {
+        let needsUpdate = force || activeBackendMode != inputBackendMode || backend == nil
+        guard needsUpdate else { return }
+
+        backend?.stop()
+        backend = makeBackend(for: inputBackendMode)
+        activeBackendMode = inputBackendMode
+
+        if isBackendStarted {
+            backend?.start()
+        }
+    }
+
+    private func makeBackend(for mode: ControllerInputBackendMode) -> ControllerInputBackend {
+        switch mode {
+        case .gameController:
+            return GameControllerBackend(manager: self)
+        case .hybridIOHID:
+            return IOHIDBackend(manager: self)
+        }
+    }
+    
+    /// Initializes the GameController backend, sets up notifications for controller connections, and configures any currently connected controllers.
+    private func startGameControllerBackend() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(controllerDidConnect(_:)),
             name: .GCControllerDidConnect,
             object: nil
         )
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(controllerDidDisconnect(_:)),
             name: .GCControllerDidDisconnect,
             object: nil
         )
-        
+
         /// Receive input while the app is in the background (menu bar / accessory / non-activating panel)
         GCController.shouldMonitorBackgroundEvents = true
         debugLog("Background events monitoring enabled")
-        
+
         /// Optionally discover wireless controllers proactively
         GCController.startWirelessControllerDiscovery(completionHandler: nil)
         debugLog("Started wireless controller discovery")
-        
+
         for controller in GCController.controllers() {
-            configure(controller)
+            if shouldBindGameControllerInputs {
+                configure(controller)
+            }
         }
-        
+
         refreshConnectedControllerGlyphStyle()
         publishCaptureState()
     }
+
+    private func stopGameControllerBackend() {
+        unbindControllerInputs()
+        NotificationCenter.default.removeObserver(self, name: .GCControllerDidConnect, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .GCControllerDidDisconnect, object: nil)
+        GCController.stopWirelessControllerDiscovery()
+        GCController.shouldMonitorBackgroundEvents = false
+    }
+    
+    private func unbindControllerInputs() {
+        for controller in GCController.controllers() {
+            if let gamepad = controller.extendedGamepad {
+                gamepad.leftThumbstick.valueChangedHandler = nil
+                gamepad.rightThumbstick.valueChangedHandler = nil
+                gamepad.dpad.valueChangedHandler = nil
+                gamepad.buttonMenu.pressedChangedHandler = nil
+                gamepad.buttonHome?.pressedChangedHandler = nil
+                gamepad.buttonOptions?.pressedChangedHandler = nil
+            } else if let micro = controller.microGamepad {
+                micro.dpad.valueChangedHandler = nil
+            }
+        }
+    }
+    
+    private func updateDetectedControllerFromHIDDevice(_ device: IOHIDDevice) {
+        // TODO: Implement your HID device detection logic here
+        debugLog("Detected HID device matched")
+    }
+    
+    private func handleIOHIDValue(_ value: IOHIDValue, device: IOHIDDevice) {
+        // TODO: Implement your HID element parsing logic here (axes, buttons, hats)
+        debugLog("Processing HID value change")
+    }
     
     deinit {
+        stop()
         stopControllerHapticsEngine()
         stopMoveRepeat(clearDirection: true, for: .overlayMovement)
         stopMoveRepeat(clearDirection: true, for: .arrowKeys)
@@ -491,7 +751,9 @@ final class ControllerInputManager: NSObject {
     @objc private func controllerDidConnect(_ notification: Notification) {
         guard let controller = notification.object as? GCController else { return }
         debugLog("Controller connected: \(controller.vendorName ?? "Unknown")")
-        configure(controller)
+        if shouldBindGameControllerInputs {
+            configure(controller)
+        }
         refreshConnectedControllerGlyphStyle()
     }
     

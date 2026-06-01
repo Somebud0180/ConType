@@ -381,6 +381,7 @@ final class AppCoordinator: ObservableObject {
         controllerInputManager.rightStickInputType = settings.rightStickInputType
         controllerInputManager.padInputType = settings.padInputType
         controllerInputManager.dismissWithGuideButton = settings.dismissWithGuideButton
+        controllerInputManager.inputBackendMode = settings.controllerInputBackendMode
         controllerInputManager.isOverlayVisible = isOverlayVisible
         controllerInputManager.keyboardMovementStyle = settings.keyboardMovementStyle
         controllerInputManager.leftStickDeadzone = settings.leftStickDeadzone
@@ -436,6 +437,12 @@ final class AppCoordinator: ObservableObject {
         settings.$dismissWithGuideButton
             .sink { [weak self] value in
                 self?.controllerInputManager.dismissWithGuideButton = value
+            }
+            .store(in: &cancellables)
+
+        settings.$controllerInputBackendMode
+            .sink { [weak self] value in
+                self?.controllerInputManager.inputBackendMode = value
             }
             .store(in: &cancellables)
         
