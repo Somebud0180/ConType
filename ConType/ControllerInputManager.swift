@@ -152,12 +152,14 @@ final class ControllerInputManager: NSObject {
                 IOHIDDeviceClose(state.device, IOOptionBits(kIOHIDOptionsTypeNone))
             }
             deviceStates.removeAll()
-
+            
             if let managerRef = hidManager {
-                IOHIDManagerSetDispatchQueue(managerRef, DispatchQueue.main)
+                IOHIDManagerRegisterDeviceMatchingCallback(managerRef, nil, nil)
+                IOHIDManagerRegisterDeviceRemovalCallback(managerRef, nil, nil)
+                IOHIDManagerRegisterInputValueCallback(managerRef, nil, nil)
+                
                 IOHIDManagerClose(managerRef, IOOptionBits(kIOHIDOptionsTypeNone))
             }
-            hidManager = nil
         }
 
         private func handleDeviceMatched(_ device: IOHIDDevice) {

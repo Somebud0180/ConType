@@ -755,7 +755,7 @@ final class AppSettings: ObservableObject {
     @Published var dismissWithGuideButton = true
 
     /// The controller input backend to use for sourcing controller events.
-    @Published var controllerInputBackendMode: ControllerInputBackendMode = .hybridIOHID
+    @Published var controllerInputBackendMode: ControllerInputBackendMode = .gameController
     
     /// A boolean value indicating whether the app should open automatically on startup.
     @Published var openAppOnStartup = false
